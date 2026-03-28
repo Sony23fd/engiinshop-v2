@@ -1,0 +1,98 @@
+import { db } from "@/lib/db"
+import { Database, Download, AlertTriangle } from "lucide-react"
+import { getCurrentAdmin } from "@/lib/auth"
+import { notFound } from "next/navigation"
+
+export const dynamic = "force-dynamic"
+
+export default async function DataCenterPage() {
+  const admin = await getCurrentAdmin();
+  if (!admin || (admin.role !== "ADMIN" && admin.role !== "DATAADMIN")) {
+    notFound()
+  }
+
+  const [usersCount, ordersCount, productsCount, categoriesCount] = await Promise.all([
+    db.user.count(),
+    db.order.count(),
+    db.product.count(),
+    db.category.count()
+  ])
+
+  return (
+    <div className="space-y-6 max-w-4xl mx-auto mt-4">
+      <div className="flex flex-col">
+        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+          <Database className="w-6 h-6 text-purple-600" />
+          Өгөгдлийн төв (Data Center)
+        </h1>
+        <p className="text-slate-500 text-sm mt-1">
+          Системийн өгөгдлүүдээ найдвартай нөөцлөх (Backup) болон удирдах төв.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+             <span className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Нийт хэрэглэгч</span>
+             <span className="text-2xl font-bold text-slate-900">{usersCount}</span>
+         </div>
+         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+             <span className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Нийт захиалга</span>
+             <span className="text-2xl font-bold text-slate-900">{ordersCount}</span>
+         </div>
+         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+             <span className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Бүртгэлтэй бараа</span>
+             <span className="text-2xl font-bold text-slate-900">{productsCount}</span>
+         </div>
+         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+             <span className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Төрөл/Ангилал</span>
+             <span className="text-2xl font-bold text-slate-900">{categoriesCount}</span>
+         </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white rounded-xl border shadow-sm p-6 space-y-4 border-t-4 border-t-purple-500 flex flex-col">
+           <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+             <Download className="w-5 h-5 text-purple-500" /> Нөөцлөх (Backup)
+           </h2>
+           <p className="text-sm text-slate-600 flex-1">
+             Мэдээллийн сан дахь бүх хүснэгтийн өгөгдлийг нэгтгэн JSON форматаар татаж авна. Аливаа устгал засвар хийхээс өмнө татаж нөөцлөхийг зөвлөж байна.
+           </p>
+           <a href="/api/admin/backup" target="_blank" className="inline-flex items-center justify-center gap-2 bg-purple-600 text-white hover:bg-purple-700 px-4 py-2.5 rounded-lg font-medium transition-colors text-sm w-full">
+              <Download className="w-4 h-4" /> Одоо татаж авах
+           </a>
+        </div>
+
+        <div className="bg-white rounded-xl border shadow-sm p-6 space-y-4 border-t-4 border-t-blue-500 flex flex-col">
+           <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+             <Database className="w-5 h-5 text-blue-500" /> Импортлох & Цэвэрлэх
+           </h2>
+           <p className="text-sm text-slate-600 flex-1">
+             Excel файлаас эсвэл хуучин системээс бөөнөөр оруулж байгаа өгөгдлийг яг системийн зөв бүтэц рүү хөрвүүлэн импортлох ухаалаг хэрэгсэл.
+           </p>
+           <a href="/admin/data-center/import" className="inline-flex items-center justify-center gap-2 bg-blue-600 text-white hover:bg-blue-700 px-4 py-2.5 rounded-lg font-medium transition-colors text-sm w-full">
+              <Database className="w-4 h-4" /> Импортын хэрэгсэл рүү очих
+           </a>
+        </div>
+      </div>
+
+      <div className="bg-red-50 rounded-xl border border-red-100 shadow-sm p-6 space-y-4">
+         <h2 className="text-lg font-bold text-red-900 flex items-center gap-2">
+           <AlertTriangle className="w-5 h-5 text-red-500" /> Өгөгдөл цэвэрлэх / Устгах
+         </h2>
+         <p className="text-sm text-red-700 leading-relaxed">
+           Системээс хуучирсан болон хэрэгцээгүй датаг массаар цэвэрлэх хэсэг. Датанд буруу үйлдэл хийснээс болж эрсдэл үүсэх тул та эхлээд заавал дээгүүрх товчоор <b>Бүрэн Backup</b> татаж авч нөөцөлсөн байх шаардлагатайг анхаарна уу!
+         </p>
+         
+         <div className="pt-4 flex flex-wrap gap-4 opacity-50">
+             <button disabled className="bg-red-200 text-red-800 px-4 py-2 rounded font-medium text-sm cursor-not-allowed">
+                 Бүтэлгүйтсэн захиалгууд устгах
+             </button>
+             <button disabled className="bg-red-200 text-red-800 px-4 py-2 rounded font-medium text-sm cursor-not-allowed">
+                 2025 оны багцуудыг устгах
+             </button>
+         </div>
+         <span className="text-[11px] text-red-500 uppercase mt-2 block font-semibold">Хөгжүүлэлтийн шатанд яваа тул түр түгжигдсэн байна.</span>
+      </div>
+    </div>
+  )
+}
