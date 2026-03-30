@@ -24,6 +24,10 @@ export async function clearAllStoreData() {
       timeout: 30000 // 30 sec should be enough to wipe the tables
     });
 
+    // Reset auto-increment sequences so batchNumber & orderNumber start from 1
+    await db.$executeRawUnsafe(`ALTER SEQUENCE "Batch_batchNumber_seq" RESTART WITH 1`);
+    await db.$executeRawUnsafe(`ALTER SEQUENCE "Order_orderNumber_seq" RESTART WITH 1`);
+
     revalidatePath("/admin/data-center");
     revalidatePath("/admin/orders");
     revalidatePath("/admin/products");
