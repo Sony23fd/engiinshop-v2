@@ -88,8 +88,8 @@ export async function runImportTransaction(payload: any) {
         }
       }
     }, {
-      maxWait: 10000, 
-      timeout: 30000 // large timeout for bulk import
+      maxWait: 20000, 
+      timeout: 900000 // 15 minutes for bulk import
     });
 
     revalidatePath("/admin/orders");

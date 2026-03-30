@@ -34,9 +34,24 @@ async function main() {
   })
   console.log(`Created cargo admin user: ${cargoAdmin.email}`)
 
+  // 1c. Create Default Data Admin User
+  const dataPassword = await bcrypt.hash('data123', 10)
+  const dataAdmin = await prisma.user.upsert({
+    where: { email: 'data@anarshop.mn' },
+    update: {},
+    create: {
+      email: 'data@anarshop.mn',
+      password: dataPassword,
+      role: 'DATAADMIN',
+      name: 'Data Admin',
+    },
+  })
+  console.log(`Created data admin user: ${dataAdmin.email}`)
+
   // 2. Create Order Status Types
   const statuses = [
     { name: 'Захиалга баталгаажсан', isFinal: false },
+    { name: 'Солонгосоос хөдөлсөн', isFinal: false },
     { name: 'Улаанбаатарт ирсэн', isFinal: false },
     { name: 'Өөрөө ирж авсан', isFinal: true },
     { name: 'Хүргэлтээр авсан', isFinal: true },

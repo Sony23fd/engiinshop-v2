@@ -51,7 +51,8 @@ export function ImportWizard({ existingStatuses }: { existingStatuses: OrderStat
     const required = ["Ангиллын нэр", "Барааны нэр", "Харилцагчийн нэр"];
     for (const req of required) {
       if (firstRow[req] === undefined) {
-        throw new Error(`Загвар буруу: '${req}' багана олдсонгүй.`);
+        const foundCols = Object.keys(firstRow).join(", ");
+        throw new Error(`Загвар буруу: '${req}' багана олдсонгүй (эсвэл үсгийн алдаа/зай авсан байж магадгүй). Олдсон баганууд: [${foundCols}].`);
       }
     }
 
@@ -94,9 +95,33 @@ export function ImportWizard({ existingStatuses }: { existingStatuses: OrderStat
            let rawData: any[] = [];
            if (Array.isArray(parsed)) {
              rawData = parsed;
+           } else if (parsed && parsed.data && Array.isArray(parsed.data.orders)) {
+             // Real Database Backup Formatter (flat tables)
+             const dbData = parsed.data;
+             dbData.orders.forEach((o: any) => {
+                const batch = dbData.batches?.find((b: any) => b.id === o.batchId);
+                const category = dbData.categories?.find((c: any) => c.id === batch?.categoryId);
+                const product = dbData.products?.find((p: any) => p.id === batch?.productId);
+                const status = dbData.orderStatusTypes?.find((s: any) => s.id === o.statusId);
+
+                rawData.push({
+                  "Ангиллын нэр": category?.name || "Тодорхойгүй ангилал",
+                  "Барааны нэр": product?.name || "Тодорхойгүй бараа",
+                  "Зорилтот тоо": batch?.targetQuantity || 0,
+                  "Барааны жин": product?.weight || 0,
+                  "Барааны үнэ": typeof batch?.price === 'number' && batch.price > 0 ? batch.price : (product?.price || 0),
+                  "Карго үнэ": batch?.cargoFeeStatus || "",
+                  "Харилцагчийн нэр": o.customerName,
+                  "Гар утас": o.customerPhone,
+                  "Данс": o.accountNumber || "",
+                  "Захиалсан тоо": o.quantity || 1,
+                  "Хүргэлтийн хаяг": o.deliveryAddress || "",
+                  "Хуучин Статус": status?.name || "Тодорхойгүй"
+                });
+             });
            } else if (parsed && Array.isArray(parsed.categories)) {
-             // Backup JSON structure flattener
-             parsed.categories.forEach((cat: any) => {
+             // Legacy nested JSON structure flattener
+              parsed.categories.forEach((cat: any) => {
                cat.batches?.forEach((b: any) => {
                  b.orders?.forEach((o: any) => {
                     rawData.push({
@@ -111,6 +136,42 @@ export function ImportWizard({ existingStatuses }: { existingStatuses: OrderStat
                       "Данс": o.accountNumber || "",
                       "Захиалсан тоо": o.quantity || 1,
                       "Хүргэлтийн хаяг": o.deliveryAddress || "",
+                      "Хуучин Статус": o.status?.name || "Тодорхойгүй"
+                    });
+                 });
+               });
+             });
+           } else if (parsed && parsed.data && Array.isArray(parsed.data.orderParents)) {
+             // Custom engiindata.json format flattener
+             parsed.data.orderParents.forEach((cat: any) => {
+               cat.orderSet?.forEach((b: any) => {
+                 b.orderitemSet?.forEach((o: any) => {
+                    const rawNameStr = String(o.name || "");
+                    const phoneMatch = rawNameStr.match(/(?:^|\D)(9[0-9]|8[0-9]|7[0-9]|6[0-9])\d{6}(?:\D|$)/);
+                    let phone = phoneMatch ? phoneMatch[0].replace(/\D/g, "") : "";
+                    if (!phone && rawNameStr.match(/\d{8}/)) {
+                      phone = rawNameStr.match(/\d{8}/)![0];
+                    }
+                    
+                    let cleanName = rawNameStr;
+                    if (phone) {
+                      cleanName = cleanName.replace(phone, "").trim();
+                    }
+                    cleanName = cleanName.replace(/^[,\s-]+|[,\s-]+$/g, "");
+                    if (!cleanName) cleanName = "Тодорхойгүй";
+
+                    rawData.push({
+                      "Ангиллын нэр": cat.name || "Тодорхойгүй ангилал",
+                      "Барааны нэр": b.name || "Тодорхойгүй бараа",
+                      "Зорилтот тоо": b.goal || 0,
+                      "Барааны жин": Number(b.weight) || 0,
+                      "Барааны үнэ": 0,
+                      "Карго үнэ": b.description || "",
+                      "Харилцагчийн нэр": cleanName,
+                      "Гар утас": phone,
+                      "Данс": String(o.phoneNumber || ""), // mapped as requested
+                      "Захиалсан тоо": o.quantity || 1,
+                      "Хүргэлтийн хаяг": o.address || "",
                       "Хуучин Статус": o.status?.name || "Тодорхойгүй"
                     });
                  });
