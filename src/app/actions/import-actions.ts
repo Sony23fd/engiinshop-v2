@@ -63,7 +63,8 @@ export async function runImportTransaction(payload: any) {
                 productId: dbProduct.id,
                 targetQuantity: b.targetQuantity,
                 price: b.price,
-                cargoFeeStatus: b.cargoFeeStatus
+                cargoFeeStatus: b.cargoFeeStatus,
+                description: b.description
               }
             });
           }

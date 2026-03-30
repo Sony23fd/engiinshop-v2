@@ -2,6 +2,7 @@ import { db } from "@/lib/db"
 import { Database, Download, AlertTriangle } from "lucide-react"
 import { getCurrentAdmin } from "@/lib/auth"
 import { notFound } from "next/navigation"
+import ClearDataButton from "./ClearDataButton"
 
 export const dynamic = "force-dynamic"
 
@@ -83,15 +84,9 @@ export default async function DataCenterPage() {
            Системээс хуучирсан болон хэрэгцээгүй датаг массаар цэвэрлэх хэсэг. Датанд буруу үйлдэл хийснээс болж эрсдэл үүсэх тул та эхлээд заавал дээгүүрх товчоор <b>Бүрэн Backup</b> татаж авч нөөцөлсөн байх шаардлагатайг анхаарна уу!
          </p>
          
-         <div className="pt-4 flex flex-wrap gap-4 opacity-50">
-             <button disabled className="bg-red-200 text-red-800 px-4 py-2 rounded font-medium text-sm cursor-not-allowed">
-                 Бүтэлгүйтсэн захиалгууд устгах
-             </button>
-             <button disabled className="bg-red-200 text-red-800 px-4 py-2 rounded font-medium text-sm cursor-not-allowed">
-                 2025 оны багцуудыг устгах
-             </button>
+         <div className="pt-4 flex flex-col sm:flex-row gap-4">
+            <ClearDataButton adminRole={admin.role} />
          </div>
-         <span className="text-[11px] text-red-500 uppercase mt-2 block font-semibold">Хөгжүүлэлтийн шатанд яваа тул түр түгжигдсэн байна.</span>
       </div>
     </div>
   )

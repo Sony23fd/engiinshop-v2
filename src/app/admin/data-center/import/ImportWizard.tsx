@@ -166,7 +166,8 @@ export function ImportWizard({ existingStatuses }: { existingStatuses: OrderStat
                       "Зорилтот тоо": b.goal || 0,
                       "Барааны жин": Number(b.weight) || 0,
                       "Барааны үнэ": 0,
-                      "Карго үнэ": b.description || "",
+                      "Карго үнэ": "",
+                      "Тайлбар": b.description || "",
                       "Харилцагчийн нэр": cleanName,
                       "Гар утас": phone,
                       "Данс": String(o.phoneNumber || ""), // mapped as requested
@@ -225,6 +226,7 @@ export function ImportWizard({ existingStatuses }: { existingStatuses: OrderStat
             weight: Number(row["Барааны жин"] || 0),
             price: Number(row["Барааны үнэ"] || 0),
             cargoFeeStatus: String(row["Карго үнэ"] || ""),
+            description: String(row["Тайлбар"] || ""),
             orders: []
           }
         }
