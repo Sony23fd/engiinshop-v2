@@ -588,6 +588,17 @@ export async function requestDelivery(orderIds: string[], deliveryAddress: strin
           deliveryRequestedAt: new Date()
         }
       })
+
+      // Emit notification for admin
+      const { emitDeliveryRequest } = await import("@/lib/orderEvents")
+      emitDeliveryRequest({
+        customerName: eligibleOrders[0]?.customerName || "Хэрэглэгч",
+        customerPhone: eligibleOrders[0]?.customerPhone || "",
+        address: deliveryAddress.trim(),
+        orderCount: eligibleIds.length,
+        createdAt: new Date().toISOString()
+      })
+
       revalidatePath("/track")
       return { success: true, directlyConfirmed: true }
     }
@@ -612,6 +623,12 @@ export async function requestDelivery(orderIds: string[], deliveryAddress: strin
 
 export async function confirmManualDeliveryRequest(orderIds: string[], address: string) {
   try {
+    // Fetch orders first to get customer info for notification
+    const orders = await (db.order as any).findMany({
+      where: { id: { in: orderIds } },
+      select: { customerName: true, customerPhone: true }
+    })
+
     await (db.order as any).updateMany({
       where: { id: { in: orderIds } },
       data: {
@@ -621,6 +638,17 @@ export async function confirmManualDeliveryRequest(orderIds: string[], address: 
         deliveryRequestedAt: new Date()
       }
     })
+
+    // Emit notification for admin
+    const { emitDeliveryRequest } = await import("@/lib/orderEvents")
+    emitDeliveryRequest({
+      customerName: orders[0]?.customerName || "Хэрэглэгч",
+      customerPhone: orders[0]?.customerPhone || "",
+      address: address.trim(),
+      orderCount: orderIds.length,
+      createdAt: new Date().toISOString()
+    })
+
     revalidatePath("/track")
     revalidatePath("/admin/orders")
     return { success: true }

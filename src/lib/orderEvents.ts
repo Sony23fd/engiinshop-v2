@@ -32,6 +32,14 @@ export type OrderConfirmedEvent = {
   totalAmount: number
 }
 
+export type DeliveryRequestEvent = {
+  customerName: string
+  customerPhone: string
+  address: string
+  orderCount: number
+  createdAt: string
+}
+
 // ── Server-side debounce grouping ────────────────────────────────────────────
 // Multiple createOrder calls share the same transactionRef (cart checkout).
 // We buffer them for 800ms then emit a single grouped notification.
@@ -74,4 +82,8 @@ export function emitNewOrder(event: Omit<NewOrderEvent, "items"> & {
     orderEmitter.emit("new-order", entry.event)
     orderBuffer.delete(ref)
   }, 800) // wait 800ms for any additional items from same checkout
+}
+
+export function emitDeliveryRequest(event: DeliveryRequestEvent) {
+  orderEmitter.emit("delivery-request", event)
 }
