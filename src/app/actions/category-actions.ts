@@ -6,11 +6,11 @@ import { revalidatePath } from "next/cache"
 export async function getCategories(days: number = 30) {
   try {
     const whereClause: any = { isArchived: false };
-    if (days > 0) {
-      const cutoffDate = new Date();
-      cutoffDate.setDate(cutoffDate.getDate() - days);
-      whereClause.updatedAt = { gte: cutoffDate };
-    }
+    
+    // We shouldn't filter category by updatedAt because categories are like folders
+    // that could be created months ago but still have active orders today.
+    // If we want to filter, we should filter at the batch/order level instead,
+    // but for now, we will return all unarchived categories regardless of days.
 
     const categories = await db.category.findMany({
       where: whereClause,
