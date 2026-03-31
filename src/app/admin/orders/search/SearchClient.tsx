@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Search, Loader2 } from "lucide-react"
+import { Search, Loader2, Package } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { searchOrders, updateOrderStatus } from "@/app/actions/order-actions"
@@ -176,6 +176,15 @@ export default function SearchClient({ statuses }: { statuses: any[] }) {
             const allSelected = groupIds.every(id => selectedInGroup.includes(id)) && groupIds.length > 0
             const someSelected = selectedInGroup.length > 0 && !allSelected
 
+            // Calculate total cargo fee for the group
+            const totalGroupCargoFee = group.reduce((sum, order) => {
+              const unitCargoFee = Number(order.batch?.cargoFeeStatus || 0) * Number(order.batch?.product?.weight || 0);
+              const orderCustomFee = Number(order.cargoFee || 0);
+              const qty = Number(order.quantity || 1);
+              const orderCargoFee = orderCustomFee > 0 ? orderCustomFee * qty : unitCargoFee * qty;
+              return sum + orderCargoFee;
+            }, 0);
+
             return (
               <div key={groupKey} className="bg-white rounded-xl border shadow-sm overflow-hidden border-l-4 border-l-indigo-400">
                 
@@ -192,11 +201,23 @@ export default function SearchClient({ statuses }: { statuses: any[] }) {
                           {first.customerPhone}
                         </span>
                       </div>
-                      <div className="text-sm text-slate-500 mt-1 flex gap-2 items-center">
+                      <div className="text-sm text-slate-500 mt-1 flex flex-wrap gap-2 items-center">
                         {first.accountNumber && (
                           <span className="font-mono bg-slate-200/50 px-1 rounded">Данс: {first.accountNumber}</span>
                         )}
                         <span className="text-slate-400">Сүүлд: {new Date(first.createdAt).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        <Package className="w-3.5 h-3.5 text-amber-600" />
+                        {totalGroupCargoFee > 0 ? (
+                          <span className="text-sm font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
+                            📦 Каргоны нийт: ₮{totalGroupCargoFee.toLocaleString()}
+                          </span>
+                        ) : (
+                          <span className="text-sm font-medium text-slate-400 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-md">
+                            📦 Карго: Одоогоор тодорхойгүй
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -253,11 +274,22 @@ export default function SearchClient({ statuses }: { statuses: any[] }) {
                             <span className="text-xs font-semibold text-slate-500 mt-1 uppercase tracking-wider">{order.quantity} ширхэг</span>
                           </div>
                           
-                          {/* Price & Date */}
+                          {/* Price, Cargo & Date */}
                           <div className="md:col-span-4 flex flex-col text-sm space-y-1">
                             <span className="text-slate-500">
                               Төлбөр: <strong className="text-slate-700">₮{Number(order.totalAmount || 0).toLocaleString()}</strong>
                             </span>
+                            {(() => {
+                              const unitCargo = Number(order.batch?.cargoFeeStatus || 0) * Number(order.batch?.product?.weight || 0);
+                              const customCargo = Number(order.cargoFee || 0);
+                              const qty = Number(order.quantity || 1);
+                              const orderCargo = customCargo > 0 ? customCargo * qty : unitCargo * qty;
+                              return orderCargo > 0 ? (
+                                <span className="text-amber-600 text-xs font-medium">
+                                  Карго: ₮{orderCargo.toLocaleString()}
+                                </span>
+                              ) : null;
+                            })()}
                             <span className="text-slate-400 text-xs">
                               Захиалсан: {new Date(order.createdAt).toLocaleDateString("mn-MN")}
                             </span>

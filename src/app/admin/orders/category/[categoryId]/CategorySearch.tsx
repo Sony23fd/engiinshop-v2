@@ -28,9 +28,10 @@ export function CategorySearch() {
     <div className="relative w-full sm:max-w-md">
       <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
       <Input 
+        key={searchParams.get("q") ?? ""}
         placeholder="Багцын нэр, дугаар, тайлбараар хайх..." 
         className="pl-10 bg-slate-50 border-slate-200"
-        defaultValue={searchParams.get("q")?.toString() || ""}
+        defaultValue={searchParams.get("q") ?? ""}
         onChange={handleSearch}
       />
     </div>
