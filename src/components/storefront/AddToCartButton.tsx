@@ -9,15 +9,16 @@ interface Props {
   imageUrl?: string | null
   unitPrice: number
   deliveryFee: number
+  isPreOrder?: boolean
 }
 
-export function AddToCartButton({ batchId, name, imageUrl, unitPrice, deliveryFee }: Props) {
+export function AddToCartButton({ batchId, name, imageUrl, unitPrice, deliveryFee, isPreOrder }: Props) {
   const { addItem, items } = useCart()
   const [added, setAdded] = useState(false)
   const inCart = items.some(i => i.batchId === batchId)
 
   function handleAdd() {
-    addItem({ batchId, name, imageUrl, unitPrice, deliveryFee, qty: 1 })
+    addItem({ batchId, name, imageUrl, unitPrice, deliveryFee, isPreOrder, qty: 1 })
     setAdded(true)
     setTimeout(() => setAdded(false), 1500)
   }

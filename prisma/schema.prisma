@@ -79,6 +79,7 @@ model Batch {
   price            Decimal? // Override price for this batch
   status           BatchStatus @default(OPEN)
   isAvailableForSale Boolean  @default(false)  // Admin manually enables for direct sale
+  isPreOrder       Boolean  @default(false)    // Pre-order flag
   deliveryFee        Decimal? @default(0)       // Extra fee for home delivery (₮)
   
   orders           Order[]

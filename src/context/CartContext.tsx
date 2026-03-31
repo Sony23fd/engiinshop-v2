@@ -9,6 +9,7 @@ export interface CartItem {
   unitPrice: number
   deliveryFee: number
   qty: number
+  isPreOrder?: boolean
 }
 
 interface CartContextType {

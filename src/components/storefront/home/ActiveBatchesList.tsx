@@ -59,10 +59,17 @@ export function ActiveBatchesList({
                     <div className="absolute inset-0 flex items-center justify-center text-slate-400 font-medium">Зураггүй</div>
                   )}
                   {/* Urgency Badge */}
-                  <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-bold text-slate-800 flex items-center gap-1.5 shadow-sm border border-slate-200/50">
-                    <Clock className="w-3.5 h-3.5 text-orange-500" />
-                    <span>Нээлттэй</span>
-                  </div>
+                  {batch.isPreOrder ? (
+                    <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-bold text-slate-800 flex items-center gap-1.5 shadow-sm border border-slate-200/50">
+                      <Clock className="w-3.5 h-3.5 text-amber-500" />
+                      <span>Урьдчилсан захиалга</span>
+                    </div>
+                  ) : (
+                    <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-bold text-slate-800 flex items-center gap-1.5 shadow-sm border border-slate-200/50">
+                      <Clock className="w-3.5 h-3.5 text-orange-500" />
+                      <span>Нээлттэй</span>
+                    </div>
+                  )}
                 </Link>
 
                 <div className="flex-1 flex flex-col gap-3">
@@ -108,6 +115,7 @@ export function ActiveBatchesList({
                       imageUrl={batch.product?.imageUrl}
                       unitPrice={Number(batch.price || batch.product?.price || 0)}
                       deliveryFee={Number(batch.deliveryFee || 0)}
+                      isPreOrder={batch.isPreOrder}
                     />
                   </div>
                 </div>

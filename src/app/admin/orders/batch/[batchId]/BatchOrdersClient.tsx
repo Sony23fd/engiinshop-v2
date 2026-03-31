@@ -16,17 +16,30 @@ export function BatchOrdersClient({ activeOrders, batch, statuses, role }: { act
   const [loading, setLoading] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState("")
   const [editingOrder, setEditingOrder] = useState<any>(null)
+  const [searchQuery, setSearchQuery] = useState("")
   const { toast } = useToast()
   const router = useRouter()
 
-  const allSelected = activeOrders.length > 0 && selectedIds.length === activeOrders.length
-  const someSelected = selectedIds.length > 0 && !allSelected
+  const filteredOrders = activeOrders.filter(o => {
+    if (!searchQuery) return true
+    const q = searchQuery.toLowerCase()
+    return (
+      (o.accountNumber && o.accountNumber.toLowerCase().includes(q)) ||
+      (o.customerPhone && o.customerPhone.toLowerCase().includes(q)) ||
+      (o.customerName && o.customerName.toLowerCase().includes(q)) ||
+      (o.orderNumber && String(o.orderNumber).toLowerCase().includes(q))
+    )
+  })
+
+  const allSelected = filteredOrders.length > 0 && filteredOrders.every(o => selectedIds.includes(o.id))
+  const someSelected = filteredOrders.some(o => selectedIds.includes(o.id)) && !allSelected
 
   function toggleAll() {
+    const visibleIds = filteredOrders.map(o => o.id)
     if (allSelected) {
-      setSelectedIds([])
+      setSelectedIds(prev => prev.filter(id => !visibleIds.includes(id)))
     } else {
-      setSelectedIds(activeOrders.map(o => o.id))
+      setSelectedIds(prev => Array.from(new Set([...prev, ...visibleIds])))
     }
   }
 
@@ -89,7 +102,9 @@ export function BatchOrdersClient({ activeOrders, batch, statuses, role }: { act
       {/* Filters and Bulk Actions */}
       <div className="flex flex-col md:flex-row justify-between gap-4">
         <Input 
-          placeholder="Дансны дугаараар хайх" 
+          placeholder="Данс, утас, нэрээр хайх..." 
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
           className="md:w-1/3 bg-slate-50 border-slate-200"
         />
         <div className="flex flex-col md:flex-row gap-4 md:w-2/3 justify-end lg:items-center">
@@ -150,8 +165,8 @@ export function BatchOrdersClient({ activeOrders, batch, statuses, role }: { act
             </tr>
           </thead>
           <tbody className="divide-y relative">
-            {activeOrders.length > 0 ? (
-              activeOrders.map((order: any, idx: number) => {
+            {filteredOrders.length > 0 ? (
+              filteredOrders.map((order: any, idx: number) => {
                 const unitCargoFee = Number(batch.cargoFeeStatus || 0) * Number(batch.product?.weight || 0);
                 const orderCustomFee = Number(order.cargoFee || 0);
                 const baseTotal = unitCargoFee * Number(order.quantity || 1);

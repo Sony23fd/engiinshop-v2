@@ -24,8 +24,12 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled }: { ter
     setPhoneError(digits.length !== 8 ? "Утасны дугаар заавал 8 оронтой байх ёстой" : null)
   }
 
+  const hasPreOrder = items.some(i => i.isPreOrder)
+  const hasInStock = items.some(i => !i.isPreOrder)
+  const isMixedCart = hasPreOrder && hasInStock
+
   // One-time delivery fee = highest delivery fee among cart items
-  const singleDeliveryFee = wantsDelivery
+  const singleDeliveryFee = (wantsDelivery && !hasPreOrder)
     ? Math.max(0, ...items.map(i => i.deliveryFee))
     : 0
   const grandTotal = totalPrice + singleDeliveryFee
@@ -71,7 +75,6 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled }: { ter
       // Generate one shared transactionRef for all cart orders
       const sharedRef = `ANR${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`
 
-      // Create one order per cart item.
       // Delivery fee is a ONE-TIME charge — only added to the first order.
       const results = await Promise.all(
         items.map((item, idx) =>
@@ -79,11 +82,11 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled }: { ter
             customerName,
             phoneNumber,
             accountNumber,
-            deliveryAddress: wantsDelivery ? deliveryAddress : "Өөрөө ирж авна",
+            deliveryAddress: (wantsDelivery && !hasPreOrder) ? deliveryAddress : "Өөрөө ирж авна",
             quantity: item.qty,
-            totalAmount: item.unitPrice * item.qty + (wantsDelivery && idx === 0 ? singleDeliveryFee : 0),
+            totalAmount: item.unitPrice * item.qty + (wantsDelivery && !hasPreOrder && idx === 0 ? singleDeliveryFee : 0),
             batchId: item.batchId,
-            wantsDelivery,
+            wantsDelivery: hasPreOrder ? false : wantsDelivery,
             transactionRef: sharedRef,
           })
         )
@@ -135,7 +138,12 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled }: { ter
               </div>
 
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-slate-900 truncate">{item.name}</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-medium text-slate-900 truncate">{item.name}</p>
+                  {item.isPreOrder && (
+                    <span className="shrink-0 px-1.5 py-0.5 bg-amber-100 text-amber-700 border border-amber-200 text-[10px] font-bold rounded uppercase">Урьдчилсан захиалга</span>
+                  )}
+                </div>
                 <p className="text-sm text-indigo-600 font-semibold mt-1">₮{item.unitPrice.toLocaleString()}</p>
 
                 {/* Qty controls */}
@@ -226,28 +234,53 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled }: { ter
             </div>
 
             {/* Delivery toggle */}
-            <div className="space-y-3">
-              <label className="text-sm font-medium text-slate-700">Хүлээн авах хэлбэр</label>
-              <div className="grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => setWantsDelivery(false)}
-                  className={`border-2 rounded-xl p-3 text-center transition-all text-sm ${!wantsDelivery ? "border-indigo-500 bg-indigo-50" : "border-slate-200 hover:bg-slate-50"}`}>
-                  <ShoppingBag className="w-4 h-4 mx-auto mb-1 text-slate-500" />
-                  <p className="font-semibold text-slate-700">Өөрөө ирнэ</p>
-                  <p className="text-xs text-slate-400">Үнэгүй</p>
-                </button>
-                <button type="button" onClick={() => setWantsDelivery(true)}
-                  className={`border-2 rounded-xl p-3 text-center transition-all text-sm ${wantsDelivery ? "border-indigo-500 bg-indigo-50" : "border-slate-200 hover:bg-slate-50"}`}>
-                  <Truck className="w-4 h-4 mx-auto mb-1 text-slate-500" />
-                  <p className="font-semibold text-slate-700">Хүргэлтээр</p>
-                  {singleDeliveryFee > 0
-                    ? <p className="text-xs text-indigo-500 font-medium">+₮{singleDeliveryFee.toLocaleString()}</p>
-                    : <p className="text-xs text-green-500">+Хүргэлтийн үнэ</p>
-                  }
-                </button>
+            {!hasPreOrder ? (
+              <div className="space-y-3">
+                <label className="text-sm font-medium text-slate-700">Хүлээн авах хэлбэр</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => setWantsDelivery(false)}
+                    className={`border-2 rounded-xl p-3 text-center transition-all text-sm ${!wantsDelivery ? "border-indigo-500 bg-indigo-50" : "border-slate-200 hover:bg-slate-50"}`}>
+                    <ShoppingBag className={`w-4 h-4 mx-auto mb-1 ${!wantsDelivery ? "text-indigo-500" : "text-slate-500"}`} />
+                    <p className="font-semibold text-slate-700">Өөрөө ирнэ</p>
+                    <p className="text-xs text-slate-400">Үнэгүй</p>
+                  </button>
+                  <button type="button" onClick={() => setWantsDelivery(true)}
+                    className={`border-2 rounded-xl p-3 text-center transition-all text-sm ${wantsDelivery ? "border-indigo-500 bg-indigo-50" : "border-slate-200 hover:bg-slate-50"}`}>
+                    <Truck className={`w-4 h-4 mx-auto mb-1 ${wantsDelivery ? "text-indigo-500" : "text-slate-500"}`} />
+                    <p className="font-semibold text-slate-700">Хүргэлтээр</p>
+                    {singleDeliveryFee > 0
+                      ? <p className="text-xs text-indigo-500 font-medium">+₮{singleDeliveryFee.toLocaleString()}</p>
+                      : <p className="text-xs text-green-500">+Хүргэлтийн үнэ</p>
+                    }
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="space-y-3">
+                {isMixedCart ? (
+                  <div className="bg-amber-50 border border-amber-300 rounded-lg p-3 space-y-2">
+                    <div className="flex gap-2 items-start text-amber-800">
+                      <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                      <p className="text-xs font-semibold leading-relaxed">
+                        Сагсанд урьдчилсан захиалгын бараа орсон тул хүргэлтийн товч хаагдлаа.
+                      </p>
+                    </div>
+                    <p className="text-xs text-amber-700 ml-7 leading-relaxed">
+                      Урьдчилан захиалсан барааг Монголд ирсний дараа хүргэлтийг шийдэх бөгөөд бэлэн бараагаа яг одоо хүргүүлэх бол <b>урьдчилсан захиалгаа сагснаасаа устгаж тусад нь захиална уу!</b>
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-3 items-start">
+                    <Info className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="text-xs text-amber-800 leading-relaxed">
+                      <strong>Урьдчилсан захиалга:</strong> Таны сонгосон бараануудыг Монголд ирсний дараа хүргэлтийн асуудлыг тусад нь шийдэх болно.
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
-            {wantsDelivery && (
+            {wantsDelivery && !hasPreOrder && (
               <div className="space-y-3">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-700">Хүргүүлэх хаяг</label>
@@ -284,7 +317,7 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled }: { ter
                 <span>Барааны нийт</span>
                 <span>₮{totalPrice.toLocaleString()}</span>
               </div>
-              {wantsDelivery && singleDeliveryFee > 0 && (
+              {wantsDelivery && !hasPreOrder && singleDeliveryFee > 0 && (
                 <div className="flex justify-between text-sm text-slate-500">
                   <span>Хүргэлт <span className="text-xs text-slate-400">(1 удаа)</span></span>
                   <span>+₮{singleDeliveryFee.toLocaleString()}</span>

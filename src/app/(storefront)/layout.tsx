@@ -18,6 +18,38 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
   } catch (error) {
     console.error("Failed to load site logo:", error)
   }
+
+  const isMaintenanceMode = true; // TODO: Change to false to re-enable the site
+
+  if (isMaintenanceMode) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+        <div className="bg-white p-8 md:p-12 rounded-3xl shadow-xl max-w-lg w-full text-center border border-indigo-100/50">
+          <div className="w-20 h-20 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-6 rotate-3">
+            <span className="text-4xl text-indigo-500 font-black">🛠️</span>
+          </div>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 mb-3 tracking-tight">Түр засвартай байна</h1>
+          <p className="text-slate-600 mb-8 text-sm md:text-base leading-relaxed">
+            Эрхэм харилцагч танд энэ өдрийн мэнд хүргэе. Манай сайт дээр одоогоор өгөгдлийн шинэчлэл хийгдэж байгаа тул түр хугацаанд хаагдлаа. Та хэсэг хугацааны дараа дахин хандана уу. Баярлалаа!
+          </p>
+          <div className="flex justify-center gap-3">
+            <a href="#" className="hover:opacity-80 transition-opacity">
+               <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-[#4e3dc7] hover:bg-[#4e3dc7] hover:text-white transition-all">
+                 <Facebook className="w-5 h-5" />
+               </div>
+            </a>
+            <a href="#" className="hover:opacity-80 transition-opacity">
+               <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-[#4e3dc7] hover:bg-[#4e3dc7] hover:text-white transition-all">
+                 <Instagram className="w-5 h-5" />
+               </div>
+            </a>
+          </div>
+          <p className="text-xs text-slate-400 mt-8">Anar Korea Shop © {new Date().getFullYear()}</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <CartProvider>
       {/* Navigation / Top Header */}

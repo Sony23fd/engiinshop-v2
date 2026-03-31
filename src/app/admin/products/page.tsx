@@ -121,6 +121,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                       <BatchSaleToggle
                         batchId={batch.id}
                         initialEnabled={batch.isAvailableForSale ?? false}
+                        initialPreOrder={batch.isPreOrder ?? false}
                         initialFee={Number(batch.deliveryFee || 0)}
                         dynamicRemainingQty={batch.targetQuantity - (batch._calculatedOrderedSum || 0)}
                         targetQty={batch.targetQuantity}

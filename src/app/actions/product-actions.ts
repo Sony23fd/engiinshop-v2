@@ -91,6 +91,21 @@ export async function toggleBatchForSale(batchId: string, isAvailableForSale: bo
   }
 }
 
+export async function toggleBatchPreOrder(batchId: string, isPreOrder: boolean) {
+  try {
+    await db.batch.update({
+      where: { id: batchId },
+      data: { isPreOrder } as any
+    })
+    revalidatePath("/admin/products")
+    revalidatePath("/")
+    return { success: true }
+  } catch (error) {
+    console.error("Failed to toggle pre-order:", error)
+    return { success: false, error: "Failed to toggle pre-order" }
+  }
+}
+
 export async function updateBatchDeliveryFee(batchId: string, deliveryFee: number) {
   try {
     await db.batch.update({

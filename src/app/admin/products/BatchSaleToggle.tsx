@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { toggleBatchForSale, updateBatchDeliveryFee } from "@/app/actions/product-actions"
+import { toggleBatchForSale, updateBatchDeliveryFee, toggleBatchPreOrder } from "@/app/actions/product-actions"
 import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -46,21 +46,31 @@ function InlineEdit({ label, value, onSave, prefix = "" }: {
   )
 }
 
-export function BatchSaleToggle({ batchId, initialEnabled, initialFee, dynamicRemainingQty, targetQty }: {
+export function BatchSaleToggle({ batchId, initialEnabled, initialPreOrder, initialFee, dynamicRemainingQty, targetQty }: {
   batchId: string
   initialEnabled: boolean
+  initialPreOrder: boolean
   initialFee: number
   dynamicRemainingQty: number  // computed: targetQty - total ordered
   targetQty: number
 }) {
   const [enabled, setEnabled] = useState(initialEnabled)
+  const [preOrder, setPreOrder] = useState(initialPreOrder)
   const [loading, setLoading] = useState(false)
+  const [preOrderLoading, setPreOrderLoading] = useState(false)
 
   async function handleToggle(val: boolean) {
     setLoading(true)
     setEnabled(val)
     await toggleBatchForSale(batchId, val)
     setLoading(false)
+  }
+
+  async function handlePreOrderToggle(val: boolean) {
+    setPreOrderLoading(true)
+    setPreOrder(val)
+    await toggleBatchPreOrder(batchId, val)
+    setPreOrderLoading(false)
   }
 
   return (
@@ -74,6 +84,18 @@ export function BatchSaleToggle({ batchId, initialEnabled, initialFee, dynamicRe
           {enabled ? "Зарна" : "Хаалттай"}
         </span>
       </div>
+
+      {/* Pre-order Toggle */}
+      {enabled && (
+        <div className="flex items-center gap-2 mt-1 bg-slate-50 px-2 py-1.5 rounded-md border border-slate-100">
+          {preOrderLoading && <Loader2 className="w-3 h-3 animate-spin text-slate-400" />}
+          <Switch checked={preOrder} onCheckedChange={handlePreOrderToggle} disabled={preOrderLoading}
+            className="data-[state=checked]:bg-indigo-500 scale-[0.8]" />
+          <span className={`text-[11px] font-semibold ${preOrder ? "text-indigo-600" : "text-slate-400"}`}>
+            Урьдчилсан захиалга
+          </span>
+        </div>
+      )}
 
       {/* Dynamic remaining qty (read-only, computed from orders) */}
       <div className="flex items-center gap-1">

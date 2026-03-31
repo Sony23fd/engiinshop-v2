@@ -18,9 +18,10 @@ interface Props {
   remainingQuantity: number
   termsOfService?: string
   deliveryTerms?: string
+  isPreOrder?: boolean
 }
 
-export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQuantity, termsOfService, deliveryTerms }: Props) {
+export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQuantity, termsOfService, deliveryTerms, isPreOrder }: Props) {
   const router = useRouter()
   const { removeItem } = useCart()
   const { toast } = useToast()
@@ -75,7 +76,7 @@ export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQua
       quantity: qty,
       totalAmount,
       batchId,
-      wantsDelivery,
+      wantsDelivery: isPreOrder ? false : wantsDelivery,
     })
 
     if (result.success) {
@@ -163,29 +164,40 @@ export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQua
       </div>
 
       {/* Delivery Type */}
-      <div className="space-y-3">
-        <label className="text-sm font-medium">Хүлээн авах хэлбэр</label>
-        <div className="grid grid-cols-2 gap-3">
-          <button type="button" onClick={() => { setWantsDelivery(false) }}
-            className={`border-2 rounded-xl p-4 text-center transition-all ${!wantsDelivery ? "border-indigo-500 bg-indigo-50" : "border-slate-200 hover:bg-slate-50"}`}>
-            <ShoppingBag className={`w-5 h-5 mx-auto mb-1 ${!wantsDelivery ? "text-indigo-500" : "text-slate-400"}`} />
-            <p className="text-sm font-semibold text-slate-700">Өөрөө ирнэ</p>
-            <p className="text-xs text-slate-400">Нэмэлт үнэгүй</p>
-          </button>
-          <button type="button" onClick={() => setWantsDelivery(true)}
-            className={`border-2 rounded-xl p-4 text-center transition-all ${wantsDelivery ? "border-indigo-500 bg-indigo-50" : "border-slate-200 hover:bg-slate-50"}`}>
-            <Truck className={`w-5 h-5 mx-auto mb-1 ${wantsDelivery ? "text-indigo-500" : "text-slate-400"}`} />
-            <p className="text-sm font-semibold text-slate-700">Хүргэлтээр</p>
-            {deliveryFee > 0
-              ? <p className={`text-xs font-medium ${wantsDelivery ? "text-indigo-500" : "text-slate-400"}`}>+₮{deliveryFee.toLocaleString()}</p>
-              : <p className="text-xs text-green-500 font-medium">Үнэгүй</p>
-            }
-          </button>
+      {!isPreOrder ? (
+        <div className="space-y-3">
+          <label className="text-sm font-medium">Хүлээн авах хэлбэр</label>
+          <div className="grid grid-cols-2 gap-3">
+            <button type="button" onClick={() => { setWantsDelivery(false) }}
+              className={`border-2 rounded-xl p-4 text-center transition-all ${!wantsDelivery ? "border-indigo-500 bg-indigo-50" : "border-slate-200 hover:bg-slate-50"}`}>
+              <ShoppingBag className={`w-5 h-5 mx-auto mb-1 ${!wantsDelivery ? "text-indigo-500" : "text-slate-400"}`} />
+              <p className="text-sm font-semibold text-slate-700">Өөрөө ирнэ</p>
+              <p className="text-xs text-slate-400">Нэмэлт үнэгүй</p>
+            </button>
+            <button type="button" onClick={() => setWantsDelivery(true)}
+              className={`border-2 rounded-xl p-4 text-center transition-all ${wantsDelivery ? "border-indigo-500 bg-indigo-50" : "border-slate-200 hover:bg-slate-50"}`}>
+              <Truck className={`w-5 h-5 mx-auto mb-1 ${wantsDelivery ? "text-indigo-500" : "text-slate-400"}`} />
+              <p className="text-sm font-semibold text-slate-700">Хүргэлтээр</p>
+              {deliveryFee > 0
+                ? <p className={`text-xs font-medium ${wantsDelivery ? "text-indigo-500" : "text-slate-400"}`}>+₮{deliveryFee.toLocaleString()}</p>
+                : <p className="text-xs text-green-500 font-medium">Үнэгүй</p>
+              }
+            </button>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="space-y-2">
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-3 items-start">
+            <Info className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="text-xs text-amber-800 leading-relaxed">
+              <strong>Урьдчилсан захиалга:</strong> Таны сонгосон бараа Монголд ирсний дараа хүргэлтийн асуудал тусад нь шийдэгдэх болно. Яг одоо хүргэлт сонгох боломжгүй.
+            </div>
+          </div>
+        </div>
+      )}
 
-      {/* Address — only when delivery is selected */}
-      {wantsDelivery && (
+      {/* Address — only when delivery is selected OR if it is preorder to collect address in advance optionally? Actually user explicitly says no delivery option now */}
+      {wantsDelivery && !isPreOrder && (
         <div className="space-y-2">
           <label className="text-sm font-medium" htmlFor="deliveryAddress">Хүргүүлэх хаяг</label>
           <Textarea id="deliveryAddress" name="deliveryAddress" required rows={2}
@@ -224,7 +236,7 @@ export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQua
           <span>₮{unitPrice.toLocaleString()} × {qty}</span>
           <span>₮{itemTotal.toLocaleString()}</span>
         </div>
-        {wantsDelivery && deliveryFee > 0 && (
+        {wantsDelivery && !isPreOrder && deliveryFee > 0 && (
           <div className="flex justify-between text-sm text-slate-500">
             <span>Хүргэлт</span>
             <span>+₮{deliveryFee.toLocaleString()}</span>

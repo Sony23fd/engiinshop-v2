@@ -57,6 +57,13 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                 <span className="text-sm font-medium">{batch.product?.name}</span>
               </div>
             )}
+            
+            {/* Pre-order Badge Overlay */}
+            {(batch as any).isPreOrder && (
+              <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-amber-700 flex items-center gap-1.5 shadow-sm border border-amber-200 uppercase tracking-widest">
+                <span>📌 Урьдчилсан захиалга</span>
+              </div>
+            )}
           </div>
           <h1 className="text-2xl font-bold text-slate-900 mb-2">{batch.product?.name}</h1>
           <p className="text-slate-600 mb-6 flex-1">
@@ -122,6 +129,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
             remainingQuantity={batch.remainingQuantity}
             termsOfService={shopSettings.terms_of_service}
             deliveryTerms={shopSettings.delivery_terms}
+            isPreOrder={(batch as any).isPreOrder}
           />
         </div>
 
