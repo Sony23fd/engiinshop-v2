@@ -1,8 +1,9 @@
 import { db } from "@/lib/db"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Package, Users, ShoppingCart, DollarSign, CheckCircle } from "lucide-react"
+import { Package, Users, ShoppingCart, DollarSign, CheckCircle, AlertCircle } from "lucide-react"
 import { DashboardCharts } from "./DashboardCharts"
 import { DateRangeFilter } from "@/components/admin/DateRangeFilter"
+import Link from "next/link"
 
 export const dynamic = "force-dynamic"
 
@@ -16,6 +17,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
   let successfulOrdersCount = 0;
   let completedOrdersCount = 0;
   let activeProductsCount = 0;
+  let pendingRefundsCount = 0;
   let revenueData: { date: string, amount: number }[] = [];
   let batchSales: { name: string, sales: number }[] = [];
 
@@ -57,6 +59,14 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     // 4. Active Products
     activeProductsCount = await db.product.count({
       where: { isActive: true }
+    })
+
+    // 5. Refunds tracking
+    pendingRefundsCount = await (db.order as any).count({
+      where: {
+        status: { name: { contains: "Буцаагдсан" } },
+        isRefunded: false
+      }
     })
 
     // Chart 1: Revenue last 7 days
@@ -106,6 +116,21 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
 
   return (
     <div className="space-y-6">
+      {pendingRefundsCount > 0 && (
+        <div className="bg-rose-50 border border-rose-200 p-4 rounded-xl flex items-start sm:items-center justify-between gap-4 shadow-sm animate-in fade-in slide-in-from-top-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-rose-600 mt-0.5 shrink-0" />
+            <div>
+              <h3 className="font-bold text-rose-800 text-sm">Анхаар: Мөнгө буцаалт хүлээгдэж байна!</h3>
+              <p className="text-rose-600 text-sm mt-0.5">Танд хүмүүс рүү мөнгийг нь дансаар буцаан шилжүүлэх шаардлагатай <strong>{pendingRefundsCount}</strong> ширхэг захиалга байна. Марталгүй шилжүүлж баталгаажуулна уу.</p>
+            </div>
+          </div>
+          <Link href="/admin/orders/refunds" className="text-xs font-bold bg-white text-rose-600 border border-rose-200 px-4 py-2 rounded-lg shadow-sm hover:shadow transition-all whitespace-nowrap">
+            Яг одоо шалгах
+          </Link>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Хянах самбар</h1>

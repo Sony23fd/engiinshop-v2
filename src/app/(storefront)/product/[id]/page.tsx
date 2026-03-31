@@ -77,8 +77,11 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
             </div>
             <div className="flex justify-between items-center">
               <span className="text-slate-500 text-sm">Үлдэгдэл:</span>
-              <span className={`font-bold ${batch.remainingQuantity > 0 ? "text-green-600" : "text-red-500"}`}>
-                {batch.remainingQuantity > 0 ? `${batch.remainingQuantity} ширхэг` : "Дууссан"}
+              <span className={`font-bold ${(batch as any).isPreOrder || batch.remainingQuantity > 0 ? "text-green-600" : "text-red-500"}`}>
+                {(batch as any).isPreOrder 
+                  ? "Хязгааргүй (Урьдчилсан)"
+                  : batch.remainingQuantity > 0 ? `${batch.remainingQuantity} ширхэг` : "Дууссан"
+                }
               </span>
             </div>
             {deliveryFee > 0 && (

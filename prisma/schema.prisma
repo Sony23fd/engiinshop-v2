@@ -75,6 +75,7 @@ model Batch {
   description      String?  // e.g. "карго авахгүй"
   targetQuantity   Int      @default(0)   // ЗОРИЛТОТ ТОО
   remainingQuantity Int     @default(0)   // ҮЛДЭГДЭЛ ТОO
+  closingDate      DateTime? // Урьдчилсан захиалга хаагдах хугацаа
   cargoFeeStatus   String?
   price            Decimal? // Override price for this batch
   status           BatchStatus @default(OPEN)
@@ -128,6 +129,7 @@ model Order {
   paymentProofUrl String?                    // URL of uploaded payment screenshot
   paymentStatus   String   @default("PENDING") // PENDING | CONFIRMED | REJECTED
   totalAmount     Decimal? @default(0)        // Total including delivery fee
+  isRefunded      Boolean  @default(false)    // If the order was fully refunded back to customer
   transactionRef  String?                     // Unique reference for payment (auto-generated)
   
   // QPay fields

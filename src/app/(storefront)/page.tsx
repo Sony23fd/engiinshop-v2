@@ -12,13 +12,23 @@ export default async function StorefrontHomePage() {
   return (
     <div className="bg-white min-h-screen">
       <HeroSection />
+      {/* Active Ready Stock */}
+      <ActiveBatchesList 
+        batches={success && products ? products.filter((p: any) => !p.isPreOrder) : []} 
+        title="Монголд бэлэн байгаа"
+        subtitle="Яг одоо бэлэн байгаа барааг шууд авах боломжтой"
+        badge="Онцлох бараа"
+        theme="ready"
+      />
       
-      {/* 
-        This is where the user's active, open batches will be shown.
-        Since we don't have categories or 'ready stock' flags in this iteration per user request, 
-        we'll just showcase what's returned as open batches.
-      */}
-      <ActiveBatchesList batches={success && products ? products : []} />
+      {/* Pre-Orders */}
+      <ActiveBatchesList 
+        batches={success && products ? products.filter((p: any) => p.isPreOrder) : []} 
+        title="Урьдчилсан захиалга"
+        subtitle="Урьдчилж захиалаад илүү хямдаар аваарай"
+        badge="Тун удахгүй ирэх"
+        theme="preorder"
+      />
       
       <HowItWorks />
       

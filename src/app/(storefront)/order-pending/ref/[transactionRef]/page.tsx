@@ -4,6 +4,7 @@ import { notFound } from "next/navigation"
 import { Clock, CreditCard, CheckCircle2, AlertCircle } from "lucide-react"
 import { CopyButton } from "../../[orderId]/CopyButton"
 import { QRCodeSVG } from "qrcode.react"
+import { PaymentCheckClient } from "./PaymentCheckClient"
 
 export const dynamic = "force-dynamic"
 
@@ -143,6 +144,10 @@ export default async function OrderPendingByRefPage({ params }: { params: Promis
                   </div>
                 </div>
               )}
+              
+              <div className="w-full mt-4">
+                <PaymentCheckClient transactionRef={transactionRef} />
+              </div>
             </div>
           ) : (
             <div className="w-40 h-40 mx-auto bg-slate-100 rounded-xl flex flex-col items-center justify-center border-2 border-dashed border-slate-300 mb-4">

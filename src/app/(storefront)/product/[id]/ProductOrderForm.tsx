@@ -48,7 +48,7 @@ export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQua
   const canSubmit =
     agreedToTerms &&
     !phoneError &&
-    remainingQuantity > 0
+    (isPreOrder || remainingQuantity > 0)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -259,7 +259,7 @@ export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQua
         disabled={submitting || !canSubmit}
         className="w-full bg-[#4F46E5] hover:bg-[#4338ca] py-6 text-base font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
       >
-        {submitting ? "Илгээж байна..." : remainingQuantity > 0 ? "✅ Захиалга баталгаажуулах" : "Дууссан"}
+        {submitting ? "Илгээж байна..." : (isPreOrder || remainingQuantity > 0) ? "✅ Захиалга баталгаажуулах" : "Дууссан"}
       </Button>
 
       {!agreedToTerms && (

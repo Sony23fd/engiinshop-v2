@@ -654,6 +654,43 @@ export async function checkDeliveryPayment(orderIds: string[], invoiceId: string
   }
 }
 
+export async function checkOrderPayment(transactionRef: string) {
+  try {
+    const orders = await (db.order as any).findMany({
+      where: { transactionRef }
+    })
+    
+    if (!orders || orders.length === 0) return { success: false, error: "Захиалга олдсонгүй" }
+    if (orders[0].paymentStatus === "CONFIRMED") return { success: true, paid: true }
+    
+    const invoiceId = orders[0].qpayInvoiceId
+    if (!invoiceId) return { success: false, error: "QPay нэхэмжлэх үүсээгүй байна" }
+    
+    const { checkQPayPayment } = await import("@/lib/qpay")
+    const checkRes = await checkQPayPayment(invoiceId)
+    
+    if (checkRes.success && checkRes.data.count > 0) {
+      const paidRow = checkRes.data.rows?.find((r: any) => r.payment_status === "PAID")
+      if (paidRow) {
+         const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
+         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://localhost:3000`;
+         const res = await fetch(`${baseUrl}/api/qpay/callback?ref=${transactionRef}&payment_id=${paidRow.payment_id}`, { method: 'POST', cache: 'no-store' });
+         if (res.ok) {
+           revalidatePath(`/order-pending/ref/${transactionRef}`);
+           revalidatePath("/");
+           return { success: true, paid: true };
+         } else {
+           return { success: false, error: "Төлбөр шалгахад алдаа гарлаа (API)" }
+         }
+      }
+    }
+    return { success: true, paid: false }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+
 export async function forceAddDeliveryAddress(orderIds: string[], address: string) {
   try {
     const adminMode = await getCurrentAdmin()
@@ -892,6 +929,55 @@ export async function deleteOrder(orderId: string) {
     revalidatePath("/admin/orders/batch/[batchId]", "page")
     return { success: true }
   } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+export async function getRefundOrders() {
+  try {
+    const orders = await (db.order as any).findMany({
+      where: {
+        status: { name: { contains: "Буцаагдсан" } }
+      },
+      include: {
+        batch: {
+          include: { product: true, category: true }
+        },
+        status: true
+      },
+      orderBy: { updatedAt: "desc" },
+    })
+    return { success: true, orders: JSON.parse(JSON.stringify(orders)) }
+  } catch (error) {
+    console.error("Failed to fetch refund orders:", error)
+    return { success: false, error: "Буцаалтууд татахад алдаа гарлаа" }
+  }
+}
+
+export async function toggleOrderRefund(orderId: string, isRefunded: boolean) {
+  try {
+    const adminMode = await getCurrentAdmin()
+    if (!adminMode) return { success: false, error: "Хандах эрхгүй" }
+
+    await (db.order as any).update({
+      where: { id: orderId },
+      data: { isRefunded }
+    })
+
+    await logActivity({
+      userId: adminMode.id,
+      userName: adminMode.name || "Админ",
+      userRole: adminMode.role,
+      action: isRefunded ? "Мөнгө буцаагдсан" : "Мөнгө буцаахыг цуцалсан",
+      target: "Захиалга",
+      detail: `Захиалга #${orderId} -ийн төлбөрийг ${isRefunded ? 'буцааж шилжүүлэв' : 'буцаалт хийгээгүй төлөвт шилжүүлэв'}.`,
+    })
+
+    revalidatePath("/admin/orders/refunds")
+    revalidatePath("/admin/home")
+    return { success: true }
+  } catch (error: any) {
+    console.error("Failed to toggle order refund:", error)
     return { success: false, error: error.message }
   }
 }

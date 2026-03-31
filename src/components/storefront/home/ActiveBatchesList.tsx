@@ -1,29 +1,32 @@
 import Link from "next/link"
 import { AddToCartButton } from "@/components/storefront/AddToCartButton"
 import { Clock, TrendingUp } from "lucide-react"
+import { PreOrderCountdown } from "@/components/storefront/home/PreOrderCountdown"
 
 export function ActiveBatchesList({ 
   batches,
   title = "Яг одоо захиалах",
   subtitle = "Хамгийн эрэлттэй, захиалга нь нээлттэй байгаа бараанууд",
-  badge = "Тренд бараанууд"
+  badge = "Тренд бараанууд",
+  theme = "ready"
 }: { 
   batches: any[],
   title?: string,
   subtitle?: string,
-  badge?: string
+  badge?: string,
+  theme?: "ready" | "preorder" | string
 }) {
   if (!batches || batches.length === 0) return null;
 
   return (
-    <div id="batches" className="py-20 bg-slate-50/50">
+    <div id="batches" className="pt-12 pb-16 border-b border-indigo-50/50">
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
           <div>
             {badge && (
-              <div className="inline-flex items-center gap-2 mb-3 px-3 py-1 bg-indigo-100/50 rounded-full border border-indigo-200/50">
-                <TrendingUp className="w-4 h-4 text-[#4e3dc7]" />
-                <span className="text-xs font-bold text-[#4e3dc7] uppercase tracking-wider">{badge}</span>
+              <div className={`inline-flex items-center gap-2 mb-3 px-3 py-1 rounded-full border ${theme === "preorder" ? "bg-amber-100/50 border-amber-200/50 text-amber-600" : "bg-indigo-100/50 border-indigo-200/50 text-[#4e3dc7]"}`}>
+                <TrendingUp className="w-4 h-4" />
+                <span className="text-xs font-bold uppercase tracking-wider">{badge}</span>
               </div>
             )}
             <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">{title}</h2>
@@ -33,9 +36,12 @@ export function ActiveBatchesList({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {batches.map((batch: any) => {
-            const progress = batch.quantity > 0 
-              ? Math.min(100, Math.max(0, ((batch.quantity - batch.remainingQuantity) / batch.quantity) * 100))
+            const progress = batch.targetQuantity > 0 
+              ? Math.min(100, Math.max(0, ((batch.targetQuantity - batch.remainingQuantity) / batch.targetQuantity) * 100))
               : 0;
+            
+            // If it's a pre-order, you might want to hide the quantity text or just show a different message
+            const showQty = !batch.isPreOrder || batch.remainingQuantity > 0;
 
             return (
               <div key={batch.id} className="bg-white rounded-2xl p-4 flex flex-col group border border-slate-200/60 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
@@ -73,11 +79,6 @@ export function ActiveBatchesList({
                 </Link>
 
                 <div className="flex-1 flex flex-col gap-3">
-                  {batch.category && (
-                    <div className="text-[10px] font-bold text-[#4e3dc7] uppercase tracking-wider">
-                      {batch.category.name}
-                    </div>
-                  )}
                   <Link href={`/product/${batch.id}`}>
                     <h3 className="font-semibold text-slate-900 leading-snug hover:text-[#4e3dc7] transition-colors line-clamp-2">
                       {batch.product?.name}
@@ -97,16 +98,33 @@ export function ActiveBatchesList({
                     </div>
 
                     <div className="space-y-1.5 mb-4">
-                      <div className="flex justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                        <span>Захиалга дүүрэлт</span>
-                        <span className="text-[#4e3dc7]">{batch.remainingQuantity} үлдсэн</span>
-                      </div>
-                      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-gradient-to-r from-[#4e3dc7] to-indigo-400 rounded-full transition-all duration-1000" 
-                          style={{ width: `${progress}%` }}
-                        ></div>
-                      </div>
+                      {batch.isPreOrder ? (
+                        <div className="space-y-2">
+                           {batch.closingDate ? (
+                             <PreOrderCountdown closingDate={batch.closingDate} />
+                           ) : (
+                             <div className="text-[11px] font-bold text-amber-600 uppercase tracking-wider text-center py-2 bg-amber-50 rounded-lg border border-amber-100">
+                               🎉 Захиалга нээлттэй хадгалагдсан
+                             </div>
+                           )}
+                           <p className="text-[10px] text-center text-slate-500 font-medium leading-relaxed bg-slate-50 border border-slate-100 p-1.5 rounded-lg">
+                             Захиалга хаагдсанаас хойш<br/>7-14 хоногт ирнэ
+                           </p>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                            <span>Захиалга дүүрэлт</span>
+                            <span className="text-[#4e3dc7]">{batch.remainingQuantity} үлдсэн</span>
+                          </div>
+                          <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-gradient-to-r from-[#4e3dc7] to-indigo-400 rounded-full transition-all duration-1000" 
+                              style={{ width: `${progress}%` }}
+                            ></div>
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     <AddToCartButton

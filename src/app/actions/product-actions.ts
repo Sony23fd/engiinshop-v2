@@ -135,6 +135,21 @@ export async function updateBatchRemainingQty(batchId: string, remainingQuantity
   }
 }
 
+export async function updateBatchClosingDate(batchId: string, closingDate: Date | null) {
+  try {
+    await db.batch.update({
+      where: { id: batchId },
+      data: { closingDate } as any
+    })
+    revalidatePath("/admin/products")
+    revalidatePath("/")
+    return { success: true }
+  } catch (error) {
+    console.error("Failed to update closing date:", error)
+    return { success: false, error: "Failed to update closing date" }
+  }
+}
+
 export async function createProduct(data: {
   name: string
   description?: string

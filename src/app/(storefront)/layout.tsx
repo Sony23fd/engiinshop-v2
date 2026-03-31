@@ -19,7 +19,7 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
     console.error("Failed to load site logo:", error)
   }
 
-  const isMaintenanceMode = true; // TODO: Change to false to re-enable the site
+  const isMaintenanceMode = false; // TODO: Change to false to re-enable the site
 
   if (isMaintenanceMode) {
     return (
@@ -34,14 +34,14 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
           </p>
           <div className="flex justify-center gap-3">
             <a href="#" className="hover:opacity-80 transition-opacity">
-               <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-[#4e3dc7] hover:bg-[#4e3dc7] hover:text-white transition-all">
-                 <Facebook className="w-5 h-5" />
-               </div>
+              <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-[#4e3dc7] hover:bg-[#4e3dc7] hover:text-white transition-all">
+                <Facebook className="w-5 h-5" />
+              </div>
             </a>
             <a href="#" className="hover:opacity-80 transition-opacity">
-               <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-[#4e3dc7] hover:bg-[#4e3dc7] hover:text-white transition-all">
-                 <Instagram className="w-5 h-5" />
-               </div>
+              <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-[#4e3dc7] hover:bg-[#4e3dc7] hover:text-white transition-all">
+                <Instagram className="w-5 h-5" />
+              </div>
             </a>
           </div>
           <p className="text-xs text-slate-400 mt-8">Anar Korea Shop © {new Date().getFullYear()}</p>
@@ -54,20 +54,18 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
     <CartProvider>
       {/* Navigation / Top Header */}
       <header className="sticky top-0 z-40 border-b border-indigo-800/50 shadow-md relative overflow-hidden">
-        
+
         {/* Animated Background */}
         <AnimatedHeroBackground bgColor="#3c27c4" />
 
         <div className="relative z-10 max-w-6xl mx-auto px-4 py-3 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-2 group">
             {siteLogo ? (
-              <div className="relative h-10 w-auto min-w-[120px] flex items-center">
-                <Image 
-                  src={siteLogo} 
-                  alt="AnarKorea Logo" 
-                  width={150} 
-                  height={40} 
-                  className="object-contain max-h-12 w-auto drop-shadow-sm"
+              <div className="relative flex items-center h-12">
+                <img
+                  src={siteLogo}
+                  alt="AnarKorea Logo"
+                  className="object-contain h-full w-auto drop-shadow-sm max-w-[200px]"
                 />
               </div>
             ) : (
@@ -81,7 +79,7 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
               </>
             )}
           </Link>
-          
+
           <div className="flex items-center gap-4 w-full md:w-auto mt-2 md:mt-0">
             <form action="/track" className="flex relative group w-full md:w-auto shadow-lg hover:shadow-xl transition-shadow rounded-full font-sans">
               <input
@@ -112,18 +110,16 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
         <div className="max-w-6xl mx-auto">
           {/* Top border decor */}
           <div className="h-1 w-20 bg-gradient-to-r from-[#4e3dc7] to-indigo-400 rounded-full mb-12"></div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8 mb-16">
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-6">
                 {siteLogo ? (
-                  <div className="relative h-8 w-auto min-w-[100px] flex items-center opacity-90 group-hover:opacity-100 transition-opacity brightness-0 invert">
-                    <Image 
-                      src={siteLogo} 
-                      alt="AnarKorea Logo" 
-                      width={120} 
-                      height={32} 
-                      className="object-contain max-h-8 w-auto"
+                  <div className="relative flex items-center h-10">
+                    <img
+                      src={siteLogo}
+                      alt="AnarKorea Logo"
+                      className="object-contain h-full w-auto max-w-[200px]"
                     />
                   </div>
                 ) : (
@@ -152,7 +148,7 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
               <h3 className="text-white font-semibold text-sm uppercase tracking-wider mb-6">Холбоо барих</h3>
               <div className="flex items-start gap-3 text-sm">
                 <MapPin className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
-                <p className="leading-relaxed">БЗД, 26-р хороо Саруул хороолол<br/>122-р байр 3 давхарт</p>
+                <p className="leading-relaxed">БЗД, 26-р хороо Саруул хороолол<br />122-р байр 3 давхарт</p>
               </div>
               <div className="flex items-center gap-3 text-sm">
                 <Phone className="w-5 h-5 text-indigo-400 shrink-0" />
