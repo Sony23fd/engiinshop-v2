@@ -19,7 +19,7 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
     console.error("Failed to load site logo:", error)
   }
 
-  const isMaintenanceMode = false; // TODO: Change to false to re-enable the site
+  const isMaintenanceMode = true; // TODO: Change to false to re-enable the site
 
   if (isMaintenanceMode) {
     return (
