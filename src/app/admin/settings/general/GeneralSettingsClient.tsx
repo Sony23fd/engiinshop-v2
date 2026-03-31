@@ -21,6 +21,8 @@ export function GeneralSettingsClient({ initialSettings }: Props) {
   // Default to true if not explicitly set to "false"
   const [showHeroText, setShowHeroText] = useState(initialSettings["hero_text_visible"] !== "false")
   
+  const [isMaintenanceMode, setIsMaintenanceMode] = useState(initialSettings["maintenance_mode"] === "true")
+  
   const [heroBgColor, setHeroBgColor] = useState(initialSettings["hero_bg_color"] || "#5442cc")
   
   const initialCarouselStr = initialSettings["hero_carousel_images"]
@@ -82,6 +84,14 @@ export function GeneralSettingsClient({ initialSettings }: Props) {
         body: JSON.stringify({ key: "hero_text_visible", value: showHeroText ? "true" : "false" }),
       })
       if (!resHero.ok) throw new Error("Нүүрний текстийн тохиргоо хадгалахад алдаа гарлаа")
+
+      // Save maintenance mode
+      const resMaint = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "maintenance_mode", value: isMaintenanceMode ? "true" : "false" }),
+      })
+      if (!resMaint.ok) throw new Error("Засварын горим хадгалахад алдаа гарлаа")
 
       // Save hero bg color
       const resColor = await fetch("/api/admin/settings", {
@@ -173,6 +183,19 @@ export function GeneralSettingsClient({ initialSettings }: Props) {
             <Switch 
               checked={showHeroText} 
               onCheckedChange={setShowHeroText} 
+            />
+          </div>
+
+          <div className="w-full pt-4 border-t border-slate-100 flex items-center justify-between">
+            <div className="space-y-0.5">
+              <label className="text-base font-semibold text-slate-800">Сайтыг түр хаах (Засвартай горим)</label>
+              <p className="text-sm text-slate-500">
+                Идэвхжүүлсэн үед хэрэглэгчдэд "Түр засвартай" гэсэн хуудас харагдах ба худалдан авалт хийх боломжгүй болно.
+              </p>
+            </div>
+            <Switch 
+              checked={isMaintenanceMode} 
+              onCheckedChange={setIsMaintenanceMode} 
             />
           </div>
 

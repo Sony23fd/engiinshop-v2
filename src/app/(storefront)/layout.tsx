@@ -12,14 +12,18 @@ export const dynamic = "force-dynamic"
 
 export default async function StorefrontLayout({ children }: { children: ReactNode }) {
   let siteLogo = null;
+  let isMaintenanceMode = false;
+  
   try {
-    const logoSetting = await db.shopSettings.findUnique({ where: { key: "site_logo" } })
-    siteLogo = logoSetting?.value
+    const settings = await db.shopSettings.findMany({
+      where: { key: { in: ["site_logo", "maintenance_mode"] } }
+    });
+    
+    siteLogo = settings.find(s => s.key === "site_logo")?.value;
+    isMaintenanceMode = settings.find(s => s.key === "maintenance_mode")?.value === "true";
   } catch (error) {
-    console.error("Failed to load site logo:", error)
+    console.error("Failed to load settings in layout:", error)
   }
-
-  const isMaintenanceMode = false; // TODO: Change to false to re-enable the site
 
   if (isMaintenanceMode) {
     return (
