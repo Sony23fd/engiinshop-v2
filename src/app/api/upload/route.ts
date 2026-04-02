@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       data: isVideo ? { videoUrl: fileUrl } : { imageUrl: fileUrl }
     })
 
-    return NextResponse.json({ success: true, url: fileUrl, type: isVideo ? "video" : "image" })
+    return NextResponse.json({ success: true, url: fileUrl, imageUrl: fileUrl, videoUrl: isVideo ? fileUrl : undefined, type: isVideo ? "video" : "image" })
   } catch (error: any) {
     console.error("Upload error:", error)
     return NextResponse.json({ error: error.message ?? "Upload failed" }, { status: 500 })
