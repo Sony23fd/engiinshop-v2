@@ -152,7 +152,7 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
               <h3 className="text-white font-semibold text-sm uppercase tracking-wider mb-6">Холбоо барих</h3>
               <div className="flex items-start gap-3 text-sm">
                 <MapPin className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
-                <p className="leading-relaxed">БЗД, 26-р хороо Саруул хороолол<br />122-р байр 3 давхарт</p>
+                <p className="leading-relaxed">БЗД, 26-р хороо Саруул хороолол<br />122-р байр, Үйлчилгээний хэсгийн 3 давхарт</p>
               </div>
               <div className="flex items-center gap-3 text-sm">
                 <Phone className="w-5 h-5 text-indigo-400 shrink-0" />
