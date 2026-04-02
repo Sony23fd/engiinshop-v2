@@ -139,10 +139,10 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
                 Солонгос улсаас чанарын баталгаат бараа бүтээгдэхүүнийг хамгийн хурднаар, найдвартай захиалж аваарай.
               </p>
               <div className="flex gap-4 pt-2">
-                <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 flex items-center justify-center text-white hover:scale-110 shadow-sm transition-transform" title="Instagram">
+                <a href="https://www.instagram.com/anar_korea_shop" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 flex items-center justify-center text-white hover:scale-110 shadow-sm transition-transform" title="Instagram">
                   <Instagram className="w-5 h-5 drop-shadow-sm" />
                 </a>
-                <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full bg-gradient-to-b from-blue-500 to-blue-700 flex items-center justify-center text-white hover:scale-110 shadow-sm transition-transform" title="Facebook">
+                <a href="https://www.facebook.com/profile.php?id=100086582256535" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full bg-gradient-to-b from-blue-500 to-blue-700 flex items-center justify-center text-white hover:scale-110 shadow-sm transition-transform" title="Facebook">
                   <Facebook className="w-5 h-5 fill-white drop-shadow-sm" />
                 </a>
               </div>
