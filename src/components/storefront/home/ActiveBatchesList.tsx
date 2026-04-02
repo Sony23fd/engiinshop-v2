@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { AddToCartButton } from "@/components/storefront/AddToCartButton"
 import { Clock, TrendingUp } from "lucide-react"
 import { PreOrderCountdown } from "@/components/storefront/home/PreOrderCountdown"
@@ -56,10 +57,12 @@ export function ActiveBatchesList({
                       className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500 pointer-events-none"
                     />
                   ) : batch.product?.imageUrl ? (
-                    <img
+                    <Image
                       src={batch.product.imageUrl}
-                      alt={batch.product.name}
+                      alt={batch.product.name || "Бараа"}
+                      fill
                       className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                     />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center text-slate-400 font-medium">Зураггүй</div>

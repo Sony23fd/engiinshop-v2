@@ -40,6 +40,7 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
   {
     label: "АРХИВ / ТҮҮХ",
     items: [
+      { name: "Баталгаажсан захиалгууд", url: "/admin/orders/archived/confirmed", icon: CheckCircle, roles: ["ADMIN", "CARGO_ADMIN"] },
       { name: "Өөрөө авсан захиалга", url: "/admin/orders/picked-up", icon: Handshake, roles: ["ADMIN", "CARGO_ADMIN"] },
       { name: "Хүргэгдсэн захиалга", url: "/admin/orders/delivered", icon: PackageCheck, roles: ["ADMIN", "CARGO_ADMIN"] },
       { name: "Цуцлагдсан захиалга", url: "/admin/orders/rejected", icon: XCircle, roles: ["ADMIN", "CARGO_ADMIN"] },

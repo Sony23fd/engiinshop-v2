@@ -1009,3 +1009,37 @@ export async function toggleOrderRefund(orderId: string, isRefunded: boolean) {
     return { success: false, error: error.message }
   }
 }
+
+export async function getArchivedConfirmedOrders(page: number = 1, limit: number = 20, q: string = "") {
+  try {
+    const { db } = await import("@/lib/db");
+    const where: any = {
+      paymentStatus: "CONFIRMED"
+    };
+
+    if (q) {
+      where.OR = [
+        { customerName: { contains: q, mode: 'insensitive' } },
+        { customerPhone: { contains: q } },
+        { accountNumber: { contains: q } },
+        { transactionRef: { contains: q } }
+      ]
+    }
+
+    const total = await db.order.count({ where });
+    const orders = await db.order.findMany({
+       where,
+       include: {
+         batch: { include: { product: true } },
+         status: true
+       },
+       orderBy: { updatedAt: "desc" },
+       skip: (Math.max(1, page) - 1) * limit,
+       take: limit
+    });
+    
+    return { success: true, orders: JSON.parse(JSON.stringify(orders)), total };
+  } catch(error: any) {
+    return { success: false, error: error.message, orders: [], total: 0 };
+  }
+}
