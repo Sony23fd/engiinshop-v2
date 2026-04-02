@@ -159,6 +159,7 @@ export async function createProduct(data: {
   weight?: number
   sourceLink?: string
   categoryId?: string
+  options?: any[]
 }) {
   try {
     let status: BatchStatus = BatchStatus.OPEN
@@ -192,6 +193,7 @@ export async function createProduct(data: {
             price: data.price,
             ...(data.weight !== undefined && { weight: data.weight }),
             ...(data.sourceLink !== undefined && { sourceLink: data.sourceLink }),
+            ...(data.options !== undefined && { options: data.options }),
           }
         }
       },

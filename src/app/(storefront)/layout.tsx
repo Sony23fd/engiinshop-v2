@@ -13,12 +13,12 @@ export const dynamic = "force-dynamic"
 export default async function StorefrontLayout({ children }: { children: ReactNode }) {
   let siteLogo = null;
   let isMaintenanceMode = false;
-  
+
   try {
     const settings = await db.shopSettings.findMany({
       where: { key: { in: ["site_logo", "maintenance_mode"] } }
     });
-    
+
     siteLogo = settings.find(s => s.key === "site_logo")?.value;
     isMaintenanceMode = settings.find(s => s.key === "maintenance_mode")?.value === "true";
   } catch (error) {
@@ -139,11 +139,11 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
                 Солонгос улсаас чанарын баталгаат бараа бүтээгдэхүүнийг хамгийн хурднаар, найдвартай захиалж аваарай.
               </p>
               <div className="flex gap-4 pt-2">
-                <a href="#" className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center hover:bg-[#4e3dc7] hover:text-white transition-colors">
-                  <Instagram className="w-4 h-4" />
+                <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 flex items-center justify-center text-white hover:scale-110 shadow-sm transition-transform" title="Instagram">
+                  <Instagram className="w-5 h-5 drop-shadow-sm" />
                 </a>
-                <a href="#" className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center hover:bg-[#4e3dc7] hover:text-white transition-colors">
-                  <Facebook className="w-4 h-4" />
+                <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full bg-gradient-to-b from-blue-500 to-blue-700 flex items-center justify-center text-white hover:scale-110 shadow-sm transition-transform" title="Facebook">
+                  <Facebook className="w-5 h-5 fill-white drop-shadow-sm" />
                 </a>
               </div>
             </div>
@@ -156,7 +156,7 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
               </div>
               <div className="flex items-center gap-3 text-sm">
                 <Phone className="w-5 h-5 text-indigo-400 shrink-0" />
-                <p>+976 8853 9887</p>
+                <p>+976 8853 9667</p>
               </div>
               <div className="flex items-center gap-3 text-sm">
                 <Mail className="w-5 h-5 text-indigo-400 shrink-0" />
@@ -168,11 +168,11 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
               <h3 className="text-white font-semibold text-sm uppercase tracking-wider mb-6">Цагийн хуваарь</h3>
               <ul className="text-sm space-y-3">
                 <li className="flex justify-between items-center pb-2 border-b border-white/5">
-                  <span className="text-slate-400">Мягмар - Бямба</span>
-                  <span className="text-indigo-400 font-medium">11:00 - 19:00</span>
+                  <span className="text-slate-400">Даваа - Бямба</span>
+                  <span className="text-indigo-400 font-medium">10:00 - 19:00</span>
                 </li>
                 <li className="flex justify-between items-center pb-2 border-b border-white/5">
-                  <span className="text-slate-400">Даваа & Ням</span>
+                  <span className="text-slate-400">Ням</span>
                   <span className="text-rose-400 font-medium tracking-wide">Амарна</span>
                 </li>
               </ul>

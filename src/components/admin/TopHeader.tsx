@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation"
 import { Menu, LogOut, User, Shield, Truck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { OrderNotificationListener } from "@/components/admin/OrderNotificationListener"
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
+import { AdminSidebar } from "@/components/admin/AdminSidebar"
 
 interface AdminUser {
   id: string
@@ -24,9 +26,15 @@ export function TopHeader({ admin }: { admin?: AdminUser | null }) {
   return (
     <header className="h-16 border-b bg-white flex items-center justify-between px-4 sticky top-0 z-10">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" className="md:hidden">
-          <Menu className="w-5 h-5" />
-        </Button>
+        <Sheet>
+          <SheetTrigger className="md:hidden p-2 rounded-md hover:bg-slate-100 flex items-center justify-center text-slate-700 transition-colors">
+            <Menu className="w-5 h-5" />
+          </SheetTrigger>
+          <SheetContent side="left" className="p-0 w-[280px]">
+            <SheetTitle className="sr-only">Гар утасны цэс</SheetTitle>
+            <AdminSidebar className="w-full border-r-0" role={admin?.role || "CARGO_ADMIN"} />
+          </SheetContent>
+        </Sheet>
       </div>
 
       <div className="flex items-center gap-3">

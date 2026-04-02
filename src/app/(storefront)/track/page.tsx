@@ -113,8 +113,10 @@ function UnifiedDeliverySection({ groups }: { groups: any[][] }) {
   // If everything is already handled, don't show anything
   if (alreadyDelivered.length === 0 && eligibleForDelivery.length === 0 && notYetDeliverable.length === 0) return null
 
+  const hasMixedDeliverable = eligibleForDelivery.length > 0 && notYetDeliverable.length > 0;
+
   return (
-    <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl border border-indigo-100 p-5 space-y-4">
+    <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl border border-indigo-100 p-5 space-y-4 shadow-sm">
       <div className="flex items-center gap-2">
         <Truck className="w-5 h-5 text-indigo-600" />
         <h3 className="font-bold text-slate-800">Хүргэлтийн мэдээлэл</h3>
@@ -122,35 +124,46 @@ function UnifiedDeliverySection({ groups }: { groups: any[][] }) {
 
       {/* Already delivered orders */}
       {alreadyDelivered.length > 0 && (
-        <div className="flex items-start gap-3 text-sm text-green-700 bg-green-50 rounded-xl px-4 py-3 border border-green-100">
-          <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
+        <div className="flex items-start gap-3 text-sm text-green-700 bg-green-50/80 rounded-xl px-4 py-3 border border-green-200 shadow-sm">
+          <CheckCircle2 className="w-5 h-5 mt-0 flex-shrink-0 text-green-500" />
           <div>
-            <p className="font-semibold">Хүргэлт захиалагдсан ({alreadyDelivered.length} бараа)</p>
-            {deliveryAddress && <p className="text-xs text-green-600 mt-0.5">{deliveryAddress}</p>}
+            <p className="font-semibold text-green-800">Хүргэлт захиалагдсан ({alreadyDelivered.length} бараа)</p>
+            {deliveryAddress && <p className="text-xs font-medium text-green-600/90 mt-0.5">{deliveryAddress}</p>}
           </div>
         </div>
       )}
 
       {/* Eligible orders — show the unified button */}
       {eligibleForDelivery.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-sm text-slate-600">
-            🚚 <strong>{eligibleForDelivery.length}</strong> бараа хүргэлтэд бэлэн байна. Нэг удаа хаягаа оруулахад бүгд хүргэгдэнэ.
+        <div className="space-y-3 bg-white p-4 rounded-xl border border-indigo-100 shadow-sm">
+          <p className="text-sm text-slate-700 font-medium">
+            🚚 <strong>{eligibleForDelivery.length}</strong> бараа хүргэлтэд бэлэн байна.
           </p>
           <DeliveryRequestButton orderIds={eligibleForDelivery.map((o: any) => o.id)} />
+          
+          {hasMixedDeliverable && (
+            <div className="mt-2 bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800 leading-relaxed font-medium">
+              ⚠️ <strong className="text-amber-900">Анхаарах:</strong> Танд ирээгүй <strong>{notYetDeliverable.length}</strong> бараа байна. 
+              Та ирсэн барааг нь одоо салгаж хүргүүлэх бол, дараа нь үлдсэн барааг хүргэхэд <strong>ДАХИН хүргэлтийн төлбөр төлнө</strong> гэдгийг анхаарна уу!
+            </div>
+          )}
         </div>
       )}
 
       {/* Not yet deliverable */}
       {notYetDeliverable.length > 0 && eligibleForDelivery.length === 0 && alreadyDelivered.length === 0 && (
-        <div className="text-xs text-slate-400 bg-white rounded-lg px-4 py-3 border border-dashed">
-          🕐 Таны {notYetDeliverable.length} бараа одоогоор карго дээр байгаа тул хүргэлт захиалах боломжгүй. Бараа ирсний дараа автоматаар идэвхтэй болно.
+        <div className="text-sm text-slate-500 bg-white rounded-xl px-4 py-3 border border-slate-200 shadow-sm flex gap-3 items-start">
+          <Clock className="w-5 h-5 text-slate-400 flex-shrink-0 mt-0.5" />
+          <p className="leading-relaxed">
+            Таны {notYetDeliverable.length} бараа одоогоор хүлээгдэж байгаа тул хүргэлт захиалах боломжгүй. 
+            Бараа тань Монголд ирсний дараа автоматаар хүргэлт захиалах боломжтой болно.
+          </p>
         </div>
       )}
 
       {notYetDeliverable.length > 0 && (eligibleForDelivery.length > 0 || alreadyDelivered.length > 0) && (
-        <p className="text-xs text-slate-400">
-          🕐 Үлдсэн {notYetDeliverable.length} бараа карго дээр явж байгаа тул хүргэлт захиалахад бэлэн болсны дараа энд автоматаар гарч ирнэ.
+        <p className="text-xs text-slate-500 font-medium px-1">
+          🕐 Үлдсэн {notYetDeliverable.length} бараа хүлээгдэж байна. Бэлэн болсны дараа автоматаар хүргэлтийн товч нээгдэнэ.
         </p>
       )}
     </div>
@@ -159,6 +172,16 @@ function UnifiedDeliverySection({ groups }: { groups: any[][] }) {
 
 // ── OrderGroup Component ─────────────────────────────────────────────────────
 
+function getStatusIcon(statusName: string | undefined) {
+  if (!statusName) return "🕒";
+  const name = statusName.toLowerCase();
+  if (name.includes("солонгосоос хөдөлсөн") || name.includes("замдаа")) return "✈️";
+  if (name.includes("улаанбаатарт ирсэн") || name.includes("ирсэн")) return "✅";
+  if (name.includes("баталгаажсан")) return "🛒";
+  if (name.includes("хүргэгдсэн") || name.includes("хүргэлтэнд")) return "🚚";
+  return "🕒";
+}
+
 function OrderGroup({ orders, completed = false }: { orders: any[]; completed?: boolean }) {
   const first = orders[0]
   const totalAmount = orders.reduce((s: number, o: any) => s + Number(o.totalAmount || 0), 0)
@@ -166,73 +189,85 @@ function OrderGroup({ orders, completed = false }: { orders: any[]; completed?: 
   const allDeliveryRequested = orders.every((o: any) => o.wantsDelivery)
   const someDeliveryRequested = orders.some((o: any) => o.wantsDelivery)
 
-  // The "representative" status to show (pick latest / highest priority)
-  const latestOrder = orders.slice().sort((a: any, b: any) =>
-    new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-  )[0]
-
   // Card border color: green if all delivered, amber if some, default otherwise
   const borderClass = allDeliveryRequested 
-    ? "border-l-4 border-l-green-400" 
+    ? "border-emerald-300 shadow-emerald-500/10 ring-1 ring-emerald-500/20" 
     : someDeliveryRequested 
-      ? "border-l-4 border-l-amber-400" 
-      : ""
+      ? "border-amber-300 shadow-amber-500/10 ring-1 ring-amber-500/20" 
+      : "border-slate-200/60 shadow-slate-200/50"
 
   return (
-    <div className={`bg-white rounded-xl border overflow-hidden ${borderClass}`}>
+    <div className={`bg-white rounded-xl border shadow-sm transition-all overflow-hidden ${borderClass}`}>
       {/* Header */}
-      <div className="bg-slate-50 border-b px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <div className="bg-slate-50/50 border-b border-slate-100 px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${allFinal ? "bg-green-100" : "bg-blue-100"}`}>
+          <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm border ${allFinal ? "bg-emerald-50 border-emerald-100 text-emerald-600" : "bg-white border-slate-200 text-slate-500"}`}>
             {allFinal
-              ? <CheckCircle2 className="w-4 h-4 text-green-600" />
-              : <Clock className="w-4 h-4 text-blue-600" />}
+              ? <CheckCircle2 className="w-4 h-4" />
+              : <Package className="w-4 h-4" />}
           </div>
           <div>
-            <p className="text-sm font-semibold text-slate-900">
-              {orders.length > 1 ? `${orders.length} бараа нэг захиалгад` : "Захиалга"}
+            <p className="text-sm font-bold text-slate-800">
+              {orders.length > 1 ? `${orders.length} ширхэг бараа` : "Захиалсан бараа"}
             </p>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs font-medium text-slate-400 mt-0.5">
               {new Date(first.createdAt).toLocaleDateString("mn-MN")} захиалсан
             </p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           {allDeliveryRequested && (
-            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-green-100 text-green-700 flex items-center gap-1">
-              <Truck className="w-3 h-3" /> Хүргэлтэд
+            <span className="text-[10px] px-2.5 py-1 rounded-full font-bold bg-emerald-100 text-emerald-700 flex items-center gap-1.5 border border-emerald-200 shadow-sm">
+              <Truck className="w-3 h-3" /> БҮГД ХҮРГЭЛТЭД
             </span>
           )}
-          <span className={`text-xs px-2 py-1 rounded-full font-medium ${allFinal ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}`}>
-            {latestOrder.status?.name || "Хүлээгдэж байна"}
-          </span>
-          <span className="font-bold text-slate-900">₮{totalAmount.toLocaleString()}</span>
+          {totalAmount > 0 ? (
+            <span className="font-extrabold text-slate-800 text-lg tracking-tight">₮{totalAmount.toLocaleString()}</span>
+          ) : (
+             <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">Төлөгдсөн</span>
+          )}
         </div>
       </div>
 
       {/* Items */}
-      <div className="divide-y">
-        {orders.map((order: any) => (
-          <div key={order.id} className={`px-6 py-4 flex items-center justify-between gap-4 ${order.wantsDelivery ? "bg-green-50/30" : ""}`}>
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <Package className={`w-4 h-4 flex-shrink-0 ${order.wantsDelivery ? "text-green-400" : "text-slate-300"}`} />
-              <div className="min-w-0">
-                <p className="font-medium text-slate-800 truncate">{order.batch?.product?.name}</p>
-                <p className="text-xs text-slate-400">#{order.orderNumber} · {order.quantity} ш</p>
+      <div className="divide-y divide-slate-50">
+        {orders.map((order: any) => {
+          const isPending = !order.status?.isDeliverable && !order.status?.isFinal;
+          return (
+            <div key={order.id} className={`px-5 py-4 flex items-center justify-between gap-4 transition-colors ${order.wantsDelivery ? "bg-emerald-50/30" : "hover:bg-slate-50/50"} ${isPending ? "opacity-75" : ""}`}>
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                {isPending ? (
+                  <Clock className="w-4 h-4 flex-shrink-0 text-slate-300" />
+                ) : (
+                  <Package className={`w-4 h-4 flex-shrink-0 ${order.wantsDelivery ? "text-emerald-400" : "text-indigo-400"}`} />
+                )}
+                <div className="min-w-0">
+                  <p className={`font-semibold truncate ${isPending ? "text-slate-500" : "text-slate-800"}`}>
+                    {order.batch?.product?.name}
+                  </p>
+                  <p className="text-xs text-slate-400 mt-0.5 font-medium">#{order.orderNumber} · {order.quantity} ш</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {order.wantsDelivery && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-100/80 text-emerald-700 font-bold flex items-center gap-1 whitespace-nowrap border border-emerald-200/60 shadow-sm">
+                    <Truck className="w-3 h-3" /> Хүргэлт
+                  </span>
+                )}
+                <span className={`text-xs px-2.5 py-1 rounded-full font-bold whitespace-nowrap border shadow-sm flex items-center gap-1.5 ${
+                  order.status?.isFinal 
+                    ? "bg-emerald-50 border-emerald-200/50 text-emerald-700" 
+                    : isPending
+                      ? "bg-slate-50 border-slate-200/60 text-slate-600"
+                      : "bg-blue-50 border-blue-200/50 text-blue-700"
+                }`}>
+                  <span className="text-sm leading-none">{getStatusIcon(order.status?.name)}</span>
+                  {order.status?.name || "Хүлээгдэж байна"}
+                </span>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              {order.wantsDelivery && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-semibold flex items-center gap-0.5 whitespace-nowrap">
-                  <Truck className="w-2.5 h-2.5" /> Хүргэлт
-                </span>
-              )}
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${order.status?.isFinal ? "bg-green-50 text-green-600" : "bg-blue-50 text-blue-600"}`}>
-                {order.status?.name || "Хүлээгдэж байна"}
-              </span>
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

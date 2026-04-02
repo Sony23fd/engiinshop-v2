@@ -47,6 +47,7 @@ model Product {
   sourceLink       String?
   isActive         Boolean  @default(true)
   weight           Decimal? @default(0.0)
+  options          Json?    // e.g. [{"name": "Өнгө", "values": ["Хар", "Цагаан"]}, {"name": "Хэмжээ", "values": ["36", "37"]}]
   
   batches          Batch[]
   
@@ -113,6 +114,7 @@ model Order {
   customerPhone  String   // 99723599
   accountNumber  String?  // Paid from account e.g. 5071443386
   quantity       Int      @default(1)
+  selectedOptions Json?   // e.g. {"Өнгө": "Хар", "Хэмжээ": "37"}
   
   arrivalDate    DateTime? // ирэх өдөр
   deliveryDate   DateTime? // хүргүүлэх өдөр

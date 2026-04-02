@@ -64,54 +64,63 @@ export function ImageUploader({ productId, currentImageUrl, batchName }: Props) 
   }
 
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex flex-col items-start gap-1">
       {/* Image preview / upload zone */}
       <div
         onClick={() => inputRef.current?.click()}
         onDrop={handleDrop}
         onDragOver={e => e.preventDefault()}
-        className="w-16 h-16 rounded-lg border-2 border-dashed border-slate-200 hover:border-indigo-400 cursor-pointer overflow-hidden transition-colors relative group bg-slate-50 flex-shrink-0"
+        className={`rounded-xl border-2 overflow-hidden transition-all relative group cursor-pointer flex-shrink-0 shadow-sm ${
+          preview ? "w-20 h-20 border-slate-200" : "w-28 h-20 border-dashed border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100 hover:border-indigo-400"
+        }`}
       >
         {preview ? (
           <>
             <img src={preview} alt={batchName} className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
               <ImagePlus className="w-5 h-5 text-white" />
+              <span className="text-[10px] text-white font-medium">Солих</span>
             </div>
           </>
         ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
-            {uploading
-              ? <Loader2 className="w-5 h-5 text-indigo-400 animate-spin" />
-              : <ImagePlus className="w-5 h-5 text-slate-300 group-hover:text-indigo-400 transition-colors" />
-            }
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 p-2 text-center">
+            {uploading ? (
+              <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
+            ) : (
+              <>
+                <ImagePlus className="w-6 h-6 text-indigo-400 group-hover:scale-110 transition-transform" />
+                <span className="text-[10px] font-semibold text-indigo-600 leading-tight">Зураг оруулах</span>
+              </>
+            )}
           </div>
         )}
 
         {/* Uploading overlay */}
-        {uploading && (
-          <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
-            <Loader2 className="w-5 h-5 text-indigo-500 animate-spin" />
+        {uploading && preview && (
+          <div className="absolute inset-0 bg-white/70 backdrop-blur-sm flex flex-col items-center justify-center">
+            <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
           </div>
         )}
 
         {/* Success overlay */}
         {success && (
-          <div className="absolute inset-0 bg-green-500/80 flex items-center justify-center">
-            <CheckCircle2 className="w-6 h-6 text-white" />
+          <div className="absolute inset-0 bg-emerald-500/90 flex flex-col items-center justify-center text-white">
+            <CheckCircle2 className="w-6 h-6 mb-1" />
+            <span className="text-[10px] font-bold">Амжилттай</span>
           </div>
         )}
       </div>
 
       <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleChange} />
 
-      {error && (
-        <div className="flex items-center gap-1 text-[10px] text-red-500 max-w-[100px] text-center leading-tight">
-          <X className="w-3 h-3 flex-shrink-0" />
-          {error}
+      {error ? (
+        <div className="flex items-start gap-1 text-[10px] text-red-600 max-w-[112px] leading-tight font-medium bg-red-50 p-1 rounded">
+          <X className="w-3 h-3 flex-shrink-0 mt-0.5" />
+          <span>{error}</span>
         </div>
+      ) : (
+        !preview && <span className="text-[10px] text-slate-400 font-medium px-1">PNG, JPG (Max 5MB)</span>
       )}
-      <span className="text-[10px] text-slate-400">Зураг</span>
     </div>
   )
 }

@@ -134,6 +134,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
             termsOfService={shopSettings.terms_of_service}
             deliveryTerms={shopSettings.delivery_terms}
             isPreOrder={(batch as any).isPreOrder}
+            options={(batch.product as any)?.options}
           />
         </div>
 

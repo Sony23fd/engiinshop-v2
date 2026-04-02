@@ -245,6 +245,7 @@ export async function createOrder(data: {
   batchId: string
   wantsDelivery?: boolean
   transactionRef?: string  // shared ref for multi-item cart checkout
+  selectedOptions?: any
 }) {
   try {
     const result = await db.$transaction(async (tx) => {
@@ -275,6 +276,7 @@ export async function createOrder(data: {
           totalAmount: data.totalAmount,
           transactionRef,
           creationSource: "WEB",
+          selectedOptions: data.selectedOptions,
           ...(defaultStatus?.id && { statusId: defaultStatus.id })
         } as any
       });

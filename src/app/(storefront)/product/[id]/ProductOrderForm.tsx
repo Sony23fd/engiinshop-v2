@@ -19,9 +19,10 @@ interface Props {
   termsOfService?: string
   deliveryTerms?: string
   isPreOrder?: boolean
+  options?: Array<{name: string, values: string[]}>
 }
 
-export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQuantity, termsOfService, deliveryTerms, isPreOrder }: Props) {
+export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQuantity, termsOfService, deliveryTerms, isPreOrder, options }: Props) {
   const router = useRouter()
   const { removeItem } = useCart()
   const { toast } = useToast()
@@ -32,6 +33,15 @@ export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQua
   const [error, setError] = useState<string | null>(null)
   const [phoneError, setPhoneError] = useState<string | null>(null)
   const [agreedToTerms, setAgreedToTerms] = useState(false)
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>(() => {
+    const defaultOpts: Record<string, string> = {}
+    if (options) {
+      options.forEach(opt => {
+        if (opt.values.length > 0) defaultOpts[opt.name] = opt.values[0]
+      })
+    }
+    return defaultOpts
+  })
 
   const itemTotal = qty * unitPrice
   const totalAmount = itemTotal + (wantsDelivery ? deliveryFee : 0)
@@ -77,6 +87,7 @@ export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQua
       totalAmount,
       batchId,
       wantsDelivery: isPreOrder ? false : wantsDelivery,
+      selectedOptions: Object.keys(selectedOptions).length > 0 ? selectedOptions : undefined
     })
 
     if (result.success) {
@@ -150,6 +161,38 @@ export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQua
           Захиалгаа шалгах гол мэдээлэл — үнэн зөв оруулна уу.
         </p>
       </div>
+
+      {/* Product Options (Variants) */}
+      {options && options.length > 0 && (
+        <div className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+          <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+            <Package className="w-4 h-4 text-[#4e3dc7]" /> Сонголт
+          </h3>
+          <div className="space-y-3">
+            {options.map((opt, i) => (
+              <div key={i} className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{opt.name}</label>
+                <div className="flex flex-wrap gap-2">
+                  {opt.values.map(val => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setSelectedOptions({ ...selectedOptions, [opt.name]: val })}
+                      className={`text-sm px-3 py-1.5 rounded-lg border font-medium transition-all ${
+                        selectedOptions[opt.name] === val 
+                          ? "bg-[#4e3dc7] border-[#4e3dc7] text-white shadow-sm shadow-indigo-200" 
+                          : "bg-white border-slate-200 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50"
+                      }`}
+                    >
+                      {val}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="space-y-2">
         <label className="text-sm font-medium">Тоо ширхэг</label>
