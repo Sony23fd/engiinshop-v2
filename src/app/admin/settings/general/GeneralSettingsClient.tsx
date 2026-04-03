@@ -10,12 +10,14 @@ import Image from "next/image"
 import { Switch } from "@/components/ui/switch"
 
 import { SystemUpdateCard } from "@/components/admin/SystemUpdateCard"
+import { Role } from "@prisma/client"
 
 interface Props {
   initialSettings: Record<string, string>
+  userRole?: Role
 }
 
-export function GeneralSettingsClient({ initialSettings }: Props) {
+export function GeneralSettingsClient({ initialSettings, userRole }: Props) {
   const router = useRouter()
   const { toast } = useToast()
   
@@ -129,6 +131,9 @@ export function GeneralSettingsClient({ initialSettings }: Props) {
 
   return (
     <div className="space-y-8">
+      <div className="text-[10px] text-slate-400 font-mono uppercase bg-slate-50 p-1 rounded inline-block">
+        Debug - Таны эрх: {userRole || "Тодорхойгүй"}
+      </div>
       <Card className="border-slate-200 shadow-sm">
         <CardHeader>
           <CardTitle>Сайтын Лого</CardTitle>
@@ -288,7 +293,7 @@ export function GeneralSettingsClient({ initialSettings }: Props) {
         </CardFooter>
       </Card>
 
-      <SystemUpdateCard />
+      {userRole === "DATAADMIN" && <SystemUpdateCard />}
     </div>
   )
 }
