@@ -58,9 +58,44 @@ export async function getPendingOrders() {
           }
         ]
       } as any,
-      include: {
-        batch: { include: { product: true } },
-        status: true
+      select: {
+        id: true,
+        orderNumber: true,
+        customerName: true,
+        customerPhone: true,
+        accountNumber: true,
+        quantity: true,
+        totalAmount: true,
+        transactionRef: true,
+        paymentProofUrl: true,
+        paymentStatus: true,
+        wantsDelivery: true,
+        deliveryAddress: true,
+        createdAt: true,
+        batch: {
+          select: {
+            id: true,
+            batchNumber: true,
+            product: {
+              select: {
+                id: true,
+                name: true
+              }
+            },
+            category: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        },
+        status: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
       },
       orderBy: { createdAt: "desc" }
     })
@@ -72,6 +107,9 @@ export async function getPendingOrders() {
 
 export async function confirmOrderPayment(orderId: string) {
   try {
+    const admin = await getCurrentAdmin()
+    if (!admin) return { success: false, error: "Нэвтрэнэ үү" }
+
     const confirmedStatus = await db.orderStatusType.findFirst({ where: { name: "Баталгаажсан" } }) 
       || await db.orderStatusType.findFirst({ where: { isDefault: false, isFinal: false } });
 
@@ -79,6 +117,9 @@ export async function confirmOrderPayment(orderId: string) {
       where: { id: orderId },
       data: { 
         paymentStatus: "CONFIRMED",
+        confirmedById: admin.id,
+        confirmationMethod: "MANUAL",
+        confirmedAt: new Date(),
         ...(confirmedStatus?.id && { statusId: confirmedStatus.id })
       }
     })
@@ -92,6 +133,9 @@ export async function confirmOrderPayment(orderId: string) {
 
 export async function rejectOrderPayment(orderId: string) {
   try {
+    const admin = await getCurrentAdmin()
+    if (!admin) return { success: false, error: "Нэвтрэнэ үү" }
+
     await db.$transaction(async (tx) => {
       const order = await (tx.order as any).findUnique({ where: { id: orderId } })
       if (!order) return
@@ -133,6 +177,9 @@ export async function confirmGroupPayment(orderIds: string[]) {
       where: { id: { in: orderIds } },
       data: { 
         paymentStatus: "CONFIRMED",
+        confirmedById: admin.id,
+        confirmationMethod: "MANUAL",
+        confirmedAt: new Date(),
         ...(confirmedStatus?.id && { statusId: confirmedStatus.id })
       }
     })

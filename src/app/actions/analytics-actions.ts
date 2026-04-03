@@ -16,7 +16,7 @@ export async function logVisit(path: string, referrer?: string) {
     // Ignore admin paths for public analytics
     if (path.startsWith("/admin") || path.startsWith("/api")) return
 
-    await (db.visitorLog as any).create({
+    await (db as any).visitorLog.create({
       data: {
         ipHash,
         path,
@@ -39,7 +39,7 @@ export async function getAnalyticsSummary(days: number = 30) {
     const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000)
 
     // 1. Total Page Views
-    const totalViews = await (db.visitorLog as any).count({
+    const totalViews = await (db as any).visitorLog.count({
       where: { createdAt: { gte: cutoff } }
     })
 
@@ -75,6 +75,18 @@ export async function getAnalyticsSummary(days: number = 30) {
       count: Number(v.count)
     }))
 
+    // 6. Orders by Category (for Pie Chart)
+    const categoryStats = await db.$queryRawUnsafe<any[]>(
+      `SELECT c.name, COUNT(o.id) as count 
+       FROM "Order" o
+       JOIN "Batch" b ON o."batchId" = b.id
+       JOIN "Category" c ON b."categoryId" = c.id
+       WHERE o."createdAt" >= $1 AND o."paymentStatus" != 'REJECTED'
+       GROUP BY c.name
+       ORDER BY count DESC`,
+      cutoff
+    )
+
     return { 
       success: true, 
       stats: {
@@ -82,7 +94,8 @@ export async function getAnalyticsSummary(days: number = 30) {
         uniqueVisitors,
         activeUsers,
         topPages,
-        viewsOverTime
+        viewsOverTime,
+        categoryStats: categoryStats.map(c => ({ name: c.name, value: Number(c.count) }))
       }
     }
   } catch (error) {

@@ -182,6 +182,8 @@ function getStatusIcon(statusName: string | undefined) {
   return "🕒";
 }
 
+import { OrderStatusTimeline } from "@/components/OrderStatusTimeline"
+
 function OrderGroup({ orders, completed = false }: { orders: any[]; completed?: boolean }) {
   const first = orders[0]
   const totalAmount = orders.reduce((s: number, o: any) => s + Number(o.totalAmount || 0), 0)
@@ -227,6 +229,14 @@ function OrderGroup({ orders, completed = false }: { orders: any[]; completed?: 
              <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">Төлөгдсөн</span>
           )}
         </div>
+      </div>
+
+      {/* Visual Status Timeline (for the entire group) */}
+      <div className="px-5 py-2 border-b border-slate-50">
+        <OrderStatusTimeline 
+          status={first.status?.name || ""} 
+          isFinal={first.status?.isFinal} 
+        />
       </div>
 
       {/* Items */}

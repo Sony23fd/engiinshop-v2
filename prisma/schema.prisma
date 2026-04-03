@@ -16,6 +16,7 @@ model User {
   name      String?
   role      Role     @default(CUSTOMER)
   createdAt DateTime @default(now())
+  confirmedOrders Order[] @relation("ConfirmedOrders")
 }
 
 model Category {
@@ -43,6 +44,9 @@ model Product {
   updatedAt     DateTime @updatedAt
   options       Json?
   batches       Batch[]
+
+  @@index([isActive])
+  @@index([name])
 }
 
 model Batch {
@@ -65,6 +69,11 @@ model Batch {
   category           Category    @relation(fields: [categoryId], references: [id])
   product            Product     @relation(fields: [productId], references: [id])
   orders             Order[]
+
+  @@index([status])
+  @@index([isAvailableForSale])
+  @@index([categoryId])
+  @@index([productId])
 }
 
 model OrderStatusType {
@@ -113,8 +122,17 @@ model Order {
   updatedAt             DateTime         @updatedAt
   isRefunded            Boolean          @default(false)
   selectedOptions       Json?
+  confirmedById         String?
+  confirmationMethod    String?          @default("MANUAL")
+  confirmedAt           DateTime?
+  confirmedBy           User?            @relation("ConfirmedOrders", fields: [confirmedById], references: [id])
   batch                 Batch            @relation(fields: [batchId], references: [id])
   status                OrderStatusType? @relation(fields: [statusId], references: [id])
+
+  @@index([paymentStatus])
+  @@index([updatedAt])
+  @@index([customerPhone])
+  @@index([transactionRef])
 }
 
 model ShopSettings {
@@ -135,6 +153,9 @@ model ActivityLog {
   targetUrl String?
   detail    String?
   createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
 }
 
 model VisitorLog {

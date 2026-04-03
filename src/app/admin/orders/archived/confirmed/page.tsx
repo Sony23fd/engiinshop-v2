@@ -2,6 +2,8 @@ import { getArchivedConfirmedOrders } from "@/app/actions/order-actions"
 import { CheckCircle, Package, Truck, User, ChevronLeft, ChevronRight } from "lucide-react"
 import { ListSearchFilter } from "@/components/admin/ListSearchFilter"
 import Link from "next/link"
+import { cn } from "@/lib/utils"
+import { OrderStatusTimeline } from "@/components/OrderStatusTimeline"
 
 export const dynamic = "force-dynamic"
 
@@ -101,7 +103,13 @@ export default async function ConfirmedOrdersArchivePage({
                       <div className="flex items-start gap-3 flex-wrap">
                         <div className="flex-1 min-w-0 space-y-1.5">
                           <div className="flex items-center gap-3 flex-wrap">
-                            <span className="font-semibold text-slate-800">{order.batch?.product?.name}</span>
+                            <Link 
+                              href={`/admin/orders/batch/${order.batchId}`}
+                              className="font-semibold text-slate-800 hover:text-indigo-600 hover:underline transition-colors"
+                              title="Багцын дэлгэрэнгүйг харах"
+                            >
+                              {order.batch?.product?.name}
+                            </Link>
                             <span className="text-slate-400 text-sm">#{order.orderNumber}</span>
                             {order.status && (
                               <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">
@@ -109,6 +117,15 @@ export default async function ConfirmedOrdersArchivePage({
                               </span>
                             )}
                           </div>
+
+                          {/* Visual Status Timeline */}
+                          <div className="py-6 px-4 bg-slate-50/50 rounded-xl my-4 border border-slate-100/50">
+                            <OrderStatusTimeline 
+                              status={order.status?.name || ""} 
+                              isFinal={order.status?.isFinal} 
+                            />
+                          </div>
+
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-1 text-sm">
                             <div>
                               <span className="text-slate-400 text-xs block">Тоо</span>
@@ -126,7 +143,23 @@ export default async function ConfirmedOrdersArchivePage({
                             </div>
                             <div>
                               <span className="text-slate-400 text-xs block">Батлагдсан огноо</span>
-                              <span className="text-xs text-slate-500">{new Date(order.updatedAt || order.createdAt).toLocaleString("mn-MN")}</span>
+                              <span className="text-xs text-slate-500">{new Date(order.confirmedAt || order.updatedAt || order.createdAt).toLocaleString("mn-MN")}</span>
+                            </div>
+                            <div className="sm:col-span-1">
+                              <span className="text-slate-400 text-xs block">Баталгаажуулсан</span>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <span className={cn(
+                                  "text-[11px] font-bold px-2 py-0.5 rounded-full uppercase tracking-tight",
+                                  order.confirmationMethod === "QPAY_AUTO" 
+                                    ? "bg-blue-100 text-blue-700" 
+                                    : "bg-emerald-100 text-emerald-700"
+                                )}>
+                                  {order.confirmationMethod === "QPAY_AUTO" ? "Систем (QPay)" : (order.confirmedBy?.name || "Админ")}
+                                </span>
+                                {order.confirmationMethod === "MANUAL" && (
+                                  <span className="text-[10px] text-slate-400 italic">(Гараар)</span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>

@@ -113,6 +113,11 @@ export default async function PendingOrdersPage({
                           <div className="flex items-center gap-3 flex-wrap">
                             <span className="font-semibold text-slate-800">{order.batch?.product?.name}</span>
                             <span className="text-slate-400 text-sm">#{order.orderNumber}</span>
+                            {order.batch?.category?.name && (
+                              <span className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-md border border-indigo-100 font-medium capitalize">
+                                {order.batch.category.name}
+                              </span>
+                            )}
                           </div>
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-1 text-sm">
                             <div>

@@ -7,7 +7,7 @@ import { getCurrentAdmin, logActivity } from "@/lib/auth"
 
 export async function getOrders() {
   try {
-    const orders = await db.order.findMany({
+    const orders = await (db.order as any).findMany({
       where: {
         paymentStatus: { not: "REJECTED" },
         OR: [
@@ -15,11 +15,27 @@ export async function getOrders() {
           { status: { isFinal: false } }
         ]
       },
-      include: {
+      select: {
+        id: true,
+        orderNumber: true,
+        customerName: true,
+        customerPhone: true,
+        accountNumber: true,
+        quantity: true,
+        totalAmount: true,
+        transactionRef: true,
+        paymentStatus: true,
+        createdAt: true,
+        updatedAt: true,
+        status: { select: { id: true, name: true, color: true } },
         batch: {
-          include: { product: true, category: true }
-        },
-        status: true
+          select: {
+            id: true,
+            batchNumber: true,
+            product: { select: { id: true, name: true } },
+            category: { select: { id: true, name: true } }
+          }
+        }
       },
       orderBy: { createdAt: "desc" },
     })
@@ -43,13 +59,28 @@ export async function getPickedUpOrders(days: number = 30) {
       whereClause.updatedAt = { gte: cutoffDate };
     }
 
-    const orders = await db.order.findMany({
+    const orders = await (db.order as any).findMany({
       where: whereClause,
-      include: {
+      select: {
+        id: true,
+        orderNumber: true,
+        customerName: true,
+        customerPhone: true,
+        accountNumber: true,
+        quantity: true,
+        totalAmount: true,
+        transactionRef: true,
+        paymentStatus: true,
+        updatedAt: true,
+        status: { select: { id: true, name: true, color: true } },
         batch: {
-          include: { product: true, category: true }
-        },
-        status: true
+          select: {
+            id: true,
+            batchNumber: true,
+            product: { select: { id: true, name: true } },
+            category: { select: { id: true, name: true } }
+          }
+        }
       },
       orderBy: { updatedAt: "desc" },
     })
@@ -73,13 +104,28 @@ export async function getDeliveredOrders(days: number = 30) {
       whereClause.updatedAt = { gte: cutoffDate };
     }
 
-    const orders = await db.order.findMany({
+    const orders = await (db.order as any).findMany({
       where: whereClause,
-      include: {
+      select: {
+        id: true,
+        orderNumber: true,
+        customerName: true,
+        customerPhone: true,
+        accountNumber: true,
+        quantity: true,
+        totalAmount: true,
+        transactionRef: true,
+        paymentStatus: true,
+        updatedAt: true,
+        status: { select: { id: true, name: true, color: true } },
         batch: {
-          include: { product: true, category: true }
-        },
-        status: true
+          select: {
+            id: true,
+            batchNumber: true,
+            product: { select: { id: true, name: true } },
+            category: { select: { id: true, name: true } }
+          }
+        }
       },
       orderBy: { updatedAt: "desc" },
     })
@@ -661,6 +707,12 @@ export async function confirmManualDeliveryRequest(orderIds: string[], address: 
 
 export async function checkDeliveryPayment(orderIds: string[], invoiceId: string) {
   try {
+    const { getShopSettings } = await import("@/app/actions/settings-actions")
+    const settings = await getShopSettings()
+    if (settings.qpay_enabled !== "true") {
+      return { success: false, error: "QPay одоогоор идэвхгүй байна" }
+    }
+
     const { checkQPayPayment } = await import("@/lib/qpay")
     const checkRes = await checkQPayPayment(invoiceId)
     
@@ -686,6 +738,12 @@ export async function checkDeliveryPayment(orderIds: string[], invoiceId: string
 
 export async function checkOrderPayment(transactionRef: string) {
   try {
+    const { getShopSettings } = await import("@/app/actions/settings-actions")
+    const settings = await getShopSettings()
+    if (settings.qpay_enabled !== "true") {
+      return { success: false, error: "QPay одоогоор идэвхгүй байна" }
+    }
+
     const orders = await (db.order as any).findMany({
       where: { transactionRef }
     })
@@ -1020,90 +1078,75 @@ export async function getArchivedConfirmedOrders(page: number = 1, limit: number
     };
 
     if (q) {
+      const numQ = parseInt(q, 10);
+      const isNum = !isNaN(numQ);
+
       where.OR = [
         { customerName: { contains: q, mode: 'insensitive' } },
         { customerPhone: { contains: q } },
-        { accountNumber: { contains: q } },
-        { transactionRef: { contains: q } }
+        { accountNumber: { contains: q, mode: 'insensitive' } },
+        { transactionRef: { contains: q, mode: 'insensitive' } },
+        { batch: { product: { name: { contains: q, mode: 'insensitive' } } } },
+        ...(isNum ? [
+          { orderNumber: numQ },
+          { batch: { batchNumber: numQ } }
+        ] : [])
       ]
     }
 
     const total = await db.order.count({ where });
-    const orders = await db.order.findMany({
-       where,
-       include: {
-         batch: { include: { product: true } },
-         status: true
-       },
-       orderBy: { updatedAt: "desc" },
-       skip: (Math.max(1, page) - 1) * limit,
-       take: limit
-    });
-    
-    return { success: true, orders: JSON.parse(JSON.stringify(orders)), total };
+    const orders = await (db.order as any).findMany({
+        where,
+        select: {
+          id: true,
+          orderNumber: true,
+          customerName: true,
+          customerPhone: true,
+          accountNumber: true,
+          quantity: true,
+          totalAmount: true,
+          transactionRef: true,
+          paymentStatus: true,
+          wantsDelivery: true,
+          deliveryAddress: true,
+          createdAt: true,
+          updatedAt: true,
+          batchId: true,
+          confirmedById: true,
+          confirmationMethod: true,
+          confirmedAt: true,
+          confirmedBy: {
+            select: {
+              id: true,
+              name: true
+            }
+          },
+          batch: {
+            select: {
+              id: true,
+              batchNumber: true,
+              product: {
+                select: {
+                  id: true,
+                  name: true
+                }
+              }
+            }
+          },
+          status: {
+            select: {
+              id: true,
+              name: true
+            }
+          }
+        },
+        orderBy: { updatedAt: "desc" },
+        skip: (Math.max(1, page) - 1) * limit,
+        take: limit
+     });
+     
+     return { success: true, orders: JSON.parse(JSON.stringify(orders)), total };
   } catch(error: any) {
     return { success: false, error: error.message, orders: [], total: 0 };
-  }
-}
-export async function moveOrdersToBatch(orderIds: string[], targetBatchId: string) {
-  try {
-    const adminMode = await getCurrentAdmin()
-    if (!adminMode) return { success: false, error: "Хандах эрхгүй" }
-
-    const result = await db.$transaction(async (tx) => {
-      // 1. Get target batch
-      const targetBatch = await tx.batch.findUnique({
-        where: { id: targetBatchId },
-        include: { product: true }
-      });
-      if (!targetBatch) throw new Error("Шилжүүлэх багц олдсонгүй");
-
-      // 2. Fetch orders and their current batches
-      const orders = await tx.order.findMany({
-        where: { id: { in: orderIds } }
-      });
-
-      for (const order of orders) {
-        // Skip if already in the target batch
-        if (order.batchId === targetBatchId) continue;
-
-        // A. Return quantity to old batch
-        await tx.batch.update({
-          where: { id: order.batchId },
-          data: { remainingQuantity: { increment: order.quantity } }
-        });
-
-        // B. Take quantity from new batch
-        await tx.batch.update({
-          where: { id: targetBatchId },
-          data: { remainingQuantity: { decrement: order.quantity } }
-        });
-
-        // C. Update order
-        await tx.order.update({
-          where: { id: order.id },
-          data: { batchId: targetBatchId }
-        });
-      }
-
-      return targetBatch;
-    });
-
-    await logActivity({
-      userId: adminMode.id,
-      userName: adminMode.name || "Сайтын админ",
-      userRole: adminMode.role,
-      action: "Захиалга шилжүүлсэн",
-      target: "Багц",
-      detail: `${orderIds.length} ширхэг захиалгыг #${result.batchNumber} (${result.product?.name}) багц руу шилжүүллээ.`,
-    })
-
-    revalidatePath("/admin/orders")
-    revalidatePath("/admin/orders/batch/" + targetBatchId)
-    
-    return { success: true }
-  } catch (error: any) {
-    console.error("Failed to move orders to batch:", error)
-    return { success: false, error: error.message }
   }
 }

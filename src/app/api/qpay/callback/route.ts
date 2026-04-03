@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
-import { checkQPayPayment, createQPayEbarimt, getQPayPayment } from "@/lib/qpay"
+import { getShopSettings } from "@/app/actions/settings-actions"
+import { checkQPayPayment, createQPayEbarimt } from "@/lib/qpay"
 import { orderEmitter } from "@/lib/orderEvents"
 
 export async function GET(request: Request) {
@@ -21,6 +22,13 @@ async function handleCallback(request: Request) {
   }
 
   try {
+    // 1. Check if QPay is even enabled in the system
+    const settings = await getShopSettings()
+    if (settings.qpay_enabled !== "true") {
+      console.warn("QPay callback received but QPay is currently disabled in settings.")
+      return NextResponse.json({ error: "QPay is currently disabled" }, { status: 403 })
+    }
+
     // Find orders with this ref
     const orders = await (db.order as any).findMany({
       where: { transactionRef }
@@ -104,7 +112,9 @@ async function handleCallback(request: Request) {
         statusId: webConfirmedStatus.id,
         ebarimtId: ebarimtId,
         ebarimtQr: ebarimtQr,
-        ebarimtLottery: ebarimtLottery
+        ebarimtLottery: ebarimtLottery,
+        confirmationMethod: "QPAY_AUTO",
+        confirmedAt: new Date()
       }
     })
 

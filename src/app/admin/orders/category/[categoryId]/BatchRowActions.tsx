@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useToast } from "@/components/ui/use-toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Eye, Edit2, Trash2 } from "lucide-react"
+import { Eye, Edit2, Trash2, MoveRight } from "lucide-react"
 import Link from "next/link"
 import {
   Sheet,
@@ -23,11 +23,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { updateBatch, deleteBatch } from "@/app/actions/batch-actions"
+import { MoveBatchCategoryDialog } from "@/components/admin/MoveBatchCategoryDialog"
 
-export function BatchRowActions({ batch, categoryId, role }: { batch: any, categoryId: string, role?: string }) {
+export function BatchRowActions({ batch, categoryId, role, allCategories }: { batch: any, categoryId: string, role?: string, allCategories: any[] }) {
   const { toast } = useToast()
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [isMoveOpen, setIsMoveOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
 
@@ -82,12 +84,16 @@ export function BatchRowActions({ batch, categoryId, role }: { batch: any, categ
 
   return (
     <div className="flex items-center space-x-1">
-      <Link href={`/admin/orders/batch/${batch.id}`} className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:text-accent-foreground h-8 w-8 text-[#4F46E5] hover:bg-slate-100">
+      <Link href={`/admin/orders/batch/${batch.id}`} className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:text-accent-foreground h-8 w-8 text-[#4F46E5] hover:bg-slate-100" title="Захиалгууд харах">
         <Eye className="w-4 h-4" />
       </Link>
 
+      <button onClick={() => setIsMoveOpen(true)} className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-slate-100 h-8 w-8 text-indigo-500" title="Категори шилжүүлэх">
+        <MoveRight className="w-4 h-4" />
+      </button>
+
       <Sheet open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <SheetTrigger className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-slate-100 h-8 w-8 text-amber-500">
+        <SheetTrigger className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-slate-100 h-8 w-8 text-amber-500" title="Засах">
           <Edit2 className="w-4 h-4" />
         </SheetTrigger>
         <SheetContent className="overflow-y-auto w-full sm:max-w-md">
@@ -142,7 +148,7 @@ export function BatchRowActions({ batch, categoryId, role }: { batch: any, categ
       </Sheet>
 
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-        <DialogTrigger className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-slate-100 h-8 w-8 text-red-500">
+        <DialogTrigger className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-slate-100 h-8 w-8 text-red-500" title="Устгах">
           <Trash2 className="w-4 h-4" />
         </DialogTrigger>
         <DialogContent>
@@ -160,6 +166,13 @@ export function BatchRowActions({ batch, categoryId, role }: { batch: any, categ
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <MoveBatchCategoryDialog 
+        open={isMoveOpen} 
+        onOpenChange={setIsMoveOpen} 
+        batch={batch} 
+        categories={allCategories} 
+      />
     </div>
   )
 }

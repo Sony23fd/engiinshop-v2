@@ -184,3 +184,29 @@ export async function deleteBatch(id: string) {
     return { success: false, error: "Failed to delete batch" }
   }
 }
+export async function bulkUpdateBatchStatus(ids: string[], data: { 
+  status?: BatchStatus, 
+  cargoFeeStatus?: string,
+  isAvailableForSale?: boolean
+}) {
+  try {
+    if (!ids || ids.length === 0) return { success: false, error: "No batches selected" }
+
+    const updateData: any = {};
+    if (data.status) updateData.status = data.status;
+    if (data.cargoFeeStatus !== undefined) updateData.cargoFeeStatus = data.cargoFeeStatus;
+    if (data.isAvailableForSale !== undefined) updateData.isAvailableForSale = data.isAvailableForSale;
+
+    await db.batch.updateMany({
+      where: { id: { in: ids } },
+      data: updateData
+    })
+
+    revalidatePath("/admin/orders")
+    revalidatePath("/", "layout")
+    return { success: true }
+  } catch (error) {
+    console.error("Failed to bulk update batches:", error)
+    return { success: false, error: "Failed to bulk update batches" }
+  }
+}

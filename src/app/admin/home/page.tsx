@@ -236,6 +236,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         revenueData={revenueData} 
         topProducts={batchSales} 
         viewsOverTime={analyticsStats?.viewsOverTime || []} 
+        categoryStats={analyticsStats?.categoryStats || []}
       />
     </div>
   )
