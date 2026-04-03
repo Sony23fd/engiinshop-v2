@@ -12,9 +12,128 @@ model User {
   id        String   @id @default(cuid())
   phone     String?  @unique
   email     String?  @unique
-  password  String?  
+  password  String?
   name      String?
   role      Role     @default(CUSTOMER)
+  createdAt DateTime @default(now())
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  deliveryFee Decimal? @default(0)
+  isArchived  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  batches     Batch[]
+}
+
+model Product {
+  id            String   @id @default(cuid())
+  productNumber Int      @unique @default(autoincrement())
+  name          String
+  description   String?
+  imageUrl      String?
+  videoUrl      String?
+  price         Decimal
+  sourceLink    String?
+  isActive      Boolean  @default(true)
+  weight        Decimal? @default(0.0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  options       Json?
+  batches       Batch[]
+}
+
+model Batch {
+  id                 String      @id @default(cuid())
+  batchNumber        Int         @unique @default(autoincrement())
+  productId          String
+  categoryId         String
+  description        String?
+  targetQuantity     Int         @default(0)
+  remainingQuantity  Int         @default(0)
+  cargoFeeStatus     String?
+  price              Decimal?
+  status             BatchStatus @default(OPEN)
+  isAvailableForSale Boolean     @default(false)
+  deliveryFee        Decimal?    @default(0)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  isPreOrder         Boolean     @default(false)
+  closingDate        DateTime?
+  category           Category    @relation(fields: [categoryId], references: [id])
+  product            Product     @relation(fields: [productId], references: [id])
+  orders             Order[]
+}
+
+model OrderStatusType {
+  id            String   @id @default(cuid())
+  name          String
+  color         String?  @default("slate")
+  isFinal       Boolean  @default(false)
+  isDefault     Boolean  @default(false)
+  isDeliverable Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  orders        Order[]
+}
+
+model Order {
+  id                    String           @id @default(cuid())
+  orderNumber           Int              @unique @default(autoincrement())
+  batchId               String
+  customerName          String
+  customerPhone         String
+  accountNumber         String?
+  quantity              Int              @default(1)
+  arrivalDate           DateTime?
+  deliveryDate          DateTime?
+  deliveryAddress       String?
+  deliveryRequestedAt   DateTime?
+  statusId              String?
+  cargoFee              Decimal?         @default(0)
+  wantsDelivery         Boolean          @default(false)
+  deliveryFeePaid       Boolean          @default(false)
+  deliveryQpayInvoiceId String?
+  paymentProofUrl       String?
+  paymentStatus         String           @default("PENDING")
+  totalAmount           Decimal?         @default(0)
+  transactionRef        String?
+  qpayInvoiceId         String?
+  qpayQrText            String?
+  qpayUrls              Json?
+  ebarimtId             String?
+  ebarimtQr             String?
+  ebarimtLottery        String?
+  ebarimtAmount         String?
+  creationSource        String?          @default("WEB")
+  createdByAdmin        String?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  isRefunded            Boolean          @default(false)
+  selectedOptions       Json?
+  batch                 Batch            @relation(fields: [batchId], references: [id])
+  status                OrderStatusType? @relation(fields: [statusId], references: [id])
+}
+
+model ShopSettings {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String
+  userName  String
+  userRole  String
+  action    String
+  target    String?
+  targetUrl String?
+  detail    String?
   createdAt DateTime @default(now())
 }
 
@@ -26,150 +145,9 @@ enum Role {
   SHOPPER
 }
 
-model Category {
-  id          String   @id @default(cuid())
-  name        String   // e.g. "2026.03 сар"
-  deliveryFee Decimal? @default(0)  // Category-wide delivery fee for direct sales
-  isArchived  Boolean  @default(false) // Archived categories hidden from main list
-  batches     Batch[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model Product {
-  id               String   @id @default(cuid())
-  productNumber    Int      @unique @default(autoincrement()) // e.g. #168
-  name             String
-  description      String?
-  imageUrl         String?
-  videoUrl         String?
-  price            Decimal  // Catalog Price
-  sourceLink       String?
-  isActive         Boolean  @default(true)
-  weight           Decimal? @default(0.0)
-  options          Json?    // e.g. [{"name": "Өнгө", "values": ["Хар", "Цагаан"]}, {"name": "Хэмжээ", "values": ["36", "37"]}]
-  
-  batches          Batch[]
-  
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-}
-
 enum BatchStatus {
-  OPEN       // Orders are being accepted
-  CLOSED     // Sold out or time passed
-  SHIPPED    // Batch shipped to Mongolia
-  ARRIVED    // Batch arrived in UB
-}
-
-// "Захиалга" in the Admin UI - The Procurement Run
-model Batch {
-  id               String   @id @default(cuid())
-  batchNumber      Int      @unique @default(autoincrement()) // e.g. #152
-  
-  productId        String
-  product          Product  @relation(fields: [productId], references: [id])
-  
-  categoryId       String
-  category         Category @relation(fields: [categoryId], references: [id])
-  
-  description      String?  // e.g. "карго авахгүй"
-  targetQuantity   Int      @default(0)   // ЗОРИЛТОТ ТОО
-  remainingQuantity Int     @default(0)   // ҮЛДЭГДЭЛ ТОO
-  closingDate      DateTime? // Урьдчилсан захиалга хаагдах хугацаа
-  cargoFeeStatus   String?
-  price            Decimal? // Override price for this batch
-  status           BatchStatus @default(OPEN)
-  isAvailableForSale Boolean  @default(false)  // Admin manually enables for direct sale
-  isPreOrder       Boolean  @default(false)    // Pre-order flag
-  deliveryFee        Decimal? @default(0)       // Extra fee for home delivery (₮)
-  
-  orders           Order[]
-  
-  createdAt        DateTime @default(now()) // Ordered Date
-  updatedAt        DateTime @updatedAt
-}
-
-model OrderStatusType {
-  id            String   @id @default(cuid())
-  name          String   // e.g. "захиалга баталгаажсан"
-  color         String?  @default("slate")
-  isFinal       Boolean  @default(false)
-  isDefault     Boolean  @default(false) // Auto-assigned to new orders
-  isDeliverable Boolean  @default(false) // Enables delivery request button for customer
-  orders        Order[]
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}
-
-// "Захиалгын зүйлс" in the Admin UI - The Customer's specific items
-model Order {
-  id             String   @id @default(cuid())
-  orderNumber    Int      @unique @default(autoincrement()) // e.g. 1782
-  
-  batchId        String
-  batch          Batch    @relation(fields: [batchId], references: [id])
-  
-  customerName   String   // Otgoo Jargal
-  customerPhone  String   // 99723599
-  accountNumber  String?  // Paid from account e.g. 5071443386
-  quantity       Int      @default(1)
-  selectedOptions Json?   // e.g. {"Өнгө": "Хар", "Хэмжээ": "37"}
-  
-  arrivalDate    DateTime? // ирэх өдөр
-  deliveryDate   DateTime? // хүргүүлэх өдөр
-  deliveryAddress String?  // Хаяг
-  deliveryRequestedAt DateTime? // Хүргэлт яг захиалсан цаг хугацаа
-  
-  statusId       String?
-  status         OrderStatusType? @relation(fields: [statusId], references: [id])
-  
-  cargoFee       Decimal?  @default(0)
-  wantsDelivery  Boolean   @default(false)   // Customer chose home delivery
-  deliveryFeePaid Boolean  @default(false)   // Paid the extra delivery fee online
-  deliveryQpayInvoiceId String?              // ID of the dedicated delivery QPay invoice
-  paymentProofUrl String?                    // URL of uploaded payment screenshot
-  paymentStatus   String   @default("PENDING") // PENDING | CONFIRMED | REJECTED
-  totalAmount     Decimal? @default(0)        // Total including delivery fee
-  isRefunded      Boolean  @default(false)    // If the order was fully refunded back to customer
-  transactionRef  String?                     // Unique reference for payment (auto-generated)
-  
-  // QPay fields
-  qpayInvoiceId   String?
-  qpayQrText      String?
-  qpayUrls        Json?                       // Stores app deep links
-
-  // E-barimt fields
-  ebarimtId       String?
-  ebarimtQr       String?                     // QR data (for rendering the receipt QR)
-  ebarimtLottery  String?                     // Lottery number
-  ebarimtAmount   String?                     // Amount registered in E-barimt
-  
-  // Tracking fields
-  creationSource  String?  @default("WEB")    // "WEB" or "ADMIN"
-  createdByAdmin  String?                     // Name or ID of the admin who created it
-  
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-}
-
-// Shop-wide settings (bank account, payment info etc.)
-model ShopSettings {
-  id             String   @id @default(cuid())
-  key            String   @unique  // e.g. "bank_name", "bank_account", "bank_holder"
-  value          String   // e.g. "Хаан Банк", "5071443386", "Отгоо"
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-}
-// Activity log for auditing admin actions
-model ActivityLog {
-  id        String   @id @default(cuid())
-  userId    String
-  userName  String
-  userRole  String
-  action    String   // e.g. "Статус өөрчлөв"
-  target    String?  // e.g. "Захиалга #123"
-  targetUrl String?  // e.g. "/admin/orders/batch/abc"
-  detail    String?
-  createdAt DateTime @default(now())
+  OPEN
+  CLOSED
+  SHIPPED
+  ARRIVED
 }

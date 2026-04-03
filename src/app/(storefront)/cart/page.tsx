@@ -10,6 +10,7 @@ export default async function CartPage() {
       termsOfService={settings.terms_of_service}
       deliveryTerms={settings.delivery_terms}
       qpayEnabled={settings.qpay_enabled === "true"}
+      globalDeliveryFee={Number(settings.delivery_fee || 0)}
     />
   )
 }

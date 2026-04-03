@@ -8,7 +8,12 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
 
-export function CartClient({ termsOfService, deliveryTerms, qpayEnabled }: { termsOfService?: string; deliveryTerms?: string; qpayEnabled?: boolean }) {
+export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalDeliveryFee = 0 }: { 
+  termsOfService?: string; 
+  deliveryTerms?: string; 
+  qpayEnabled?: boolean;
+  globalDeliveryFee?: number;
+}) {
   const { items, removeItem, updateQty, clearCart, totalPrice } = useCart()
   const router = useRouter()
   const { toast } = useToast()
@@ -28,9 +33,10 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled }: { ter
   const hasInStock = items.some(i => !i.isPreOrder)
   const isMixedCart = hasPreOrder && hasInStock
 
-  // One-time delivery fee = highest delivery fee among cart items
+  // One-time delivery fee = highest delivery fee among cart items, fallback to global if all are 0
+  const maxItemFee = items.length > 0 ? Math.max(0, ...items.map(i => i.deliveryFee || 0)) : 0
   const singleDeliveryFee = (wantsDelivery && !hasPreOrder)
-    ? Math.max(0, ...items.map(i => i.deliveryFee))
+    ? (maxItemFee > 0 ? maxItemFee : globalDeliveryFee)
     : 0
   const grandTotal = totalPrice + singleDeliveryFee
 

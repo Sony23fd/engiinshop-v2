@@ -20,9 +20,6 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     notFound()
   }
 
-  const unitPrice = Number(batch.price || batch.product?.price || 0)
-  const deliveryFee = Number((batch as any).deliveryFee || 0)
-
   const [relatedBatches, shopSettings] = await Promise.all([
     db.batch.findMany({
       where: { 
@@ -35,6 +32,11 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     }),
     getShopSettings()
   ])
+
+  const unitPrice = Number(batch.price || batch.product?.price || 0)
+  const batchFee = Number((batch as any).deliveryFee || 0)
+  const globalFee = Number(shopSettings.delivery_fee || 0)
+  const deliveryFee = batchFee > 0 ? batchFee : globalFee
 
   return (
     <>

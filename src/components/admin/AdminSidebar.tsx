@@ -74,7 +74,7 @@ export function AdminSidebar({ className, role }: { className?: string; role: Ad
   const pathname = usePathname()
 
   return (
-    <aside className={cn("w-[280px] flex-col border-r border-slate-200 bg-white h-full shadow-sm", className)}>
+    <aside className={cn("w-[280px] flex flex-col border-r border-slate-200 bg-white h-full shadow-sm", className)}>
       <div className="p-6 border-b border-slate-100 flex flex-col justify-center min-h-[80px]">
         <Link href="/admin/home" className="flex items-center gap-3 w-max">
           <div className="bg-[#4e3dc7] text-white w-8 h-8 rounded-lg flex items-center justify-center font-bold text-lg shadow-md shadow-indigo-200">
@@ -98,7 +98,7 @@ export function AdminSidebar({ className, role }: { className?: string; role: Ad
         )}
       </div>
       
-      <nav className="flex-1 px-4 py-6 space-y-8 overflow-y-auto custom-scrollbar">
+      <nav className="flex-1 min-h-0 px-4 py-6 space-y-8 overflow-y-auto custom-scrollbar">
         {SIDEBAR_GROUPS.map((group, idx) => {
           const visibleItems = group.items.filter(item => item.roles.includes(role))
           if (visibleItems.length === 0) return null;
