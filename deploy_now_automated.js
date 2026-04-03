@@ -3,7 +3,7 @@ const { spawn } = require('child_process');
 const args = [
   '-o', 'StrictHostKeyChecking=no',
   '-tt', 'root@156.67.24.6',
-  'cd /var/www/engiinshop && git fetch --all && git reset --hard origin/main && git clean -fd && npm install && npx prisma db push && rm -rf .next && npm run build && pm2 restart engiinshop'
+  'cd /var/www/engiinshop && git fetch --all && git reset --hard origin/main && npm install && npx prisma db push && rm -rf .next && npm run build && pm2 restart engiinshop'
 ];
 
 const pass = '+(q/pvUP]!R11j/'; // From deploy_ssh.js

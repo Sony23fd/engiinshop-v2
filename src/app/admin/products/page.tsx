@@ -1,6 +1,7 @@
 import { getProducts } from "@/app/actions/product-actions"
 import { getCategories } from "@/app/actions/category-actions"
 import { CreateProductSheet } from "./CreateProductSheet"
+import { EditProductSheet } from "./EditProductSheet"
 import { BatchSaleToggle } from "./BatchSaleToggle"
 import { ImageUploader } from "@/components/admin/ImageUploader"
 import { VideoUploader } from "@/components/admin/VideoUploader"
@@ -69,12 +70,13 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
               <tr>
                 <th className="px-4 py-3">Бараа №</th>
                 <th className="px-4 py-3">Нэр</th>
+                <th className="px-4 py-3 text-center">Үйлдэл</th>
+                <th className="px-4 py-3 text-center">Зураг</th>
                 <th className="px-4 py-3">Зорилтот тоо</th>
                 <th className="px-4 py-3">Үлдэгдэл</th>
                 <th className="px-4 py-3">Үнэ</th>
                 <th className="px-4 py-3">Жин</th>
                 <th className="px-4 py-3">Статус</th>
-                <th className="px-4 py-3">Зураг</th>
                 <th className="px-4 py-3 text-right">Нүүрт гарах / Хүргэлтийн үнэ</th>
               </tr>
             </thead>
@@ -84,6 +86,23 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                   <tr key={batch.id} className="hover:bg-slate-50/50">
                     <td className="px-4 py-4 font-medium">#{batch.batchNumber}</td>
                     <td className="px-4 py-4 font-medium text-slate-900 max-w-[200px] truncate">{batch.product?.name}</td>
+                    <td className="px-4 py-4 text-center">
+                      <EditProductSheet batch={batch} />
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex gap-2 justify-center">
+                        <ImageUploader
+                          productId={batch.product?.id}
+                          currentImageUrl={batch.product?.imageUrl}
+                          batchName={batch.product?.name ?? ""}
+                        />
+                        <VideoUploader
+                          productId={batch.product?.id}
+                          currentVideoUrl={batch.product?.videoUrl}
+                          batchName={batch.product?.name ?? ""}
+                        />
+                      </div>
+                    </td>
                     <td className="px-4 py-4 text-slate-700 font-semibold">{batch.targetQuantity}</td>
                     <td className="px-4 py-4">
                       {(() => {

@@ -200,11 +200,63 @@ export async function createProduct(data: {
       include: { product: true }
     })
     
-    revalidatePath("/admin/products")
-    revalidatePath("/")
     return { success: true, product: JSON.parse(JSON.stringify(batch)) }
   } catch (error) {
     console.error("Failed to create product:", error)
     return { success: false, error: "Failed to create product" }
+  }
+}
+
+export async function updateProduct(data: {
+  productId: string
+  batchId: string
+  name: string
+  description?: string
+  targetQuantity: number
+  remainingQuantity: number
+  price: number
+  weight?: number
+  sourceLink?: string
+  options?: any[]
+}) {
+  try {
+    // 1. Update the Product entity
+    await db.product.update({
+      where: { id: data.productId },
+      data: {
+        name: data.name,
+        description: data.description,
+        price: data.price,
+        weight: data.weight,
+        sourceLink: data.sourceLink,
+        options: data.options || []
+      }
+    })
+
+    // 2. Update the Batch entity
+    let status: BatchStatus = BatchStatus.OPEN
+    if (data.remainingQuantity <= 0) {
+      status = BatchStatus.CLOSED
+    } else {
+      status = BatchStatus.OPEN
+    }
+
+    await db.batch.update({
+      where: { id: data.batchId },
+      data: {
+        price: data.price,
+        description: data.description,
+        targetQuantity: data.targetQuantity,
+        remainingQuantity: data.remainingQuantity,
+        status: status
+      }
+    })
+
+    revalidatePath("/admin/products")
+    revalidatePath("/")
+    return { success: true }
+  } catch (error) {
+    console.error("Failed to update product:", error)
+    return { success: false, error: "Failed to update product" }
   }
 }
