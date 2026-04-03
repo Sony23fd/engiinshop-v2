@@ -514,6 +514,120 @@ export async function updateOrderStatus(orderId: string, statusId: string) {
   }
 }
 
+export async function updateOrderDetails(orderId: string, data: any) {
+  try {
+    const admin = await getCurrentAdmin()
+    if (!admin) return { success: false, error: "Хандах эрхгүй" }
+
+    const oldOrder = await db.order.findUnique({ where: { id: orderId } })
+    if (!oldOrder) return { success: false, error: "Захиалга олдсонгүй" }
+
+    const result = await db.$transaction(async (tx) => {
+      // If quantity changed, adjust batch inventory
+      if (data.quantity !== undefined && data.quantity !== oldOrder.quantity) {
+        const diff = data.quantity - oldOrder.quantity
+        await (tx.batch as any).update({
+          where: { id: oldOrder.batchId },
+          data: { remainingQuantity: { decrement: diff } }
+        })
+      }
+
+      return await tx.order.update({
+        where: { id: orderId },
+        data: {
+          customerName: data.customerName,
+          customerPhone: data.customerPhone,
+          deliveryAddress: data.deliveryAddress,
+          quantity: data.quantity,
+          totalAmount: data.totalAmount,
+          accountNumber: data.accountNumber,
+          cargoFee: data.cargoFee
+        } as any
+      })
+    })
+
+    await logActivity({
+      userId: admin.id,
+      userName: admin.name || "Админ",
+      userRole: admin.role,
+      action: "Захиалга засварлав",
+      target: "Захиалга",
+      detail: `#${result.orderNumber} дугаартай захиалгын мэдээллийг шинэчлэв`,
+    })
+
+    revalidatePath("/admin/orders")
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+export async function deleteOrder(orderId: string) {
+  try {
+    const admin = await getCurrentAdmin()
+    if (!admin) return { success: false, error: "Хандах эрхгүй" }
+
+    const order = await db.order.findUnique({ where: { id: orderId } })
+    if (!order) return { success: false, error: "Захиалга олдсонгүй" }
+
+    await db.$transaction(async (tx) => {
+      // 1. Restore batch inventory
+      await (tx.batch as any).update({
+        where: { id: order.batchId },
+        data: { remainingQuantity: { increment: order.quantity } }
+      })
+
+      // 2. Delete order
+      await tx.order.delete({ where: { id: orderId } })
+    })
+
+    await logActivity({
+      userId: admin.id,
+      userName: admin.name || "Админ",
+      userRole: admin.role,
+      action: "Захиалга устгав",
+      target: "Захиалга",
+      detail: `#${order.orderNumber} захиалгыг устгалаа`,
+    })
+
+    revalidatePath("/admin/orders")
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+export async function restoreGroupOrder(orderIds: string[]) {
+  try {
+    const admin = await getCurrentAdmin()
+    if (!admin) return { success: false, error: "Хандах эрхгүй" }
+
+    const defaultStatus = await db.orderStatusType.findFirst({
+      where: { isDefault: true } as any
+    })
+
+    await db.order.updateMany({
+      where: { id: { in: orderIds } },
+      data: { statusId: defaultStatus?.id || null } as any
+    })
+
+    await logActivity({
+      userId: admin.id,
+      userName: admin.name || "Админ",
+      userRole: admin.role,
+      action: "Захиалга сэргээв",
+      target: "Захиалгууд",
+      detail: `${orderIds.length} ширхэг захиалгыг архив хэсгээс буцааж идэвхтэй төлөв рүү шилжүүллээ`,
+    })
+
+    revalidatePath("/admin/orders")
+    revalidatePath("/track")
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
 /**
  * Moves multiple orders from their current batches to a target batch.
  * Correctly updates inventory (remainingQuantity) for all involved batches.
@@ -950,5 +1064,96 @@ export async function getOrdersArchive(page: number = 1, limit: number = 20, sea
     return { success: true, orders: JSON.parse(JSON.stringify(orders)), total };
   } catch (error: any) {
     return { success: false, error: error.message, orders: [], total: 0 };
+  }
+}
+
+export async function getArchivedConfirmedOrders(page: number = 1, limit: number = 20, search: string = "") {
+  try {
+    const where: any = {
+      paymentStatus: "CONFIRMED",
+      statusId: { not: null },
+      status: { isFinal: true }
+    };
+
+    if (search) {
+      const isNum = !isNaN(Number(search));
+      const numQ = Number(search);
+      where.OR = [
+        { customerPhone: { contains: search, mode: 'insensitive' } },
+        { customerName: { contains: search, mode: 'insensitive' } },
+        { accountNumber: { contains: search, mode: 'insensitive' } },
+        ...(isNum ? [
+          { orderNumber: numQ },
+          { batch: { batchNumber: numQ } }
+        ] : [])
+      ]
+    }
+
+    const total = await db.order.count({ where });
+    const orders = await (db.order as any).findMany({
+      where,
+      include: {
+        batch: { include: { product: true, category: true } },
+        status: true,
+        confirmedBy: { select: { name: true } }
+      },
+      orderBy: { updatedAt: "desc" },
+      skip: (Math.max(1, page) - 1) * limit,
+      take: limit
+    });
+
+    return { success: true, orders: JSON.parse(JSON.stringify(orders)), total };
+  } catch (error: any) {
+    return { success: false, error: error.message, orders: [], total: 0 };
+  }
+}
+
+export async function getRefundOrders() {
+  try {
+    const orders = await (db.order as any).findMany({
+      where: {
+        OR: [
+          { paymentStatus: "REJECTED" },
+          { isRefunded: true }
+        ]
+      },
+      include: {
+        batch: { include: { product: true, category: true } },
+        status: true
+      },
+      orderBy: { updatedAt: "desc" }
+    })
+    return { success: true, orders: JSON.parse(JSON.stringify(orders)) }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+export async function toggleOrderRefund(orderId: string) {
+  try {
+    const admin = await getCurrentAdmin()
+    if (!admin) return { success: false, error: "Хандах эрхгүй" }
+
+    const order = await db.order.findUnique({ where: { id: orderId } })
+    if (!order) return { success: false, error: "Захиалга олдсонгүй" }
+
+    await db.order.update({
+      where: { id: orderId },
+      data: { isRefunded: !order.isRefunded } as any
+    })
+
+    await logActivity({
+      userId: admin.id,
+      userName: admin.name || "Админ",
+      userRole: admin.role,
+      action: "Буцаалт төлөв өөрчлөв",
+      target: "Захиалга",
+      detail: `#${order.orderNumber} захиалгын буцаалтын төлөвийг өөрчиллөө`,
+    })
+
+    revalidatePath("/admin/orders/refunds")
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message }
   }
 }
