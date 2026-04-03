@@ -35,8 +35,8 @@ export async function middleware(request: NextRequest) {
 
   // 1. Force HTTPS redirect in production
   if (process.env.NODE_ENV === "production" && protocol === "http") {
-    const httpsUrl = new URL(request.url)
-    httpsUrl.protocol = "https"
+    const host = request.headers.get("host") || "anarkoreashop.mn"
+    const httpsUrl = new URL(request.nextUrl.pathname + request.nextUrl.search, `https://${host}`)
     return NextResponse.redirect(httpsUrl, 301)
   }
 
