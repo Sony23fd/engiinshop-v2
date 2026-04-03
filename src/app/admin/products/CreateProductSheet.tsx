@@ -9,9 +9,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { Plus, Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 
-export function CreateProductSheet() {
+export function CreateProductSheet({ categories }: { categories: any[] }) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [selectedCategoryId, setSelectedCategoryId] = useState("")
   const [options, setOptions] = useState<{name: string, values: string}[]>([])
   const router = useRouter()
 
@@ -40,12 +41,14 @@ export function CreateProductSheet() {
       price: Number(formData.get("price") || 0),
       weight: Number(formData.get("weight") || 0),
       sourceLink: formData.get("sourceLink") as string,
+      categoryId: selectedCategoryId || undefined,
       options: formattedOptions.length > 0 ? formattedOptions : undefined
     })
     setLoading(false)
     if (res.success) {
       setOpen(false)
       setOptions([])
+      setSelectedCategoryId("")
       router.refresh()
     } else {
       alert(res.error || "Алдаа гарлаа")
@@ -67,6 +70,22 @@ export function CreateProductSheet() {
           <div className="space-y-2">
             <label htmlFor="name" className="text-sm font-medium">Барааны нэр</label>
             <Input id="name" name="name" required placeholder="Нэр..." />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="categoryId" className="text-sm font-medium">Ангилал (Category)</label>
+            <select 
+              id="categoryId"
+              value={selectedCategoryId}
+              onChange={(e) => setSelectedCategoryId(e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value="">Сонгох...</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
+            <p className="text-[10px] text-slate-400 font-medium italic">* Сонгохгүй бол "Ерөнхий ангилал"-д автоматаар орно.</p>
           </div>
           
           {/* Options / Variants UI */}

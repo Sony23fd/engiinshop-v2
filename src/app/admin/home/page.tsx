@@ -27,17 +27,20 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
 
   try {
     const validOrderFilter: any = {
-      status: {
-        isDefault: false,
-        name: { not: "Цуцлагдсан" }
-      }
+      paymentStatus: { not: "REJECTED" },
+      OR: [
+        { statusId: null },
+        { 
+          status: {
+            name: { not: "Цуцлагдсан" }
+          }
+        }
+      ]
     };
     
-    let dateFilter: any = {};
     if (days > 0) {
       const cutoffDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-      dateFilter = { updatedAt: { gte: cutoffDate } };
-      validOrderFilter.updatedAt = { gte: cutoffDate };
+      validOrderFilter.createdAt = { gte: cutoffDate };
     }
 
     // Parallel fetch all data
@@ -51,7 +54,12 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     ] = await Promise.all([
       db.order.aggregate({ where: validOrderFilter, _sum: { totalAmount: true } }),
       db.order.count({ where: validOrderFilter }),
-      db.order.count({ where: { status: { isFinal: true, name: { not: "Цуцлагдсан" } }, ...dateFilter } }),
+      db.order.count({ 
+        where: { 
+          status: { isFinal: true, name: { not: "Цуцлагдсан" } },
+          ...(days > 0 && { createdAt: { gte: new Date(now.getTime() - days * 24 * 60 * 60 * 1000) } })
+        } 
+      }),
       db.product.count({ where: { isActive: true } }),
       (db.order as any).count({ where: { status: { name: { contains: "Буцаагдсан" } }, isRefunded: false } }),
       getAnalyticsSummary(days)
@@ -94,17 +102,39 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       amount: revenueByDate[date]
     }));
 
-    // Chart 2: Top 10 performing batches
-    const batches = await db.batch.findMany({
-      include: { product: true },
+    // Chart 2: Top 10 performing batches (Based on actual orders in the selected period)
+    const topSalesGroups = await db.order.groupBy({
+      by: ['batchId'],
+      where: validOrderFilter,
+      _sum: {
+        quantity: true
+      },
+      orderBy: {
+        _sum: {
+          quantity: 'desc'
+        }
+      },
+      take: 10
     });
-    batchSales = batches.map(b => {
-      const sold = b.targetQuantity - b.remainingQuantity;
-      return {
-        name: b.product?.name?.substring(0, 15) + "..." || "Бараа",
-        sales: sold > 0 ? sold : 0
-      };
-    }).filter(b => b.sales > 0).sort((a, b) => b.sales - a.sales).slice(0, 10);
+
+    if (topSalesGroups.length > 0) {
+      const topBatchIds = topSalesGroups.map(group => group.batchId);
+      const batchesInfo = await db.batch.findMany({
+        where: { id: { in: topBatchIds } },
+        include: { product: true }
+      });
+
+      batchSales = topSalesGroups.map(group => {
+        const batch = batchesInfo.find(b => b.id === group.batchId);
+        const name = batch?.product?.name || "Нэргүй бараа";
+        return {
+          name: name.length > 20 ? name.substring(0, 20) + "..." : name,
+          sales: group._sum.quantity || 0
+        };
+      });
+    } else {
+      batchSales = [];
+    }
   } catch (error) {
     console.error("Dashboard data fetch error:", error);
   }

@@ -7,13 +7,15 @@ import { StatusBadge } from "@/components/admin/StatusBadge"
 import { updateBatchOrderStatusesByIds, updateOrderDetails, deleteOrder } from "@/app/actions/order-actions"
 import { useToast } from "@/components/ui/use-toast"
 import { GroupAdminDeliveryButton } from "../../search/GroupAdminDeliveryButton"
-import { Loader2, Pencil, Trash2 } from "lucide-react"
+import { MoveToBatchDialog } from "@/components/admin/MoveToBatchDialog"
+import { Loader2, Pencil, Trash2, ArrowRight } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 
 export function BatchOrdersClient({ activeOrders, batch, statuses, role }: { activeOrders: any[], batch: any, statuses: any[], role: string }) {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState("")
   const [editingOrder, setEditingOrder] = useState<any>(null)
   const [searchQuery, setSearchQuery] = useState("")
@@ -99,6 +101,13 @@ export function BatchOrdersClient({ activeOrders, batch, statuses, role }: { act
 
   return (
     <div className="bg-white p-6 rounded-xl shadow-sm border space-y-6">
+      <MoveToBatchDialog 
+        open={moveDialogOpen} 
+        onOpenChange={setMoveDialogOpen} 
+        selectedOrderIds={selectedIds}
+        onSuccess={() => setSelectedIds([])}
+      />
+
       {/* Filters and Bulk Actions */}
       <div className="flex flex-col md:flex-row justify-between gap-4">
         <Input 
@@ -109,10 +118,19 @@ export function BatchOrdersClient({ activeOrders, batch, statuses, role }: { act
         />
         <div className="flex flex-col md:flex-row gap-4 md:w-2/3 justify-end lg:items-center">
           <div className="flex flex-wrap items-center gap-2 justify-end">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setMoveDialogOpen(true)}
+              disabled={selectedIds.length === 0}
+              className="h-9 border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+            >
+              <ArrowRight className="w-4 h-4 mr-2" />
+              Категори шилжүүлэх ({selectedIds.length})
+            </Button>
             <GroupAdminDeliveryButton 
               selectedOrderIds={selectedIds} 
               onUpdated={() => {
-                 // Force a reload or unselect
                  setSelectedIds([])
                  window.location.reload()
               }} 

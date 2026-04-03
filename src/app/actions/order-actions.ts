@@ -1045,3 +1045,65 @@ export async function getArchivedConfirmedOrders(page: number = 1, limit: number
     return { success: false, error: error.message, orders: [], total: 0 };
   }
 }
+export async function moveOrdersToBatch(orderIds: string[], targetBatchId: string) {
+  try {
+    const adminMode = await getCurrentAdmin()
+    if (!adminMode) return { success: false, error: "Хандах эрхгүй" }
+
+    const result = await db.$transaction(async (tx) => {
+      // 1. Get target batch
+      const targetBatch = await tx.batch.findUnique({
+        where: { id: targetBatchId },
+        include: { product: true }
+      });
+      if (!targetBatch) throw new Error("Шилжүүлэх багц олдсонгүй");
+
+      // 2. Fetch orders and their current batches
+      const orders = await tx.order.findMany({
+        where: { id: { in: orderIds } }
+      });
+
+      for (const order of orders) {
+        // Skip if already in the target batch
+        if (order.batchId === targetBatchId) continue;
+
+        // A. Return quantity to old batch
+        await tx.batch.update({
+          where: { id: order.batchId },
+          data: { remainingQuantity: { increment: order.quantity } }
+        });
+
+        // B. Take quantity from new batch
+        await tx.batch.update({
+          where: { id: targetBatchId },
+          data: { remainingQuantity: { decrement: order.quantity } }
+        });
+
+        // C. Update order
+        await tx.order.update({
+          where: { id: order.id },
+          data: { batchId: targetBatchId }
+        });
+      }
+
+      return targetBatch;
+    });
+
+    await logActivity({
+      userId: adminMode.id,
+      userName: adminMode.name || "Сайтын админ",
+      userRole: adminMode.role,
+      action: "Захиалга шилжүүлсэн",
+      target: "Багц",
+      detail: `${orderIds.length} ширхэг захиалгыг #${result.batchNumber} (${result.product?.name}) багц руу шилжүүллээ.`,
+    })
+
+    revalidatePath("/admin/orders")
+    revalidatePath("/admin/orders/batch/" + targetBatchId)
+    
+    return { success: true }
+  } catch (error: any) {
+    console.error("Failed to move orders to batch:", error)
+    return { success: false, error: error.message }
+  }
+}

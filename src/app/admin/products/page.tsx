@@ -1,4 +1,5 @@
 import { getProducts } from "@/app/actions/product-actions"
+import { getCategories } from "@/app/actions/category-actions"
 import { CreateProductSheet } from "./CreateProductSheet"
 import { BatchSaleToggle } from "./BatchSaleToggle"
 import { ImageUploader } from "@/components/admin/ImageUploader"
@@ -12,7 +13,10 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
   const stockFilter = p.stock || "all";
   const sortFilter = p.sort || "remaining_desc"; // user requested highest remaining first
 
-  const { products, success } = await getProducts()
+  const [{ products, success }, { categories }] = await Promise.all([
+    getProducts(),
+    getCategories()
+  ])
   
   let filteredProducts = products || [];
   // 1. Filter first
@@ -49,7 +53,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
         
         <div className="flex flex-col sm:flex-row items-center gap-3">
           <ProductFilters currentStock={stockFilter} currentSort={sortFilter} />
-          <CreateProductSheet />
+          <CreateProductSheet categories={categories || []} />
         </div>
       </div>
 
