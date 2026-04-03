@@ -1129,7 +1129,7 @@ export async function getRefundOrders() {
   }
 }
 
-export async function toggleOrderRefund(orderId: string) {
+export async function toggleOrderRefund(orderId: string, isRefunded?: boolean) {
   try {
     const admin = await getCurrentAdmin()
     if (!admin) return { success: false, error: "Хандах эрхгүй" }
@@ -1137,9 +1137,11 @@ export async function toggleOrderRefund(orderId: string) {
     const order = await db.order.findUnique({ where: { id: orderId } })
     if (!order) return { success: false, error: "Захиалга олдсонгүй" }
 
+    const targetState = isRefunded !== undefined ? isRefunded : !order.isRefunded
+
     await db.order.update({
       where: { id: orderId },
-      data: { isRefunded: !order.isRefunded } as any
+      data: { isRefunded: targetState } as any
     })
 
     await logActivity({
