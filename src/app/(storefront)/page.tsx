@@ -31,8 +31,6 @@ export default async function StorefrontHomePage() {
       />
       
       <HowItWorks />
-      
-      <LiveTicker />
     </div>
   )
 }

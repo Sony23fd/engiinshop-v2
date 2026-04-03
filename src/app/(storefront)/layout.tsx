@@ -7,6 +7,8 @@ import Image from "next/image"
 import { db } from "@/lib/db"
 
 import { AnimatedHeroBackground } from "@/components/storefront/home/AnimatedHeroBackground"
+import { VisitorTracker } from "@/components/storefront/VisitorTracker"
+import { SocialProofToast } from "@/components/storefront/SocialProofToast"
 
 export const dynamic = "force-dynamic"
 
@@ -109,6 +111,10 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
       {/* Global FAB Cart Icon */}
       <CartIcon />
 
+      {/* Global Analytics & Social Proof */}
+      <VisitorTracker />
+      <SocialProofToast />
+
       {/* Modern Premium Footer */}
       <footer className="bg-[#1c1642] text-slate-300 pt-16 pb-8 px-4 md:px-8 lg:px-16 mt-auto">
         <div className="max-w-6xl mx-auto">
@@ -145,8 +151,8 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
                 <a href="https://www.facebook.com/profile.php?id=100086582256535" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full bg-gradient-to-b from-blue-500 to-blue-700 flex items-center justify-center text-white hover:scale-110 shadow-sm transition-transform" title="Facebook">
                   <Facebook className="w-5 h-5 fill-white drop-shadow-sm" />
                 </a>
-              </div>
-            </div>
+              </div>2м
+              аа            </div>
 
             <div className="space-y-4">
               <h3 className="text-white font-semibold text-sm uppercase tracking-wider mb-6">Холбоо барих</h3>

@@ -137,6 +137,19 @@ model ActivityLog {
   createdAt DateTime @default(now())
 }
 
+model VisitorLog {
+  id        String   @id @default(cuid())
+  ipHash    String?
+  path      String
+  userAgent String?
+  referrer  String?
+  viewTime  Int?     @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([path])
+}
+
 enum Role {
   CUSTOMER
   ADMIN
