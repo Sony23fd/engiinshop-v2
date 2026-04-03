@@ -31,8 +31,16 @@ const SESSION_OPTIONS = {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+  const protocol = request.headers.get("x-forwarded-proto") || "https"
 
-  // Skip API routes and statics
+  // 1. Force HTTPS redirect in production
+  if (process.env.NODE_ENV === "production" && protocol === "http") {
+    const httpsUrl = new URL(request.url)
+    httpsUrl.protocol = "https"
+    return NextResponse.redirect(httpsUrl, 301)
+  }
+
+  // Skip API routes and statics (for /admin protection)
   if (
     pathname.startsWith("/api/admin/login") ||
     pathname.startsWith("/api/admin/logout") ||
@@ -44,7 +52,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Only protect /admin routes
+  // Only protect /admin routes for session check
   if (!pathname.startsWith("/admin")) {
     return NextResponse.next()
   }
@@ -87,5 +95,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|public/|api/notifications).*)"],
 }
