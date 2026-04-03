@@ -280,6 +280,7 @@ export async function getOrdersByAccount(accountNumber: string) {
     return { success: false, error: "Failed to fetch orders" }
   }
 }
+
 export async function createOrder(data: {
   customerName: string
   phoneNumber: string
@@ -510,6 +511,66 @@ export async function updateOrderStatus(orderId: string, statusId: string) {
   } catch (error) {
     console.error("Failed to update order status:", error)
     return { success: false, error: "Failed to update status" }
+  }
+}
+
+/**
+ * Moves multiple orders from their current batches to a target batch.
+ * Correctly updates inventory (remainingQuantity) for all involved batches.
+ */
+export async function moveOrdersToBatch(orderIds: string[], targetBatchId: string) {
+  try {
+    const admin = await getCurrentAdmin()
+    if (!admin) return { success: false, error: "Хандах эрхгүй" }
+
+    await db.$transaction(async (tx) => {
+      // 1. Get the target batch
+      const targetBatch = await (tx.batch as any).findUnique({ where: { id: targetBatchId } })
+      if (!targetBatch) throw new Error("Target batch not found")
+
+      // 2. Get the orders to move
+      const orders = await (tx.order as any).findMany({
+        where: { id: { in: orderIds } }
+      })
+
+      for (const order of orders) {
+        if (order.batchId === targetBatchId) continue
+
+        // 3. Increment source batch inventory
+        await (tx.batch as any).update({
+          where: { id: order.batchId },
+          data: { remainingQuantity: { increment: order.quantity } }
+        })
+
+        // 4. Decrement target batch inventory
+        await (tx.batch as any).update({
+          where: { id: targetBatchId },
+          data: { remainingQuantity: { decrement: order.quantity } }
+        })
+
+        // 5. Update order batch reference
+        await (tx.order as any).update({
+          where: { id: order.id },
+          data: { batchId: targetBatchId }
+        })
+      }
+    })
+
+    await logActivity({
+      userId: admin.id,
+      userName: admin.name || "Админ",
+      userRole: admin.role,
+      action: "Захиалга шилжүүлэв",
+      target: "Багц",
+      detail: `${orderIds.length} ширхэг захиалгыг #${targetBatchId} багц руу шилжүүллээ`,
+    })
+
+    revalidatePath("/admin/orders")
+    revalidatePath("/admin/orders/search")
+    return { success: true }
+  } catch (error: any) {
+    console.error("moveOrdersToBatch error:", error)
+    return { success: false, error: error.message }
   }
 }
 
@@ -808,285 +869,26 @@ export async function forceAddDeliveryAddress(orderIds: string[], address: strin
     revalidatePath("/admin/orders/delivery")
     
     return { success: true }
-  } catch (error: any) {
-    return { success: false, error: error.message }
-  }
-}
-
-export async function restoreGroupOrder(orderIds: string[]) {
-  try {
-    const adminMode = await getCurrentAdmin()
-    if (!adminMode) return { success: false, error: "Хандах эрхгүй" }
-
-    const activeStatus = await db.orderStatusType.findFirst({
-      where: { isDefault: true }
-    })
-
-    if (!activeStatus) {
-      return { success: false, error: "Үндсэн идэвхтэй төлөв олдсонгүй" }
-    }
-
-    await db.$transaction(async (tx) => {
-      const orders = await (tx.order as any).findMany({
-        where: { id: { in: orderIds } }
-      });
-
-      for (const order of orders) {
-        const updateData: any = { statusId: activeStatus.id };
-
-        if (order.paymentStatus === 'REJECTED') {
-          updateData.paymentStatus = 'PENDING';
-          await (tx.batch as any).update({
-            where: { id: order.batchId },
-            data: { remainingQuantity: { decrement: order.quantity } }
-          });
-        }
-
-        await (tx.order as any).update({
-          where: { id: order.id },
-          data: updateData
-        });
-      }
-    });
-
-    await logActivity({
-      userId: adminMode.id,
-      userName: adminMode.name || "Сэргээгч Админ",
-      userRole: adminMode.role,
-      action: "Бөөнөөр сэргээлээ",
-      target: "Захиалгууд",
-      detail: `${orderIds.length} ширхэг хуучин захиалгыг буцааж идэвхтэй төлөвт шилжүүллээ`,
-    })
-
-    revalidatePath("/admin/orders/rejected")
-    revalidatePath("/admin/orders/pending")
-    revalidatePath("/admin/orders")
-    revalidatePath("/admin/products")
-    revalidatePath("/")
-    
-    return { success: true }
-  } catch(err: any) {
-    console.error("restoreGroupOrder error:", err)
+  } catch (err: any) {
     return { success: false, error: err.message }
   }
 }
 
-export async function restoreCompletedOrder(orderId: string) {
+export async function getOrdersArchive(page: number = 1, limit: number = 20, search: string = "") {
   try {
-    const adminMode = await getCurrentAdmin()
-    if (!adminMode) return { success: false, error: "Хандах эрхгүй" }
-
-    const activeStatus = await db.orderStatusType.findFirst({
-      where: { isDefault: true }
-    })
-
-    if (!activeStatus) {
-      return { success: false, error: "Үндсэн идэвхтэй төлөв олдсонгүй" }
-    }
-
-    await db.$transaction(async (tx) => {
-      const order = await (tx.order as any).findUnique({ where: { id: orderId } });
-      if (!order) throw new Error("Захиалга олдсонгүй");
-
-      const updateData: any = { statusId: activeStatus.id };
-
-      // If it was cancelled/rejected, we need to revert the paymentStatus and reserve quantity again
-      if (order.paymentStatus === 'REJECTED') {
-        updateData.paymentStatus = 'PENDING';
-        
-        await (tx.batch as any).update({
-          where: { id: order.batchId },
-          data: { remainingQuantity: { decrement: order.quantity } }
-        });
-      }
-
-      await (tx.order as any).update({
-        where: { id: orderId },
-        data: updateData
-      });
-    });
-
-    // Log the action
-    await logActivity({
-      userId: adminMode.id,
-      userName: adminMode.name || "Сэргээгч Админ",
-      userRole: adminMode.role,
-      action: "Сэргээлээ",
-      target: "Захиалга",
-      detail: `Захиалга #${orderId} -г буцааж идэвхтэй төлөвт шилжүүллээ`,
-      targetUrl: `/admin/orders/${orderId}`
-    })
-
-    revalidatePath("/admin/orders/completed")
-    revalidatePath("/admin/orders/pending")
-    revalidatePath("/admin/orders")
-    revalidatePath("/admin/products")
-    revalidatePath("/")
-    
-    return { success: true }
-  } catch(err: any) {
-    console.error("restoreCompletedOrder error:", err)
-    return { success: false, error: err.message }
-  }
-}
-
-export async function updateOrderDetails(orderId: string, data: {
-  customerName: string
-  customerPhone: string
-  accountNumber: string
-  quantity: number
-  deliveryAddress: string
-}) {
-  try {
-    const adminMode = await getCurrentAdmin()
-    if (!adminMode) return { success: false, error: "Хандах эрхгүй" }
-
-    const result = await db.$transaction(async (tx) => {
-      const order = await (tx.order as any).findUnique({ where: { id: orderId } });
-      if (!order) throw new Error("Захиалга олдсонгүй");
-
-      const diffQty = data.quantity - (order.quantity || 0);
-      if (diffQty !== 0) {
-         await (tx.batch as any).update({
-            where: { id: order.batchId },
-            data: { remainingQuantity: { decrement: diffQty } }
-         });
-      }
-
-      await (tx.order as any).update({
-        where: { id: orderId },
-        data: {
-           customerName: data.customerName,
-           customerPhone: data.customerPhone,
-           accountNumber: data.accountNumber,
-           quantity: data.quantity,
-           deliveryAddress: data.deliveryAddress
-        }
-      });
-    });
-
-    await logActivity({
-      userId: adminMode.id,
-      userName: adminMode.name || "Админ",
-      userRole: adminMode.role,
-      action: "Захиалга засав",
-      target: "Захиалга",
-      detail: `Захиалга #${orderId} мэдээллийг өөрчиллөө`,
-    })
-
-    revalidatePath("/admin/orders")
-    revalidatePath("/admin/orders/search")
-    revalidatePath("/admin/orders/batch/[batchId]", "page")
-    return { success: true }
-  } catch (error: any) {
-    return { success: false, error: error.message }
-  }
-}
-
-export async function deleteOrder(orderId: string) {
-  try {
-    const adminMode = await getCurrentAdmin()
-    if (!adminMode || adminMode.role !== "ADMIN") return { success: false, error: "Устгах эрхгүй байна" }
-
-    const result = await db.$transaction(async (tx) => {
-      const order = await (tx.order as any).findUnique({ where: { id: orderId } });
-      if (!order) throw new Error("Захиалга олдсонгүй");
-
-      // Revert quantity if order was not rejected
-      if (order.paymentStatus !== "REJECTED" && order.quantity > 0) {
-         await (tx.batch as any).update({
-            where: { id: order.batchId },
-            data: { remainingQuantity: { increment: order.quantity } }
-         });
-      }
-
-      await (tx.order as any).delete({ where: { id: orderId } });
-    });
-
-    await logActivity({
-      userId: adminMode.id,
-      userName: adminMode.name || "Админ",
-      userRole: adminMode.role,
-      action: "Захиалга устгав",
-      target: "Захиалга",
-      detail: `Захиалга #${orderId} бүрмөсөн устгагдлаа`,
-    })
-
-    revalidatePath("/admin/orders")
-    revalidatePath("/admin/orders/search")
-    revalidatePath("/admin/orders/batch/[batchId]", "page")
-    return { success: true }
-  } catch (error: any) {
-    return { success: false, error: error.message }
-  }
-}
-
-export async function getRefundOrders() {
-  try {
-    const orders = await (db.order as any).findMany({
-      where: {
-        status: { name: { contains: "Буцаагдсан" } }
-      },
-      include: {
-        batch: {
-          include: { product: true, category: true }
-        },
-        status: true
-      },
-      orderBy: { updatedAt: "desc" },
-    })
-    return { success: true, orders: JSON.parse(JSON.stringify(orders)) }
-  } catch (error) {
-    console.error("Failed to fetch refund orders:", error)
-    return { success: false, error: "Буцаалтууд татахад алдаа гарлаа" }
-  }
-}
-
-export async function toggleOrderRefund(orderId: string, isRefunded: boolean) {
-  try {
-    const adminMode = await getCurrentAdmin()
-    if (!adminMode) return { success: false, error: "Хандах эрхгүй" }
-
-    await (db.order as any).update({
-      where: { id: orderId },
-      data: { isRefunded }
-    })
-
-    await logActivity({
-      userId: adminMode.id,
-      userName: adminMode.name || "Админ",
-      userRole: adminMode.role,
-      action: isRefunded ? "Мөнгө буцаагдсан" : "Мөнгө буцаахыг цуцалсан",
-      target: "Захиалга",
-      detail: `Захиалга #${orderId} -ийн төлбөрийг ${isRefunded ? 'буцааж шилжүүлэв' : 'буцаалт хийгээгүй төлөвт шилжүүлэв'}.`,
-    })
-
-    revalidatePath("/admin/orders/refunds")
-    revalidatePath("/admin/home")
-    return { success: true }
-  } catch (error: any) {
-    console.error("Failed to toggle order refund:", error)
-    return { success: false, error: error.message }
-  }
-}
-
-export async function getArchivedConfirmedOrders(page: number = 1, limit: number = 20, q: string = "") {
-  try {
-    const { db } = await import("@/lib/db");
     const where: any = {
-      paymentStatus: "CONFIRMED"
+      paymentStatus: "CONFIRMED",
+      statusId: { not: null },
+      status: { isFinal: true }
     };
 
-    if (q) {
-      const numQ = parseInt(q, 10);
-      const isNum = !isNaN(numQ);
-
+    if (search) {
+      const isNum = !isNaN(Number(search));
+      const numQ = Number(search);
       where.OR = [
-        { customerName: { contains: q, mode: 'insensitive' } },
-        { customerPhone: { contains: q } },
-        { accountNumber: { contains: q, mode: 'insensitive' } },
-        { transactionRef: { contains: q, mode: 'insensitive' } },
-        { batch: { product: { name: { contains: q, mode: 'insensitive' } } } },
+        { customerPhone: { contains: search, mode: 'insensitive' } },
+        { customerName: { contains: search, mode: 'insensitive' } },
+        { accountNumber: { contains: search, mode: 'insensitive' } },
         ...(isNum ? [
           { orderNumber: numQ },
           { batch: { batchNumber: numQ } }
