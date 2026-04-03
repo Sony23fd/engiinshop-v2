@@ -138,7 +138,7 @@ export async function getDeliveredOrders(days: number = 30) {
 
 export async function getDeliveryOrders(date?: string) {
   try {
-    const whereClause: any = { 
+    const whereClause: any = {
       paymentStatus: "CONFIRMED", // Must be confirmed by Main Admin first
       wantsDelivery: true,
       deliveryAddress: { not: "" },
@@ -149,10 +149,10 @@ export async function getDeliveryOrders(date?: string) {
       // date is in YYYY-MM-DD
       const startOfDay = new Date(date)
       startOfDay.setHours(0, 0, 0, 0)
-      
+
       const endOfDay = new Date(date)
       endOfDay.setHours(23, 59, 59, 999)
-      
+
       whereClause.OR = [
         {
           deliveryRequestedAt: {
@@ -211,9 +211,9 @@ export async function confirmDeliveryGroup(orderIds: string[]) {
     revalidatePath("/admin/orders/delivery")
     revalidatePath("/admin/orders/delivered")
     revalidatePath("/admin/orders")
-    
+
     return { success: true }
-  } catch(err: any) {
+  } catch (err: any) {
     console.error("confirmDeliveryGroup error:", err)
     return { success: false, error: err.message }
   }
@@ -263,8 +263,8 @@ export async function getOrderStatuses() {
 export async function getOrdersByAccount(accountNumber: string) {
   try {
     const orders = await db.order.findMany({
-      where: { 
-        accountNumber 
+      where: {
+        accountNumber
       },
       include: {
         batch: {
@@ -475,7 +475,7 @@ export async function updateBatchOrderStatuses(batchId: string, statusId: string
         }
       }
     })
-    
+
     if (!batch) return { success: false, error: "Batch not found" }
 
     const orderIdsToUpdate = batch.orders
@@ -491,10 +491,10 @@ export async function updateBatchOrderStatuses(batchId: string, statusId: string
 
     revalidatePath(`/admin/orders/batch/${batchId}`)
     revalidatePath("/admin/orders")
-    
+
     return { success: true, count: orderIdsToUpdate.length }
   } catch (error: any) {
-      console.error("Failed to update batch order statuses:", error)
+    console.error("Failed to update batch order statuses:", error)
     return { success: false, error: "Failed to update statuses" }
   }
 }
@@ -616,22 +616,22 @@ export async function getQPayInvoiceForOrder(transactionRef: string) {
     const orders = await (db.order as any).findMany({
       where: { transactionRef }
     })
-    
+
     if (!orders || orders.length === 0) return { success: false, error: "N/A" }
 
     // If already generated, return existing
     if (orders[0].qpayInvoiceId && orders[0].qpayQrText) {
-      return { 
-        success: true, 
-        qpayQrText: orders[0].qpayQrText, 
-        qpayUrls: orders[0].qpayUrls 
+      return {
+        success: true,
+        qpayQrText: orders[0].qpayQrText,
+        qpayUrls: orders[0].qpayUrls
       }
     }
 
     // Otherwise generate new invoice
     const { createQPayInvoice } = await import("@/lib/qpay")
     const totalAmount = orders.reduce((sum: number, o: any) => sum + Number(o.totalAmount || 0), 0)
-    
+
     if (totalAmount <= 0) return { success: false, error: "Amount is 0" }
 
     const invoiceRes = await createQPayInvoice({
@@ -674,7 +674,7 @@ export async function requestDelivery(orderIds: string[], deliveryAddress: strin
       include: { status: true }
     })
     if (!orders || orders.length === 0) return { success: false, error: "Захиалга олдсонгүй" }
-    
+
     // Only target orders that are deliverable and haven't requested delivery yet
     const eligibleOrders = orders.filter((o: any) => !o.wantsDelivery && o.status?.isDeliverable)
     if (eligibleOrders.length === 0) return { success: false, error: "Хүргэлт захиалах боломжтой бараа олдсонгүй" }
@@ -713,10 +713,10 @@ export async function requestDelivery(orderIds: string[], deliveryAddress: strin
     }
 
     // Force Cargo Manual Bank Transfer for Delivery Fee, bypassing QPay entirely
-    return { 
-      success: true, 
-      isManual: true, 
-      manualData: { 
+    return {
+      success: true,
+      isManual: true,
+      manualData: {
         fee: deliveryFee,
         bank_name: settings.cargo_bank_name || "",
         bank_account: settings.cargo_bank_account || "",
@@ -776,7 +776,7 @@ export async function checkDeliveryPayment(orderIds: string[], invoiceId: string
 
     const { checkQPayPayment } = await import("@/lib/qpay")
     const checkRes = await checkQPayPayment(invoiceId)
-    
+
     if (checkRes.success && checkRes.data && checkRes.data.paid_amount > 0) {
       await (db.order as any).updateMany({
         where: { id: { in: orderIds } },
@@ -789,7 +789,7 @@ export async function checkDeliveryPayment(orderIds: string[], invoiceId: string
       revalidatePath("/admin/orders")
       return { success: true, paid: true }
     }
-    
+
     return { success: true, paid: false }
   } catch (err: any) {
     console.error("checkDeliveryPayment error:", err)
@@ -808,29 +808,29 @@ export async function checkOrderPayment(transactionRef: string) {
     const orders = await (db.order as any).findMany({
       where: { transactionRef }
     })
-    
+
     if (!orders || orders.length === 0) return { success: false, error: "Захиалга олдсонгүй" }
     if (orders[0].paymentStatus === "CONFIRMED") return { success: true, paid: true }
-    
+
     const invoiceId = orders[0].qpayInvoiceId
     if (!invoiceId) return { success: false, error: "QPay нэхэмжлэх үүсээгүй байна" }
-    
+
     const { checkQPayPayment } = await import("@/lib/qpay")
     const checkRes = await checkQPayPayment(invoiceId)
-    
+
     if (checkRes.success && checkRes.data.count > 0) {
       const paidRow = checkRes.data.rows?.find((r: any) => r.payment_status === "PAID")
       if (paidRow) {
-         const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
-         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://localhost:3000`;
-         const res = await fetch(`${baseUrl}/api/qpay/callback?ref=${transactionRef}&payment_id=${paidRow.payment_id}`, { method: 'POST', cache: 'no-store' });
-         if (res.ok) {
-           revalidatePath(`/order-pending/ref/${transactionRef}`);
-           revalidatePath("/");
-           return { success: true, paid: true };
-         } else {
-           return { success: false, error: "Төлбөр шалгахад алдаа гарлаа (API)" }
-         }
+        const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://localhost:3000`;
+        const res = await fetch(`${baseUrl}/api/qpay/callback?ref=${transactionRef}&payment_id=${paidRow.payment_id}`, { method: 'POST', cache: 'no-store' });
+        if (res.ok) {
+          revalidatePath(`/order-pending/ref/${transactionRef}`);
+          revalidatePath("/");
+          return { success: true, paid: true };
+        } else {
+          return { success: false, error: "Төлбөр шалгахад алдаа гарлаа (API)" }
+        }
       }
     }
     return { success: true, paid: false }
@@ -867,7 +867,7 @@ export async function forceAddDeliveryAddress(orderIds: string[], address: strin
     revalidatePath("/admin/orders/search")
     revalidatePath("/admin/orders/batch/[batchId]", "page")
     revalidatePath("/admin/orders/delivery")
-    
+
     return { success: true }
   } catch (err: any) {
     return { success: false, error: err.message }
@@ -898,57 +898,97 @@ export async function getOrdersArchive(page: number = 1, limit: number = 20, sea
 
     const total = await db.order.count({ where });
     const orders = await (db.order as any).findMany({
-        where,
-        select: {
-          id: true,
-          orderNumber: true,
-          customerName: true,
-          customerPhone: true,
-          accountNumber: true,
-          quantity: true,
-          totalAmount: true,
-          transactionRef: true,
-          paymentStatus: true,
-          wantsDelivery: true,
-          deliveryAddress: true,
-          createdAt: true,
-          updatedAt: true,
-          batchId: true,
-          confirmedById: true,
-          confirmationMethod: true,
-          confirmedAt: true,
-          confirmedBy: {
-            select: {
-              id: true,
-              name: true
-            }
-          },
-          batch: {
-            select: {
-              id: true,
-              batchNumber: true,
-              product: {
-                select: {
-                  id: true,
-                  name: true
-                }
+      where,
+      select: {
+        id: true,
+        orderNumber: true,
+        customerName: true,
+        customerPhone: true,
+        accountNumber: true,
+        quantity: true,
+        totalAmount: true,
+        transactionRef: true,
+        paymentStatus: true,
+        wantsDelivery: true,
+        deliveryAddress: true,
+        createdAt: true,
+        updatedAt: true,
+        batchId: true,
+        confirmedById: true,
+        confirmationMethod: true,
+        confirmedAt: true,
+        confirmedBy: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
+        batch: {
+          select: {
+            id: true,
+            batchNumber: true,
+            product: {
+              select: {
+                id: true,
+                name: true
               }
-            }
-          },
-          status: {
-            select: {
-              id: true,
-              name: true
             }
           }
         },
-        orderBy: { updatedAt: "desc" },
-        skip: (Math.max(1, page) - 1) * limit,
-        take: limit
-     });
-     
-     return { success: true, orders: JSON.parse(JSON.stringify(orders)), total };
-  } catch(error: any) {
+        status: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      },
+      orderBy: { updatedAt: "desc" },
+      skip: (Math.max(1, page) - 1) * limit,
+      take: limit
+    });
+
+    return { success: true, orders: JSON.parse(JSON.stringify(orders)), total };
+  } catch (error: any) {
     return { success: false, error: error.message, orders: [], total: 0 };
+  }
+}
+/**
+ * Захиалгуудыг өөр багц руу шилжүүлэх болон үлдэгдлийг тооцох функц
+ */
+export async function moveOrdersToBatch(orderIds: string[], targetBatchId: string) {
+  try {
+    const admin = await getCurrentAdmin()
+    if (!admin) return { success: false, error: "Хандах эрхгүй" }
+
+    await db.$transaction(async (tx) => {
+      const targetBatch = await (tx.batch as any).findUnique({ where: { id: targetBatchId } })
+      if (!targetBatch) throw new Error("Target batch not found")
+
+      const orders = await (tx.order as any).findMany({ where: { id: { in: orderIds } } })
+
+      for (const order of orders) {
+        if (order.batchId === targetBatchId) continue
+        // Хуучин багцын тоог нэмэгдүүлэх
+        await (tx.batch as any).update({
+          where: { id: order.batchId },
+          data: { remainingQuantity: { increment: order.quantity } }
+        })
+        // Шинэ багцын тоог хасах
+        await (tx.batch as any).update({
+          where: { id: targetBatchId },
+          data: { remainingQuantity: { decrement: order.quantity } }
+        })
+        // Захиалгыг шинэ багцад холбох
+        await (tx.order as any).update({
+          where: { id: order.id },
+          data: { batchId: targetBatchId }
+        })
+      }
+    })
+
+    revalidatePath("/admin/orders")
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message }
   }
 }
