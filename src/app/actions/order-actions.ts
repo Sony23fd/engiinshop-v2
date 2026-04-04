@@ -1288,13 +1288,23 @@ export async function toggleOrderRefund(orderId: string, isRefunded?: boolean) {
  */
 export async function autoCancelExpiredOrders() {
   try {
-    // 1. "Цуцлагдсан" статусын ID-г олж авах
+    // 1. "Цуцлагдсан" статусын ID-г олж авах (Уян хатан хайлт)
     const cancelledStatus = await db.orderStatusType.findFirst({
-      where: { name: "Цуцлагдсан" }
+      where: { 
+        OR: [
+          { name: "Цуцлагдсан" },
+          { name: "Rejected" },
+          { name: { contains: "Цуцл" } },
+          { name: { contains: "цуцл" } }
+        ]
+      }
     })
     
     if (!cancelledStatus) {
-      throw new Error("'Цуцлагдсан' нэртэй статус олдсонгүй")
+      // Хэрэв олдохгүй бол системийн бүх статусыг консол дээр хэвлэж харуулна (Оношилгоонд зориулж)
+      const allStatuses = await db.orderStatusType.findMany({ select: { name: true } });
+      const statusNames = allStatuses.map(s => s.name).join(", ");
+      throw new Error(`Цуцлах статус олдсонгүй. Боломжит статусууд: ${statusNames}`);
     }
 
     // 2. 24 цагийн өмнөх хугацааг тооцоолох
