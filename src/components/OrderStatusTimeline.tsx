@@ -14,8 +14,8 @@ export function OrderStatusTimeline({ status, isFinal }: StatusTimelineProps) {
     { name: "Хүлээн авсан", icon: Clock, matches: ["Төлбөр хүлээгдэж байна", "Хүлээн авсан", "Received", "Pending"] },
     { name: "Баталгаажсан", icon: CheckCircle2, matches: ["Баталгаажсан", "Confirmed", "Батлагдсан"] },
     { name: "Солонгосоос гарсан", icon: Truck, matches: ["Солонгосоос гарсан", "Shipped", "Гарсан", "хөдөлсөн", "Departed"] },
-    { name: "Монголд ирсэн", icon: Box, matches: ["Ирсэн", "Arrived", "Монголд ирсэн", "Улаанбаатарт ирсэн", "UB ирсэн"] },
-    { name: "Хүлээн авсан ", icon: Home, matches: ["Өөрөө ирж авсан", "Хүргэлтээр авсан", "Delivered", "Picked up", "Дууссан", "Авсан"] },
+    { name: "Улаанбаатарт ирсэн", icon: Box, matches: ["Ирсэн", "Arrived", "Монголд ирсэн", "Улаанбаатарт ирсэн", "UB ирсэн"] },
+    { name: "Хүлээн авсан", icon: Home, matches: ["Өөрөө ирж авсан", "Хүргэлтээр авсан", "Delivered", "Picked up", "Дууссан", "Авсан"] },
   ];
 
   // Find the current step index
@@ -23,36 +23,36 @@ export function OrderStatusTimeline({ status, isFinal }: StatusTimelineProps) {
     step.matches.some(m => status.toLowerCase().includes(m.toLowerCase()))
   );
 
-  // Default to step 0 if not found, as every active order must be at least received
+  // Default to step 0 if not found
   if (currentStepIndex === -1) {
     currentStepIndex = 0;
   }
 
-  // If rejected, we don't show any progress
+  // If rejected, special case
   if (isRejected) {
-    currentStepIndex = -1; // Special case for rejected
+    currentStepIndex = -1;
   }
+
+  // Progress Bar width calculation
+  const progressWidth = isFinal ? 100 : (currentStepIndex / (steps.length - 1)) * 100;
 
   return (
     <div className="w-full py-6">
       <div className="relative flex justify-between max-w-4xl mx-auto">
         {/* Progress Line */}
-        <div className={cn(
-          "absolute top-5 left-0 w-full h-[2px] -translate-y-1/2 z-0 rounded-full",
-          isRejected ? "bg-slate-100" : "bg-slate-100"
-        )} />
+        <div className="absolute top-5 left-0 w-full h-[2px] -translate-y-1/2 z-0 rounded-full bg-slate-100" />
         {!isRejected && (
           <div 
             className="absolute top-5 left-0 h-[2px] bg-indigo-600 -translate-y-1/2 z-0 transition-all duration-700 ease-in-out rounded-full shadow-[0_0_8px_rgba(79,70,229,0.2)]" 
-            style={{ width: `${(currentStepIndex / (steps.length - 1)) * 100}%` }}
+            style={{ width: `${progressWidth}%` }}
           />
         )}
 
         {steps.map((step, index) => {
-          const isCompleted = !isRejected && index < currentStepIndex;
-          const isCurrent = !isRejected && index === currentStepIndex;
+          // If isFinal is true, treat EVERY step up to and including current as completed
+          const isCompleted = !isRejected && (index < currentStepIndex || (index === currentStepIndex && isFinal));
+          const isCurrent = !isRejected && index === currentStepIndex && !isFinal;
           
-          // Special handling for the first step if rejected
           const showRejectedAtThisStep = isRejected && index === 0;
           const Icon = showRejectedAtThisStep ? XCircle : step.icon;
 
@@ -77,7 +77,8 @@ export function OrderStatusTimeline({ status, isFinal }: StatusTimelineProps) {
                   "absolute -bottom-8 whitespace-nowrap text-[10px] font-bold transition-all duration-500 tracking-wider uppercase",
                   showRejectedAtThisStep ? "text-red-600" :
                   isCurrent ? "text-indigo-700 font-extrabold" : 
-                  isCompleted ? "text-slate-500" : "text-slate-300"
+                  isCompleted ? (isFinal && index === currentStepIndex ? "text-indigo-600" : "text-slate-500") : 
+                  "text-slate-300"
                 )}
               >
                 {showRejectedAtThisStep ? "Цуцлагдсан" : step.name}
