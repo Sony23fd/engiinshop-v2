@@ -44,8 +44,15 @@ export default async function TrackOrderPage({
     grouped[key].push(order)
   }
 
-  const activeGroups = Object.values(grouped).filter(g => g.some((o: any) => !o.status?.isFinal))
-  const completedGroups = Object.values(grouped).filter(g => g.every((o: any) => o.status?.isFinal))
+  // Define what "Finished" means (either final status or explicitly rejected/cancelled)
+  const isOrderFinished = (o: any) => 
+    o.status?.isFinal === true || 
+    o.paymentStatus === "REJECTED" || 
+    o.status?.name === "Цуцлагдсан" ||
+    o.status?.name?.toLowerCase().includes("rejected");
+
+  const activeGroups = Object.values(grouped).filter(g => g.some((o: any) => !isOrderFinished(o)))
+  const completedGroups = Object.values(grouped).filter(g => g.every((o: any) => isOrderFinished(o)))
 
   const totalOrders = orders?.length || 0
 
