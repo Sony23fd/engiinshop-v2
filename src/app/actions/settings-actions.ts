@@ -132,7 +132,7 @@ export async function confirmOrderPayment(orderId: string) {
   }
 }
 
-export async function rejectOrderPayment(orderId: string) {
+export async function rejectOrderPayment(orderId: string, reason?: string) {
   try {
     const admin = await getCurrentAdmin()
     if (!admin) return { success: false, error: "Нэвтрэнэ үү" }
@@ -147,6 +147,7 @@ export async function rejectOrderPayment(orderId: string) {
         where: { id: orderId },
         data: { 
           paymentStatus: "REJECTED",
+          cancellationReason: reason || null,
           ...(rejectedStatus?.id && { statusId: rejectedStatus.id })
         }
       })
