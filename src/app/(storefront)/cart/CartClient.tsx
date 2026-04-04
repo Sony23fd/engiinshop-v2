@@ -346,7 +346,7 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
               disabled={submitting || !agreedToTerms || !!phoneError}
               className="w-full bg-[#4F46E5] hover:bg-[#4338ca] text-white py-3 rounded-xl font-bold text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {submitting ? "Илгээж байна..." : "✅ Захиалга баталгаажуулах"}
+              {submitting ? "Илгээж байна..." : "📦 Захиалга илгээх"}
             </button>
           </form>
         </div>

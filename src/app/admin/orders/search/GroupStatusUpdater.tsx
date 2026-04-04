@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { updateBatchOrderStatusesByIds } from "@/app/actions/order-actions"
 import { Loader2 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
-import { StatusBadge } from "@/components/admin/StatusBadge"
+import { RejectionDialog } from "@/components/admin/RejectionDialog"
 
 export function GroupStatusUpdater({
   selectedOrderIds,
@@ -17,7 +17,22 @@ export function GroupStatusUpdater({
 }) {
   const [loading, setLoading] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState("")
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false)
   const { toast } = useToast()
+
+  async function executeBulkUpdate(reason?: string) {
+    setLoading(true)
+    const res = await updateBatchOrderStatusesByIds(selectedOrderIds, selectedStatus, reason)
+    setLoading(false)
+
+    if (res.success) {
+      toast({ title: "Амжилттай", description: `Сонгогдсон ${selectedOrderIds.length} захиалгын төлөв өөрчлөгдлөө.` })
+      setSelectedStatus("")
+      onUpdated()
+    } else {
+      toast({ variant: "destructive", title: "Алдаа", description: res.error || "Алдаа гарлаа" })
+    }
+  }
 
   async function handleBulkUpdate(e: React.FormEvent) {
     e.preventDefault()
@@ -30,16 +45,11 @@ export function GroupStatusUpdater({
       return
     }
 
-    setLoading(true)
-    const res = await updateBatchOrderStatusesByIds(selectedOrderIds, selectedStatus)
-    setLoading(false)
-
-    if (res.success) {
-      toast({ title: "Амжилттай", description: `Сонгогдсон ${selectedOrderIds.length} захиалгын төлөв өөрчлөгдлөө.` })
-      setSelectedStatus("")
-      onUpdated()
+    const targetStatus = statuses.find(s => s.id === selectedStatus)
+    if (targetStatus?.name === "Цуцлагдсан") {
+      setIsRejectModalOpen(true)
     } else {
-      toast({ variant: "destructive", title: "Алдаа", description: res.error || "Алдаа гарлаа" })
+      executeBulkUpdate()
     }
   }
 
@@ -67,6 +77,14 @@ export function GroupStatusUpdater({
         {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
         Хадгалах
       </Button>
+
+      <RejectionDialog 
+        isOpen={isRejectModalOpen}
+        onClose={() => setIsRejectModalOpen(false)}
+        onConfirm={executeBulkUpdate}
+        isLoading={loading}
+        title={`${selectedOrderIds.length} захиалга цуцлах`}
+      />
     </form>
   )
 }

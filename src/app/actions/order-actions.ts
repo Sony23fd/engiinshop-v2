@@ -499,18 +499,69 @@ export async function updateBatchOrderStatuses(batchId: string, statusId: string
   }
 }
 
-export async function updateOrderStatus(orderId: string, statusId: string) {
+export async function updateOrderStatus(orderId: string, statusId: string, reason?: string) {
   try {
-    const order = await db.order.update({
-      where: { id: orderId },
-      data: { statusId }
+    const admin = await getCurrentAdmin()
+    if (!admin) return { success: false, error: "Хандах эрхгүй" }
+
+    const result = await db.$transaction(async (tx) => {
+      const order = await (tx.order as any).findUnique({
+        where: { id: orderId },
+        include: { status: true, batch: true }
+      })
+
+      if (!order) throw new Error("Order not found")
+
+      const newStatus = await tx.orderStatusType.findUnique({
+        where: { id: statusId }
+      })
+
+      if (!newStatus) throw new Error("Status not found")
+
+      const isToCancelled = newStatus.name === "Цуцлагдсан"
+      const isFromCancelled = order.status?.name === "Цуцлагдсан" || order.paymentStatus === "REJECTED"
+
+      const updateData: any = { statusId }
+
+      // 1. Transition TO Cancelled
+      if (isToCancelled && !isFromCancelled) {
+        updateData.paymentStatus = "REJECTED"
+        updateData.cancellationReason = reason || null
+        // Increment batch remaining quantity
+        await (tx.batch as any).update({
+          where: { id: order.batchId },
+          data: { remainingQuantity: { increment: order.quantity } }
+        })
+      } 
+      // 2. Transition FROM Cancelled (Restore)
+      else if (!isToCancelled && isFromCancelled) {
+        // Must check if enough stock exists to restore
+        if (order.batch.remainingQuantity < order.quantity) {
+          throw new Error(`Нөөц хүрэлцээгүй байна (Үлдэгдэл: ${order.batch.remainingQuantity})`)
+        }
+
+        updateData.paymentStatus = "PENDING" // Reset to pending for admin to re-confirm if needed
+        updateData.cancellationReason = null // Clear reason on restore
+        // Decrement batch remaining quantity
+        await (tx.batch as any).update({
+          where: { id: order.batchId },
+          data: { remainingQuantity: { decrement: order.quantity } }
+        })
+      }
+
+      return await (tx.order as any).update({
+        where: { id: orderId },
+        data: updateData
+      })
     })
+
     revalidatePath("/admin/orders/search")
     revalidatePath("/admin/orders")
-    return { success: true, order: JSON.parse(JSON.stringify(order)) }
-  } catch (error) {
+    revalidatePath("/admin/orders/rejected")
+    return { success: true, order: JSON.parse(JSON.stringify(result)) }
+  } catch (error: any) {
     console.error("Failed to update order status:", error)
-    return { success: false, error: "Failed to update status" }
+    return { success: false, error: error.message || "Failed to update status" }
   }
 }
 
@@ -606,9 +657,38 @@ export async function restoreGroupOrder(orderIds: string[]) {
       where: { isDefault: true } as any
     })
 
-    await db.order.updateMany({
-      where: { id: { in: orderIds } },
-      data: { statusId: defaultStatus?.id || null } as any
+    const result = await db.$transaction(async (tx) => {
+      const orders = await (tx.order as any).findMany({
+        where: { id: { in: orderIds } },
+        include: { batch: true }
+      })
+
+      // Check stock for ALL orders in the group before proceeding
+      for (const order of orders) {
+        if (order.batch.remainingQuantity < order.quantity) {
+          throw new Error(`'${order.batch.product?.name || "Бараа"}' нөөц хүрэлцээгүй байна (Үлдэгдэл: ${order.batch.remainingQuantity})`)
+        }
+      }
+
+      // Update orders
+      await (tx.order as any).updateMany({
+        where: { id: { in: orderIds } },
+        data: { 
+          statusId: defaultStatus?.id || null,
+          paymentStatus: "PENDING",
+          cancellationReason: null // Clear reason on restore
+        } as any
+      })
+
+      // Decrement stock for each
+      for (const order of orders) {
+        await (tx.batch as any).update({
+          where: { id: order.batchId },
+          data: { remainingQuantity: { decrement: order.quantity } }
+        })
+      }
+
+      return true
     })
 
     await logActivity({
@@ -617,7 +697,6 @@ export async function restoreGroupOrder(orderIds: string[]) {
       userRole: admin.role,
       action: "Захиалга сэргээв",
       target: "Захиалгууд",
-      detail: `${orderIds.length} ширхэг захиалгыг архив хэсгээс буцааж идэвхтэй төлөв рүү шилжүүллээ`,
     })
 
     revalidatePath("/admin/orders")
@@ -688,7 +767,7 @@ export async function moveOrdersToBatch(orderIds: string[], targetBatchId: strin
   }
 }
 
-export async function updateBatchOrderStatusesByIds(orderIds: string[], statusId: string) {
+export async function updateBatchOrderStatusesByIds(orderIds: string[], statusId: string, reason?: string) {
   try {
     const adminMode = await getCurrentAdmin()
     if (!adminMode) return { success: false, error: "Хандах эрхгүй" }
@@ -697,12 +776,55 @@ export async function updateBatchOrderStatusesByIds(orderIds: string[], statusId
       return { success: false, error: "Захиалга сонгогдоогүй байна" }
     }
 
-    await db.order.updateMany({
-      where: { id: { in: orderIds } },
-      data: { statusId }
-    })
+    const targetStatus = await db.orderStatusType.findUnique({ where: { id: statusId } })
+    if (!targetStatus) return { success: false, error: "Статус олдсонгүй" }
 
-    const status = await db.orderStatusType.findUnique({ where: { id: statusId } })
+    const isToCancelled = targetStatus.name === "Цуцлагдсан"
+
+    await db.$transaction(async (tx) => {
+      // 1. Get orders to check their previous statuses and batches
+      const orders = await (tx.order as any).findMany({
+        where: { id: { in: orderIds } },
+        include: { status: true }
+      })
+
+      for (const order of orders) {
+        const isFromCancelled = order.status?.name === "Цуцлагдсан"
+        const updateData: any = { statusId }
+
+        // Logic for transitioning TO Cancelled
+        if (isToCancelled && !isFromCancelled) {
+          updateData.paymentStatus = "REJECTED"
+          updateData.cancellationReason = reason || null
+          
+          await (tx.batch as any).update({
+            where: { id: order.batchId },
+            data: { remainingQuantity: { increment: order.quantity } }
+          })
+        }
+        // Logic for transitioning FROM Cancelled
+        else if (!isToCancelled && isFromCancelled) {
+          // Check stock
+          const batch = await (tx.batch as any).findUnique({ where: { id: order.batchId } })
+          if (batch.remainingQuantity < order.quantity) {
+            throw new Error(`'${order.orderNumber}' захиалгын барааны нөөц хүрэлцээгүй (Үлдэгдэл: ${batch.remainingQuantity})`)
+          }
+
+          updateData.paymentStatus = "PENDING"
+          updateData.cancellationReason = null
+          
+          await (tx.batch as any).update({
+            where: { id: order.batchId },
+            data: { remainingQuantity: { decrement: order.quantity } }
+          })
+        }
+
+        await (tx.order as any).update({
+          where: { id: order.id },
+          data: updateData
+        })
+      }
+    })
 
     await logActivity({
       userId: adminMode.id,
@@ -710,18 +832,18 @@ export async function updateBatchOrderStatusesByIds(orderIds: string[], statusId
       userRole: adminMode.role,
       action: "Багц статус баталгаажуулав",
       target: "Захиалгууд",
-      detail: `${orderIds.length} ширхэг захиалгыг мөрийг нь түүвэрлэн '${status?.name || statusId}' төлөвт шилжүүллээ`,
+      detail: `${orderIds.length} ширхэг захиалгыг '${targetStatus?.name || statusId}' төлөвт шилжүүллээ. ${isToCancelled ? `Шалтгаан: ${reason || "Тайлбаргүй"}` : ""}`,
     })
 
     // Revalidate widespread paths due to mass update
     revalidatePath("/admin/orders/search")
-    revalidatePath("/admin/orders/batch/[batchId]", "page")
     revalidatePath("/admin/orders")
+    revalidatePath("/admin/orders/rejected")
 
     return { success: true, count: orderIds.length }
   } catch (error: any) {
     console.error("Failed to update bulk order statuses by IDs:", error)
-    return { success: false, error: "Failed to update bulk statuses" }
+    return { success: false, error: error.message || "Failed to update bulk statuses" }
   }
 }
 
@@ -1156,6 +1278,90 @@ export async function toggleOrderRefund(orderId: string, isRefunded?: boolean) {
     revalidatePath("/admin/orders/refunds")
     return { success: true }
   } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * АВТОМАТ ЦУЦЛАЛТЫН ЛОГИК (CRON)
+ * 24 цагаас дээш хугацаанд баталгаажаагүй "PENDING" захиалгуудыг автоматаар цуцална.
+ */
+export async function autoCancelExpiredOrders() {
+  try {
+    // 1. "Цуцлагдсан" статусын ID-г олж авах
+    const cancelledStatus = await db.orderStatusType.findFirst({
+      where: { name: "Цуцлагдсан" }
+    })
+    
+    if (!cancelledStatus) {
+      throw new Error("'Цуцлагдсан' нэртэй статус олдсонгүй")
+    }
+
+    // 2. 24 цагийн өмнөх хугацааг тооцоолох
+    const cutoffDate = new Date()
+    cutoffDate.setHours(cutoffDate.getHours() - 24)
+
+    // 3. Хугацаа нь хэтэрсэн захиалгуудыг шүүх
+    const expiredOrders = await (db.order as any).findMany({
+      where: {
+        paymentStatus: "PENDING",
+        createdAt: { lt: cutoffDate },
+        // Зөвхөн админ баталгаажуулаагүй (ConfirmedAt null) захиалгуудыг цуцална
+        confirmedAt: null
+      }
+    })
+
+    if (expiredOrders.length === 0) {
+      return { success: true, count: 0, message: "Цуцлах захиалга олдсонгүй" }
+    }
+
+    console.log(`[CRON] ${expiredOrders.length} expired orders found. Starting auto-cancellation...`)
+
+    const results = []
+    
+    // 4. Захиалга бүрийг тус бүрд нь Transaction-оор цуцлах (нөөц буцаах)
+    for (const order of expiredOrders) {
+      try {
+        await db.$transaction(async (tx) => {
+          // Захиалгыг цуцлах
+          await (tx.order as any).update({
+            where: { id: order.id },
+            data: {
+              paymentStatus: "REJECTED",
+              statusId: cancelledStatus.id,
+              cancellationReason: "Системээс автоматаар цуцлав (24ц)"
+            }
+          })
+
+          // Барааны үлдэгдлийг буцаан нэмэх
+          await (tx.batch as any).update({
+            where: { id: order.batchId },
+            data: { remainingQuantity: { increment: order.quantity } }
+          })
+        })
+        results.push({ id: order.id, success: true })
+      } catch (err: any) {
+        console.error(`[CRON] Failed to cancel order ${order.id}:`, err)
+        results.push({ id: order.id, success: false, error: err.message })
+      }
+    }
+
+    // 5. Кэшийг шинэчлэх
+    revalidatePath("/admin/orders/pending")
+    revalidatePath("/admin/orders/rejected")
+    revalidatePath("/admin/orders/search")
+    revalidatePath("/track")
+
+    const successCount = results.filter(r => r.success).length
+    console.log(`[CRON] Successfully cancelled ${successCount}/${expiredOrders.length} orders.`)
+
+    return { 
+      success: true, 
+      count: successCount, 
+      total: expiredOrders.length 
+    }
+  } catch (error: any) {
+    console.error("[CRON] Fatal error in autoCancelExpiredOrders:", error)
     return { success: false, error: error.message }
   }
 }

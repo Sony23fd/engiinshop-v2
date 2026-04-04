@@ -126,20 +126,6 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                          batch.status === 'SHIPPED' ? 'Илгээгдсэн' : 'Ирсэн'}
                       </span>
                     </td>
-                    <td className="px-4 py-4">
-                      <div className="flex gap-2">
-                        <ImageUploader
-                          productId={batch.product?.id}
-                          currentImageUrl={batch.product?.imageUrl}
-                          batchName={batch.product?.name ?? ""}
-                        />
-                        <VideoUploader
-                          productId={batch.product?.id}
-                          currentVideoUrl={batch.product?.videoUrl}
-                          batchName={batch.product?.name ?? ""}
-                        />
-                      </div>
-                    </td>
                     <td className="px-4 py-4 text-right">
                       <BatchSaleToggle
                         batchId={batch.id}

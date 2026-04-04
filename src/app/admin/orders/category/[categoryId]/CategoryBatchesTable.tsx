@@ -150,7 +150,7 @@ export function CategoryBatchesTable({
           <tbody className="divide-y relative">
             {filteredBatches.length > 0 ? (
               filteredBatches.map((batch: any) => {
-                const orderedAmount = batch.orders?.filter((o: any) => o.paymentStatus !== 'REJECTED' && o.status?.name !== 'Цуцлагдсан').reduce((acc: number, o: any) => acc + o.quantity, 0) || 0;
+                const orderedAmount = batch.orders?.filter((o: any) => o.paymentStatus === 'CONFIRMED' && o.status?.name !== 'Цуцлагдсан').reduce((acc: number, o: any) => acc + o.quantity, 0) || 0;
                 const remaining = Math.max(0, batch.targetQuantity - orderedAmount);
                 const progressPercent = Math.min(100, Math.round((orderedAmount / (batch.targetQuantity || 1)) * 100));
 

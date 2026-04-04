@@ -110,7 +110,8 @@ export async function confirmOrderPayment(orderId: string) {
     const admin = await getCurrentAdmin()
     if (!admin) return { success: false, error: "Нэвтрэнэ үү" }
 
-    const confirmedStatus = await db.orderStatusType.findFirst({ where: { name: "Баталгаажсан" } }) 
+    const confirmedStatus = await db.orderStatusType.findFirst({ where: { name: "Захиалга баталгаажсан" } }) 
+      || await db.orderStatusType.findFirst({ where: { name: "Баталгаажсан" } }) 
       || await db.orderStatusType.findFirst({ where: { isDefault: false, isFinal: false } });
 
     await (db.order as any).update({
@@ -170,7 +171,8 @@ export async function confirmGroupPayment(orderIds: string[]) {
     const admin = await getCurrentAdmin()
     if (!admin) return { success: false, error: "Нэвтрэнэ үү" }
 
-    const confirmedStatus = await db.orderStatusType.findFirst({ where: { name: "Баталгаажсан" } }) 
+    const confirmedStatus = await db.orderStatusType.findFirst({ where: { name: "Захиалга баталгаажсан" } }) 
+      || await db.orderStatusType.findFirst({ where: { name: "Баталгаажсан" } }) 
       || await db.orderStatusType.findFirst({ where: { isDefault: false, isFinal: false } });
 
     await (db.order as any).updateMany({
@@ -201,7 +203,7 @@ export async function confirmGroupPayment(orderIds: string[]) {
   }
 }
 
-export async function rejectGroupPayment(orderIds: string[]) {
+export async function rejectGroupPayment(orderIds: string[], reason?: string) {
   try {
     const admin = await getCurrentAdmin()
     if (!admin) return { success: false, error: "Нэвтрэнэ үү" }
@@ -211,9 +213,15 @@ export async function rejectGroupPayment(orderIds: string[]) {
         where: { id: { in: orderIds } }
       })
 
+      const rejectedStatus = await tx.orderStatusType.findFirst({ where: { name: "Цуцлагдсан" } });
+
       await (tx.order as any).updateMany({
         where: { id: { in: orderIds } },
-        data: { paymentStatus: "REJECTED" }
+        data: { 
+          paymentStatus: "REJECTED",
+          cancellationReason: reason || null,
+          ...(rejectedStatus?.id && { statusId: rejectedStatus.id })
+        }
       })
 
       for (const order of orders) {

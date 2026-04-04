@@ -1,7 +1,7 @@
 import { getShopSettings } from "@/app/actions/settings-actions"
 import { db } from "@/lib/db"
 import { notFound } from "next/navigation"
-import { CheckCircle2, Copy } from "lucide-react"
+import { Clock, Copy } from "lucide-react"
 import { ManualPaymentClient } from "./ManualPaymentClient"
 
 export const dynamic = "force-dynamic"
@@ -23,14 +23,14 @@ export default async function ManualCheckoutPage({ params }: { params: Promise<{
   return (
     <div className="max-w-xl mx-auto px-4 py-20 min-h-screen">
       <div className="bg-white rounded-2xl shadow-sm border p-8 space-y-8 relative overflow-hidden">
-        {/* Success header */}
+        {/* Pending header */}
         <div className="text-center space-y-3 relative z-10">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle2 className="w-8 h-8 text-green-600" />
+          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Clock className="w-8 h-8 text-amber-600" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Захиалга бүртгэгдлээ</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Таны захиалга хүлээн авлаа</h1>
           <p className="text-slate-500">
-            Доорх данс руу төлбөрөө шилжүүлснээр таны захиалга баталгаажих болно.
+            Таны төлбөр төлөгдсөнөөр захиалга баталгаажна.
           </p>
         </div>
 

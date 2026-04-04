@@ -1,6 +1,16 @@
 import { getOrdersByAccount } from "@/app/actions/order-actions"
-import { Search, Package, CheckCircle2, Clock, History, Truck } from "lucide-react"
+import { 
+  CheckCircle2, 
+  Truck, 
+  Package, 
+  Clock, 
+  AlertCircle, 
+  XCircle, 
+  Search, 
+  History 
+} from "lucide-react"
 import DeliveryRequestButton from "./DeliveryRequestButton"
+import { OrderStatusTimeline } from "@/components/OrderStatusTimeline"
 
 export const dynamic = "force-dynamic"
 
@@ -61,9 +71,7 @@ export default async function TrackOrderPage({
             </h2>
             {activeGroups.length > 0 ? (
               <div className="space-y-6">
-                {/* ── Unified Delivery Section ── */}
                 <UnifiedDeliverySection groups={activeGroups} />
-
                 {activeGroups.map((groupOrders) => (
                   <OrderGroup key={groupOrders[0].transactionRef || groupOrders[0].id} orders={groupOrders} />
                 ))}
@@ -94,25 +102,14 @@ export default async function TrackOrderPage({
   )
 }
 
-// ── Unified Delivery Section ─────────────────────────────────────────────────
-// Shows a single delivery button for ALL active orders that haven't requested delivery yet.
-
 function UnifiedDeliverySection({ groups }: { groups: any[][] }) {
   const allOrders = groups.flat()
-  
-  // Orders that already have delivery requested
   const alreadyDelivered = allOrders.filter((o: any) => o.wantsDelivery)
   const deliveryAddress = alreadyDelivered.find((o: any) => o.deliveryAddress)?.deliveryAddress
-
-  // Orders eligible for delivery (deliverable status + not yet requested)
   const eligibleForDelivery = allOrders.filter((o: any) => o.status?.isDeliverable && !o.wantsDelivery)
-  
-  // Orders not yet deliverable (still in cargo, etc.)
   const notYetDeliverable = allOrders.filter((o: any) => !o.status?.isDeliverable && !o.wantsDelivery && !o.status?.isFinal)
 
-  // If everything is already handled, don't show anything
   if (alreadyDelivered.length === 0 && eligibleForDelivery.length === 0 && notYetDeliverable.length === 0) return null
-
   const hasMixedDeliverable = eligibleForDelivery.length > 0 && notYetDeliverable.length > 0;
 
   return (
@@ -121,8 +118,6 @@ function UnifiedDeliverySection({ groups }: { groups: any[][] }) {
         <Truck className="w-5 h-5 text-indigo-600" />
         <h3 className="font-bold text-slate-800">Хүргэлтийн мэдээлэл</h3>
       </div>
-
-      {/* Already delivered orders */}
       {alreadyDelivered.length > 0 && (
         <div className="flex items-start gap-3 text-sm text-green-700 bg-green-50/80 rounded-xl px-4 py-3 border border-green-200 shadow-sm">
           <CheckCircle2 className="w-5 h-5 mt-0 flex-shrink-0 text-green-500" />
@@ -132,15 +127,12 @@ function UnifiedDeliverySection({ groups }: { groups: any[][] }) {
           </div>
         </div>
       )}
-
-      {/* Eligible orders — show the unified button */}
       {eligibleForDelivery.length > 0 && (
         <div className="space-y-3 bg-white p-4 rounded-xl border border-indigo-100 shadow-sm">
           <p className="text-sm text-slate-700 font-medium">
             🚚 <strong>{eligibleForDelivery.length}</strong> бараа хүргэлтэд бэлэн байна.
           </p>
           <DeliveryRequestButton orderIds={eligibleForDelivery.map((o: any) => o.id)} />
-          
           {hasMixedDeliverable && (
             <div className="mt-2 bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800 leading-relaxed font-medium">
               ⚠️ <strong className="text-amber-900">Анхаарах:</strong> Танд ирээгүй <strong>{notYetDeliverable.length}</strong> бараа байна. 
@@ -149,32 +141,14 @@ function UnifiedDeliverySection({ groups }: { groups: any[][] }) {
           )}
         </div>
       )}
-
-      {/* Not yet deliverable */}
-      {notYetDeliverable.length > 0 && eligibleForDelivery.length === 0 && alreadyDelivered.length === 0 && (
-        <div className="text-sm text-slate-500 bg-white rounded-xl px-4 py-3 border border-slate-200 shadow-sm flex gap-3 items-start">
-          <Clock className="w-5 h-5 text-slate-400 flex-shrink-0 mt-0.5" />
-          <p className="leading-relaxed">
-            Таны {notYetDeliverable.length} бараа одоогоор хүлээгдэж байгаа тул хүргэлт захиалах боломжгүй. 
-            Бараа тань Монголд ирсний дараа автоматаар хүргэлт захиалах боломжтой болно.
-          </p>
-        </div>
-      )}
-
-      {notYetDeliverable.length > 0 && (eligibleForDelivery.length > 0 || alreadyDelivered.length > 0) && (
-        <p className="text-xs text-slate-500 font-medium px-1">
-          🕐 Үлдсэн {notYetDeliverable.length} бараа хүлээгдэж байна. Бэлэн болсны дараа автоматаар хүргэлтийн товч нээгдэнэ.
-        </p>
-      )}
     </div>
   )
 }
 
-// ── OrderGroup Component ─────────────────────────────────────────────────────
-
 function getStatusIcon(statusName: string | undefined) {
   if (!statusName) return "🕒";
   const name = statusName.toLowerCase();
+  if (name.includes("цуцлагдсан") || name.includes("rejected")) return "❌";
   if (name.includes("солонгосоос хөдөлсөн") || name.includes("замдаа")) return "✈️";
   if (name.includes("улаанбаатарт ирсэн") || name.includes("ирсэн")) return "✅";
   if (name.includes("баталгаажсан")) return "🛒";
@@ -182,96 +156,108 @@ function getStatusIcon(statusName: string | undefined) {
   return "🕒";
 }
 
-import { OrderStatusTimeline } from "@/components/OrderStatusTimeline"
-
 function OrderGroup({ orders, completed = false }: { orders: any[]; completed?: boolean }) {
   const first = orders[0]
   const totalAmount = orders.reduce((s: number, o: any) => s + Number(o.totalAmount || 0), 0)
+  const allRejected = orders.every((o: any) => o.status?.name === "Цуцлагдсан" || o.paymentStatus === "REJECTED")
+  const anyRejected = orders.some((o: any) => o.status?.name === "Цуцлагдсан" || o.paymentStatus === "REJECTED")
   const allFinal = orders.every((o: any) => o.status?.isFinal)
+  const allDelivered = allFinal && !anyRejected
   const allDeliveryRequested = orders.every((o: any) => o.wantsDelivery)
   const someDeliveryRequested = orders.some((o: any) => o.wantsDelivery)
 
-  // Card border color: green if all delivered, amber if some, default otherwise
-  const borderClass = allDeliveryRequested 
-    ? "border-emerald-300 shadow-emerald-500/10 ring-1 ring-emerald-500/20" 
-    : someDeliveryRequested 
-      ? "border-amber-300 shadow-amber-500/10 ring-1 ring-amber-500/20" 
-      : "border-slate-200/60 shadow-slate-200/50"
+  let borderClass = "border-slate-200/60 shadow-slate-200/50"
+  let accentClass = ""
+  let headerIconBg = "bg-white border-slate-200 text-slate-500"
+  let HeaderIcon = Package
+
+  if (allRejected) {
+    borderClass = "border-slate-200 shadow-sm"
+    accentClass = "border-l-4 border-l-red-500/80"
+    headerIconBg = "bg-red-50 border-red-100 text-red-500"
+    HeaderIcon = XCircle
+  } else if (allDelivered) {
+    borderClass = "border-emerald-200 shadow-emerald-500/5 ring-1 ring-emerald-500/10"
+    accentClass = "border-l-4 border-l-emerald-500/80"
+    headerIconBg = "bg-emerald-50 border-emerald-100 text-emerald-600"
+    HeaderIcon = CheckCircle2
+  } else if (allDeliveryRequested) {
+    borderClass = "border-emerald-200 shadow-sm"
+    accentClass = "border-l-4 border-l-emerald-400"
+  } else if (someDeliveryRequested) {
+    borderClass = "border-amber-200 shadow-sm"
+    accentClass = "border-l-4 border-l-amber-400"
+  }
 
   return (
-    <div className={`bg-white rounded-xl border shadow-sm transition-all overflow-hidden ${borderClass}`}>
-      {/* Header */}
-      <div className="bg-slate-50/50 border-b border-slate-100 px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className={`bg-white rounded-xl border transition-all overflow-hidden ${borderClass} ${accentClass}`}>
+      <div className="bg-slate-50/30 border-b border-slate-100 px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm border ${allFinal ? "bg-emerald-50 border-emerald-100 text-emerald-600" : "bg-white border-slate-200 text-slate-500"}`}>
-            {allFinal
-              ? <CheckCircle2 className="w-4 h-4" />
-              : <Package className="w-4 h-4" />}
+          <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm border ${headerIconBg}`}>
+            <HeaderIcon className="w-4 h-4" />
           </div>
           <div>
-            <p className="text-sm font-bold text-slate-800">
-              {orders.length > 1 ? `${orders.length} ширхэг бараа` : "Захиалсан бараа"}
+            <p className={`text-sm font-extrabold tracking-tight ${allRejected ? "text-slate-500" : "text-slate-800"}`}>
+              {allRejected ? "Цуцлагдсан захиалга" : (orders.length > 1 ? `${orders.length} ширхэг бараа` : "Захиалсан бараа")}
             </p>
-            <p className="text-xs font-medium text-slate-400 mt-0.5">
-              {new Date(first.createdAt).toLocaleDateString("mn-MN")} захиалсан
+            <p className="text-[11px] font-bold text-slate-400 mt-0.5 uppercase tracking-wider">
+              {new Date(first.createdAt).toLocaleDateString("mn-MN")}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          {allDeliveryRequested && (
+          {allDeliveryRequested && !allRejected && (
             <span className="text-[10px] px-2.5 py-1 rounded-full font-bold bg-emerald-100 text-emerald-700 flex items-center gap-1.5 border border-emerald-200 shadow-sm">
-              <Truck className="w-3 h-3" /> БҮГД ХҮРГЭЛТЭД
+              <Truck className="w-3 h-3" /> ХҮРГЭЛТ
             </span>
           )}
           {totalAmount > 0 ? (
-            <span className="font-extrabold text-slate-800 text-lg tracking-tight">₮{totalAmount.toLocaleString()}</span>
+            <span className={`font-black text-lg tracking-tighter ${allRejected ? "text-slate-300 line-through" : "text-slate-900"}`}>
+              ₮{totalAmount.toLocaleString()}
+            </span>
           ) : (
-             <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">Төлөгдсөн</span>
+            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">Төлөгдсөн</span>
           )}
         </div>
       </div>
 
-      {/* Visual Status Timeline (for the entire group) */}
       <div className="px-5 py-2 border-b border-slate-50">
         <OrderStatusTimeline 
-          status={first.status?.name || ""} 
+          status={allRejected ? "Цуцлагдсан" : (first.status?.name || "")} 
           isFinal={first.status?.isFinal} 
         />
       </div>
 
-      {/* Items */}
       <div className="divide-y divide-slate-50">
         {orders.map((order: any) => {
-          const isPending = !order.status?.isDeliverable && !order.status?.isFinal;
+          const isCancelled = order.status?.name === "Цуцлагдсан" || order.paymentStatus === "REJECTED";
+          const isPending = !isCancelled && !order.status?.isDeliverable && !order.status?.isFinal;
+          
           return (
-            <div key={order.id} className={`px-5 py-4 flex items-center justify-between gap-4 transition-colors ${order.wantsDelivery ? "bg-emerald-50/30" : "hover:bg-slate-50/50"} ${isPending ? "opacity-75" : ""}`}>
+            <div key={order.id} className={`px-5 py-3.5 flex items-center justify-between gap-4 transition-colors ${order.wantsDelivery && !isCancelled ? "bg-emerald-50/20" : "hover:bg-slate-50/50"} ${isPending || isCancelled ? "opacity-75" : ""}`}>
               <div className="flex items-center gap-3 flex-1 min-w-0">
-                {isPending ? (
-                  <Clock className="w-4 h-4 flex-shrink-0 text-slate-300" />
-                ) : (
-                  <Package className={`w-4 h-4 flex-shrink-0 ${order.wantsDelivery ? "text-emerald-400" : "text-indigo-400"}`} />
-                )}
                 <div className="min-w-0">
-                  <p className={`font-semibold truncate ${isPending ? "text-slate-500" : "text-slate-800"}`}>
+                  <p className={`font-bold text-sm truncate ${isCancelled ? "text-slate-400 line-through" : isPending ? "text-slate-500" : "text-slate-800"}`}>
                     {order.batch?.product?.name}
                   </p>
-                  <p className="text-xs text-slate-400 mt-0.5 font-medium">#{order.orderNumber} · {order.quantity} ш</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5 font-bold uppercase tracking-wide">#{order.orderNumber} · {order.quantity} ширхэг</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                {order.wantsDelivery && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-100/80 text-emerald-700 font-bold flex items-center gap-1 whitespace-nowrap border border-emerald-200/60 shadow-sm">
-                    <Truck className="w-3 h-3" /> Хүргэлт
+                {order.wantsDelivery && !isCancelled && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 font-black uppercase tracking-tighter border border-emerald-100 shadow-sm">
+                    ХҮРГЭЛТ
                   </span>
                 )}
-                <span className={`text-xs px-2.5 py-1 rounded-full font-bold whitespace-nowrap border shadow-sm flex items-center gap-1.5 ${
-                  order.status?.isFinal 
-                    ? "bg-emerald-50 border-emerald-200/50 text-emerald-700" 
-                    : isPending
-                      ? "bg-slate-50 border-slate-200/60 text-slate-600"
-                      : "bg-blue-50 border-blue-200/50 text-blue-700"
+                <span className={`text-[10px] px-2 py-0.5 rounded font-black tracking-tight uppercase border ${
+                  isCancelled
+                    ? "bg-slate-50 border-slate-200 text-slate-400"
+                    : order.status?.isFinal 
+                      ? "bg-emerald-50 border-emerald-200/50 text-emerald-600" 
+                      : isPending
+                        ? "bg-slate-50 border-slate-200/60 text-slate-500"
+                        : "bg-blue-50 border-blue-100 text-blue-600"
                 }`}>
-                  <span className="text-sm leading-none">{getStatusIcon(order.status?.name)}</span>
                   {order.status?.name || "Хүлээгдэж байна"}
                 </span>
               </div>
@@ -279,6 +265,20 @@ function OrderGroup({ orders, completed = false }: { orders: any[]; completed?: 
           )
         })}
       </div>
+
+      {allRejected && first.cancellationReason && (
+        <div className="px-5 py-3 bg-red-50/50 border-t border-red-100">
+          <div className="flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-[10px] font-black text-red-800/60 uppercase tracking-widest mb-1">Админ тайлбар:</p>
+              <p className="text-[11px] text-red-700 font-bold italic leading-relaxed">
+                "{first.cancellationReason}"
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

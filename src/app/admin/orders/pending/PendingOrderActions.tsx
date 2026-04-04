@@ -3,9 +3,11 @@
 import { useState } from "react"
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react"
 import { confirmOrderPayment, rejectOrderPayment } from "@/app/actions/settings-actions"
+import { RejectionDialog } from "@/components/admin/RejectionDialog"
 
 export function PendingOrderActions({ orderId }: { orderId: string }) {
   const [status, setStatus] = useState<"idle" | "confirming" | "rejecting" | "confirmed" | "rejected">("idle")
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false)
 
   async function handleConfirm() {
     setStatus("confirming")
@@ -14,10 +16,9 @@ export function PendingOrderActions({ orderId }: { orderId: string }) {
     else setStatus("idle")
   }
 
-  async function handleReject() {
-    if (!confirm("Энэ захиалгыг цуцлах уу?")) return
+  async function handleReject(reason: string) {
     setStatus("rejecting")
-    const res = await rejectOrderPayment(orderId)
+    const res = await rejectOrderPayment(orderId, reason)
     if (res.success) setStatus("rejected")
     else setStatus("idle")
   }
@@ -52,7 +53,7 @@ export function PendingOrderActions({ orderId }: { orderId: string }) {
         Баталгаажуулах
       </button>
       <button
-        onClick={handleReject}
+        onClick={() => setIsRejectModalOpen(true)}
         disabled={status === "confirming" || status === "rejecting"}
         className="flex items-center gap-2 bg-white border border-red-200 text-red-500 hover:bg-red-50 px-4 py-2 rounded-lg font-semibold text-sm transition-colors disabled:opacity-60"
       >
@@ -62,6 +63,13 @@ export function PendingOrderActions({ orderId }: { orderId: string }) {
         }
         Цуцлах
       </button>
+
+      <RejectionDialog 
+        isOpen={isRejectModalOpen}
+        onClose={() => setIsRejectModalOpen(false)}
+        onConfirm={handleReject}
+        isLoading={status === "rejecting"}
+      />
     </div>
   )
 }

@@ -50,18 +50,25 @@ async function main() {
 
   // 2. Create Order Status Types
   const statuses = [
-    { name: 'Захиалга баталгаажсан', isFinal: false },
-    { name: 'Солонгосоос хөдөлсөн', isFinal: false },
-    { name: 'Улаанбаатарт ирсэн', isFinal: false },
-    { name: 'Өөрөө ирж авсан', isFinal: true },
-    { name: 'Хүргэлтээр авсан', isFinal: true },
+    { name: 'Төлбөр хүлээгдэж байна', isFinal: false, isDefault: true, color: 'amber' },
+    { name: 'Захиалга баталгаажсан', isFinal: false, isDefault: false, color: 'blue' },
+    { name: 'Цуцлагдсан', isFinal: true, isDefault: false, color: 'red' },
+    { name: 'Солонгосоос хөдөлсөн', isFinal: false, isDefault: false, color: 'purple' },
+    { name: 'Улаанбаатарт ирсэн', isFinal: false, isDefault: false, color: 'indigo' },
+    { name: 'Өөрөө ирж авсан', isFinal: true, isDefault: false, color: 'emerald' },
+    { name: 'Хүргэлтээр авсан', isFinal: true, isDefault: false, color: 'emerald' },
   ]
 
   for (const s of statuses) {
-    const existing = await prisma.orderStatusType.findFirst({ where: { name: s.name } })
-    if (!existing) {
-      await prisma.orderStatusType.create({ data: s })
-    }
+    await prisma.orderStatusType.upsert({
+      where: { name: s.name },
+      update: { 
+        isDefault: s.isDefault,
+        isFinal: s.isFinal,
+        color: s.color 
+      },
+      create: s,
+    })
   }
   console.log(`Created ${statuses.length} order statuses`)
 

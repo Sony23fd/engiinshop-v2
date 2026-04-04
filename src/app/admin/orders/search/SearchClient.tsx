@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge"
 import { StatusBadge } from "@/components/admin/StatusBadge"
 import { GroupStatusUpdater } from "./GroupStatusUpdater"
 import { GroupAdminDeliveryButton } from "./GroupAdminDeliveryButton"
+import { RejectionDialog } from "@/components/admin/RejectionDialog"
 
 export default function SearchClient({ statuses }: { statuses: any[] }) {
   const [query, setQuery] = useState("")
@@ -33,6 +34,7 @@ export default function SearchClient({ statuses }: { statuses: any[] }) {
   const [loading, setLoading] = useState(false)
   const [hasSearched, setHasSearched] = useState(false)
   const [confirmChange, setConfirmChange] = useState<{orderId: string, newStatusId: string, oldStatusId: string | null} | null>(null)
+  const [pendingRejection, setPendingRejection] = useState<{orderId: string, newStatusId: string} | null>(null)
   const { toast } = useToast()
 
   async function handleSearch(e?: React.FormEvent) {
@@ -51,6 +53,33 @@ export default function SearchClient({ statuses }: { statuses: any[] }) {
         title: "Алдаа",
         description: "Жагсаалт унших үед алдаа гарлаа",
       })
+    }
+  }
+
+  async function handleStatusChange(orderId: string, newStatusId: string, oldStatusId: string | null) {
+    const statusName = statuses.find(s => s.id === newStatusId)?.name
+    
+    if (statusName === "Цуцлагдсан") {
+      setPendingRejection({ orderId, newStatusId })
+    } else {
+      setConfirmChange({ orderId, newStatusId, oldStatusId })
+    }
+  }
+
+  async function handleRejectionConfirm(reason: string) {
+    if (!pendingRejection) return
+    const { orderId, newStatusId } = pendingRejection
+    setLoading(true)
+    
+    const result = await updateOrderStatus(orderId, newStatusId, reason)
+    setLoading(false)
+    setPendingRejection(null)
+
+    if (result.success) {
+      toast({ title: "Амжилттай", description: "Захиалга цуцлагдаж, шалтгаан хадгалагдлаа." })
+      handleSearch() // Refresh data
+    } else {
+      toast({ variant: "destructive", title: "Алдаа", description: result.error || "Алдаа гарлаа" })
     }
   }
 
@@ -298,15 +327,10 @@ export default function SearchClient({ statuses }: { statuses: any[] }) {
                           {/* Status Dropdown */}
                           <div className="md:col-span-3 flex justify-end">
                             <Select 
-                              value={order.statusId ? String(order.statusId) : undefined} 
+                              defaultValue={order.statusId || "none"} 
                               onValueChange={(val) => {
-                                if (val && val !== order.statusId) {
-                                  setConfirmChange({
-                                    orderId: order.id,
-                                    newStatusId: val as string,
-                                    oldStatusId: order.statusId || null
-                                  });
-                                }
+                                if (val === "none") return;
+                                handleStatusChange(order.id, val, order.statusId)
                               }}
                             >
                               <SelectTrigger className="w-full sm:w-[160px] bg-slate-50 border-slate-200 h-9">
@@ -335,6 +359,13 @@ export default function SearchClient({ statuses }: { statuses: any[] }) {
           })}
         </div>
       )}
+
+      <RejectionDialog 
+        isOpen={!!pendingRejection}
+        onClose={() => setPendingRejection(null)}
+        onConfirm={handleRejectionConfirm}
+        isLoading={loading}
+      />
     </div>
   )
 }

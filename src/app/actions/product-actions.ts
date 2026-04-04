@@ -19,7 +19,7 @@ export async function getProducts() {
     const validOrderAggregations = await db.order.groupBy({
       by: ['batchId'],
       where: {
-        paymentStatus: { not: 'REJECTED' },
+        paymentStatus: 'CONFIRMED',
         status: {
           name: { not: 'Цуцлагдсан' }
         }
