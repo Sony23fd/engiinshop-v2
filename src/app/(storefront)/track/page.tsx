@@ -173,12 +173,19 @@ function OrderGroup({ orders, completed = false }: { orders: any[]; completed?: 
   const allDeliveryRequested = orders.every((o: any) => o.wantsDelivery)
   const someDeliveryRequested = orders.some((o: any) => o.wantsDelivery)
 
+  // Determine styles (Neutralize if completed)
   let borderClass = "border-slate-200/60 shadow-slate-200/50"
   let accentClass = ""
   let headerIconBg = "bg-white border-slate-200 text-slate-500"
   let HeaderIcon = Package
 
-  if (allRejected) {
+  if (completed) {
+    // If in history, always use muted/neutral colors regardless of status
+    borderClass = "border-slate-200 shadow-sm opacity-70 grayscale-[0.3]"
+    accentClass = "border-l-4 border-l-slate-300"
+    headerIconBg = "bg-slate-50 border-slate-100 text-slate-400"
+    HeaderIcon = allRejected ? XCircle : (allDelivered ? CheckCircle2 : Package)
+  } else if (allRejected) {
     borderClass = "border-slate-200 shadow-sm"
     accentClass = "border-l-4 border-l-red-500/80"
     headerIconBg = "bg-red-50 border-red-100 text-red-500"
@@ -204,7 +211,7 @@ function OrderGroup({ orders, completed = false }: { orders: any[]; completed?: 
             <HeaderIcon className="w-4 h-4" />
           </div>
           <div>
-            <p className={`text-sm font-extrabold tracking-tight ${allRejected ? "text-slate-500" : "text-slate-800"}`}>
+            <p className={`text-sm font-extrabold tracking-tight ${allRejected || completed ? "text-slate-500" : "text-slate-800"}`}>
               {allRejected ? "Цуцлагдсан захиалга" : (orders.length > 1 ? `${orders.length} ширхэг бараа` : "Захиалсан бараа")}
             </p>
             <p className="text-[11px] font-bold text-slate-400 mt-0.5 uppercase tracking-wider">
@@ -213,13 +220,13 @@ function OrderGroup({ orders, completed = false }: { orders: any[]; completed?: 
           </div>
         </div>
         <div className="flex items-center gap-3">
-          {allDeliveryRequested && !allRejected && (
+          {allDeliveryRequested && !allRejected && !completed && (
             <span className="text-[10px] px-2.5 py-1 rounded-full font-bold bg-emerald-100 text-emerald-700 flex items-center gap-1.5 border border-emerald-200 shadow-sm">
               <Truck className="w-3 h-3" /> ХҮРГЭЛТ
             </span>
           )}
           {totalAmount > 0 ? (
-            <span className={`font-black text-lg tracking-tighter ${allRejected ? "text-slate-300 line-through" : "text-slate-900"}`}>
+            <span className={`font-black text-lg tracking-tighter ${allRejected || completed ? "text-slate-400" : "text-slate-900"}`}>
               ₮{totalAmount.toLocaleString()}
             </span>
           ) : (
@@ -241,10 +248,10 @@ function OrderGroup({ orders, completed = false }: { orders: any[]; completed?: 
           const isPending = !isCancelled && !order.status?.isDeliverable && !order.status?.isFinal;
           
           return (
-            <div key={order.id} className={`px-5 py-3.5 flex items-center justify-between gap-4 transition-colors ${order.wantsDelivery && !isCancelled ? "bg-emerald-50/20" : "hover:bg-slate-50/50"} ${isPending || isCancelled ? "opacity-75" : ""}`}>
+            <div key={order.id} className={`px-5 py-3.5 flex items-center justify-between gap-4 transition-colors ${order.wantsDelivery && !isCancelled && !completed ? "bg-emerald-50/20" : "hover:bg-slate-50/50"} ${isPending || isCancelled || completed ? "opacity-75" : ""}`}>
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <div className="min-w-0">
-                  <p className={`font-bold text-sm truncate ${isCancelled ? "text-slate-400 line-through" : isPending ? "text-slate-500" : "text-slate-800"}`}>
+                  <p className={`font-bold text-sm truncate ${isCancelled || completed ? "text-slate-400 font-bold" : isPending ? "text-slate-500" : "text-slate-800"}`}>
                     {order.batch?.product?.name}
                   </p>
                   <p className="text-[10px] text-slate-400 mt-0.5 font-bold uppercase tracking-wide">#{order.orderNumber} · {order.quantity} ширхэг</p>
@@ -252,12 +259,12 @@ function OrderGroup({ orders, completed = false }: { orders: any[]; completed?: 
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 {order.wantsDelivery && !isCancelled && (
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 font-black uppercase tracking-tighter border border-emerald-100 shadow-sm">
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded font-black uppercase tracking-tighter border shadow-sm ${completed ? "bg-slate-50 border-slate-200 text-slate-400" : "bg-emerald-50 border-emerald-100 text-emerald-600"}`}>
                     ХҮРГЭЛТ
                   </span>
                 )}
                 <span className={`text-[10px] px-2 py-0.5 rounded font-black tracking-tight uppercase border ${
-                  isCancelled
+                  isCancelled || completed
                     ? "bg-slate-50 border-slate-200 text-slate-400"
                     : order.status?.isFinal 
                       ? "bg-emerald-50 border-emerald-200/50 text-emerald-600" 
