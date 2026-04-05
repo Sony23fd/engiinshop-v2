@@ -27,7 +27,8 @@ export function BatchOrdersClient({ activeOrders, batch, statuses, role }: { act
       (o.accountNumber && o.accountNumber.toLowerCase().includes(q)) ||
       (o.customerPhone && o.customerPhone.toLowerCase().includes(q)) ||
       (o.customerName && o.customerName.toLowerCase().includes(q)) ||
-      (o.orderNumber && String(o.orderNumber).toLowerCase().includes(q))
+      (o.orderNumber && String(o.orderNumber).toLowerCase().includes(q)) ||
+      (o.transactionRef && o.transactionRef.toLowerCase().includes(q))
     )
   })
 
@@ -102,7 +103,7 @@ export function BatchOrdersClient({ activeOrders, batch, statuses, role }: { act
       {/* Filters and Bulk Actions */}
       <div className="flex flex-col md:flex-row justify-between gap-4">
         <Input 
-          placeholder="Данс, утас, нэрээр хайх..." 
+          placeholder="Данс, утас, нэр, гүйлгээний утгаар хайх..." 
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="md:w-1/3 bg-slate-50 border-slate-200"
@@ -155,6 +156,7 @@ export function BatchOrdersClient({ activeOrders, batch, statuses, role }: { act
               <th className="px-4 py-3">Захиалгын дугаар &nbsp;</th>
               <th className="px-4 py-3">Нэр &nbsp;</th>
               <th className="px-4 py-3">Дансны дугаар &nbsp;</th>
+              <th className="px-4 py-3 text-center">Гүйлгээний утга &nbsp;</th>
               <th className="px-4 py-3 text-center">Тоо &nbsp;</th>
 
               <th className="px-4 py-3 text-center">Статус &nbsp;</th>
@@ -197,6 +199,11 @@ export function BatchOrdersClient({ activeOrders, batch, statuses, role }: { act
                     </div>
                   </td>
                   <td className="px-4 py-6 text-slate-500 font-medium">{order.accountNumber}</td>
+                  <td className="px-4 py-6 text-center">
+                    <span className="text-[11px] font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded border border-indigo-100">
+                      {order.transactionRef || "-"}
+                    </span>
+                  </td>
                   <td className="px-4 py-6 font-semibold text-center text-slate-600">{order.quantity}</td>
 
                   <td className="px-4 py-6 min-w-[150px] text-center">

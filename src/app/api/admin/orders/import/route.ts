@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import * as XLSX from "xlsx"
+import { getCurrentAdmin, logActivity } from "@/lib/auth"
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,10 +13,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "file болон batchId шаардлагатай" }, { status: 400 })
     }
 
-    const batch = await db.batch.findUnique({ where: { id: batchId } })
+    const batch = await db.batch.findUnique({ 
+      where: { id: batchId },
+      include: { product: { select: { name: true } } }
+    })
     if (!batch) {
       return NextResponse.json({ error: "Batch олдсонгүй" }, { status: 404 })
     }
+
+    const admin = await getCurrentAdmin()
 
     const arrayBuffer = await file.arrayBuffer()
     const wb = XLSX.read(arrayBuffer, { type: "buffer", cellDates: true })
@@ -62,8 +68,6 @@ export async function POST(req: NextRequest) {
       const arrivalDate = parseDate(row["Ирэх өдөр"])
       const deliveryDate = parseDate(row["Хүргүүлэх өдөр"])
       const deliveryAddress = String(row["Хаяг"] ?? "").trim() || null
-      // Захиалгын дугаар column is IGNORED — Prisma auto-increments it
-      // Карго үнэ — auto-calculated field, not imported; defaults to 0
 
       try {
         await (db.order as any).create({
@@ -75,6 +79,8 @@ export async function POST(req: NextRequest) {
             batchId,
             paymentStatus: "CONFIRMED",
             statusId,
+            createdByAdmin: admin?.name || "System",
+            creationSource: "ADMIN",
             ...(arrivalDate && { arrivalDate }),
             ...(deliveryDate && { deliveryDate }),
             ...(deliveryAddress && { deliveryAddress }),
@@ -84,6 +90,17 @@ export async function POST(req: NextRequest) {
       } catch (e: any) {
         errors.push(`Мөр ${rowNum} (${customerName}): ${e.message}`)
       }
+    }
+
+    if (created > 0 && admin) {
+      await logActivity({
+        userId: admin.id,
+        userName: admin.name,
+        userRole: admin.role,
+        action: "Захиалга импортлов",
+        target: `Багц: ${batch.batchNumber} (${batch.product?.name})`,
+        detail: `${created} ширхэг захиалга амжилттай импортлогдлоо. Үйлдлийг гүйцэтгэсэн: ${admin.name}`,
+      })
     }
 
     return NextResponse.json({ success: true, created, updated: 0, errors })
