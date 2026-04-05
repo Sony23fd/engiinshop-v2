@@ -70,7 +70,7 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ ba
         <h2 className="text-lg font-bold">Захиалгын зүйлс</h2>
         <div className="flex space-x-2">
           <ExportButton batchId={batchId} />
-          <ImportButton batchId={batchId} />
+          <ImportButton batchId={batchId} batchName={batch.product?.name || "Тодорхойгүй"} />
           <Sheet>
             <SheetTrigger className="inline-flex items-center justify-center whitespace-nowrap rounded-md font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input hover:bg-slate-100 hover:text-accent-foreground text-sm bg-white h-9 px-3 shadow-sm">
               <Plus className="w-4 h-4 mr-2" /> Нэмэх

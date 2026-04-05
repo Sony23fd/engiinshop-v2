@@ -3,6 +3,7 @@
 import { useRef, useState } from "react"
 import { Upload, Loader2, CheckCircle2, AlertCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useToast } from "@/components/ui/use-toast"
 
 interface ImportResult {
   success: boolean
@@ -12,7 +13,8 @@ interface ImportResult {
   error?: string
 }
 
-export function ImportButton({ batchId }: { batchId: string }) {
+export function ImportButton({ batchId, batchName }: { batchId: string, batchName: string }) {
+  const { toast } = useToast()
   const router = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
   const [loading, setLoading] = useState(false)
@@ -38,13 +40,35 @@ export function ImportButton({ batchId }: { batchId: string }) {
       setResult(data)
 
       if (data.success) {
+        toast({
+          title: "Амжилттай!",
+          description: `${data.created} захиалгыг [${batchName}] багц руу амжилттай импортолоо.`,
+        })
+        if (data.errors && data.errors.length > 0) {
+          toast({
+            variant: "destructive",
+            title: "Зарим мөр дээр алдаа гарлаа",
+            description: `${data.errors.length} мөр ачааллахад асуудал гарсан байна. Доорх жагсаалтаас харна уу.`,
+          })
+        }
         router.refresh()
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Импорт амжилтгүй",
+          description: data.error ?? "Алдаа гарлаа",
+        })
       }
     } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Алдаа",
+        description: err.message,
+      })
       setResult({ success: false, error: err.message })
     } finally {
       setLoading(false)
-      // Reset file input so same file can be re-selected
+      // Reset file input
       if (fileRef.current) fileRef.current.value = ""
     }
   }
@@ -72,54 +96,23 @@ export function ImportButton({ batchId }: { batchId: string }) {
         {loading ? "Импортолж байна..." : "Импорт"}
       </button>
 
-      {/* Result toast */}
-      {result && (
-        <div
-          className={`absolute top-11 right-0 z-50 w-72 rounded-lg border p-3 text-xs shadow-lg ${
-            result.success
-              ? "bg-green-50 border-green-200 text-green-800"
-              : "bg-red-50 border-red-200 text-red-700"
-          }`}
-        >
-          <div className="flex items-start gap-2">
-            {result.success ? (
-              <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-green-600" />
-            ) : (
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-500" />
-            )}
-            <div className="space-y-1">
-              {result.success ? (
-                <>
-                  <p className="font-semibold">Амжилттай импортолоо!</p>
-                  <p>{result.created} захиалга нэмэгдлээ</p>
-                  <p>{result.updated} захиалга шинэчлэгдлээ</p>
-                  {result.errors && result.errors.length > 0 && (
-                    <details className="mt-1">
-                      <summary className="cursor-pointer text-amber-700 font-medium">
-                        {result.errors.length} алдаа
-                      </summary>
-                      <ul className="mt-1 space-y-0.5 text-amber-700">
-                        {result.errors.slice(0, 5).map((e, i) => (
-                          <li key={i}>• {e}</li>
-                        ))}
-                        {result.errors.length > 5 && (
-                          <li>...болон {result.errors.length - 5} дахь алдаа</li>
-                        )}
-                      </ul>
-                    </details>
-                  )}
-                </>
-              ) : (
-                <p>{result.error ?? "Алдаа гарлаа"}</p>
-              )}
-            </div>
+      {/* Show detailed errors if any */}
+      {result && result.errors && result.errors.length > 0 && (
+        <div className="absolute top-11 right-0 z-50 w-80 rounded-lg border p-4 bg-white shadow-xl text-xs">
+          <div className="flex items-start gap-2 mb-3">
+            <AlertCircle className="w-4 h-4 shrink-0 text-amber-500 mt-0.5" />
+            <p className="font-bold text-slate-800">Импортын зарим мөр алдаатай:</p>
           </div>
-
+          <div className="max-h-48 overflow-y-auto space-y-1.5 custom-scrollbar bg-slate-50 p-2 rounded border border-slate-100">
+            {result.errors.map((e, i) => (
+              <p key={i} className="text-slate-600 leading-relaxed">• {e}</p>
+            ))}
+          </div>
           <button
             onClick={() => setResult(null)}
-            className="absolute top-2 right-2 text-slate-400 hover:text-slate-600"
+            className="mt-3 w-full py-1.5 bg-slate-100 hover:bg-slate-200 rounded font-bold text-slate-600 transition-colors"
           >
-            ×
+            Хаах
           </button>
         </div>
       )}

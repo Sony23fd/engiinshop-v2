@@ -62,19 +62,26 @@ export function BatchOrdersClient({ activeOrders, batch, statuses, role }: { act
     const res = await updateOrderDetails(editingOrder.id, data)
     setLoading(false)
     if (res.success) {
-      toast({ title: "Амжилттай" })
+      toast({ 
+        title: "Амжилттай шинэчлэгдлээ", 
+        description: `${data.customerName}-ийн захиалгын мэдээллийг шинэчиллээ.` 
+      })
       setEditingOrder(null)
       router.refresh()
     } else toast({ variant: "destructive", title: "Алдаа", description: res.error || "Алдаа" })
   }
 
   async function handleDeleteOrder(id: string) {
+    const orderToDelete = activeOrders.find(o => o.id === id)
     if (!confirm("Энэ захиалгыг бүрмөсөн устгах уу?")) return
     setLoading(true)
     const res = await deleteOrder(id)
     setLoading(false)
     if (res.success) {
-      toast({ title: "Устгагдлаа" })
+      toast({ 
+        title: "Устгагдлаа", 
+        description: `#${orderToDelete?.orderNumber || ""} дугаартай захиалгыг устгалаа.` 
+      })
       router.refresh()
     } else toast({ variant: "destructive", title: "Алдаа", description: res.error || "Алдаа" })
   }
@@ -89,7 +96,11 @@ export function BatchOrdersClient({ activeOrders, batch, statuses, role }: { act
     setLoading(false)
 
     if (res.success) {
-      toast({ title: "Амжилттай", description: "Төлөв өөрчлөгдлөө" })
+      const statusName = statuses.find(s => s.id === selectedStatus)?.name || ""
+      toast({ 
+        title: "Бөөнөөр шинэчиллээ", 
+        description: `${selectedIds.length} захиалгын төлөвийг '${statusName}' болгож шинэчиллээ.` 
+      })
       setSelectedIds([])
       setSelectedStatus("")
       router.refresh()
