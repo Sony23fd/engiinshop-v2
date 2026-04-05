@@ -16,7 +16,9 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   cargo_bank_name: "Хаан Банк",
   cargo_bank_account: "",
   cargo_bank_holder: "",
-  cargo_payment_instruction: "Гүйлгээний утга дээр утасныхаа дугаарыг заавал бичнэ үү."
+  cargo_payment_instruction: "Гүйлгээний утга дээр утасныхаа дугаарыг заавал бичнэ үү.",
+  delivery_delay_active: "false",
+  delivery_delay_message: "Хүргэлтийн захиалга хэт олон байгаагаас шалтгаалан таны захиалга бага зэрэг саатаж очих магадлалтайг анхаарна уу."
 }
 
 export async function getShopSettings(): Promise<Record<string, string>> {
@@ -39,7 +41,9 @@ export async function saveShopSetting(key: string, value: string) {
     })
     revalidatePath("/admin/settings/payment")
     revalidatePath("/admin/settings/terms")
+    revalidatePath("/admin/cargo-settings")
     revalidatePath("/cart")
+    revalidatePath("/track")
     return { success: true }
   } catch (error: any) {
     return { success: false, error: error.message }

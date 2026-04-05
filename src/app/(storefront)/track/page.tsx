@@ -1,4 +1,5 @@
 import { getOrdersByAccount } from "@/app/actions/order-actions"
+import { getShopSettings } from "@/app/actions/settings-actions"
 import { 
   CheckCircle2, 
   Truck, 
@@ -7,7 +8,8 @@ import {
   AlertCircle, 
   XCircle, 
   Search, 
-  History 
+  History,
+  AlertTriangle
 } from "lucide-react"
 import DeliveryRequestButton from "./DeliveryRequestButton"
 import { OrderStatusTimeline } from "@/components/OrderStatusTimeline"
@@ -22,21 +24,13 @@ export default async function TrackOrderPage({
   const resolvedParams = await searchParams
   const account = resolvedParams.account
 
-  if (!account) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 py-20 text-center">
-        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mx-auto mb-4">
-          <Search className="w-8 h-8" />
-        </div>
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">Хайлт хийгдсэнгүй</h2>
-        <p className="text-slate-500">Та дээрх хайлтын хэсэгт дансны дугаараа оруулан хайна уу.</p>
-      </div>
-    )
-  }
+  const [settings, accountData] = await Promise.all([
+    getShopSettings(),
+    account ? getOrdersByAccount(account) : Promise.resolve({ orders: [], success: true })
+  ])
+  const { orders, success } = accountData
 
-  const { orders, success } = await getOrdersByAccount(account)
-
-  // Group by transactionRef (same cart checkout)
+  // Define logic used in results
   const grouped: Record<string, any[]> = {}
   for (const order of (orders || [])) {
     const key = order.transactionRef || order.id
@@ -44,7 +38,6 @@ export default async function TrackOrderPage({
     grouped[key].push(order)
   }
 
-  // Define what "Finished" means (either final status or explicitly rejected/cancelled)
   const isOrderFinished = (o: any) => 
     o.status?.isFinal === true || 
     o.paymentStatus === "REJECTED" || 
@@ -53,57 +46,83 @@ export default async function TrackOrderPage({
 
   const activeGroups = Object.values(grouped).filter(g => g.some((o: any) => !isOrderFinished(o)))
   const completedGroups = Object.values(grouped).filter(g => g.every((o: any) => isOrderFinished(o)))
-
   const totalOrders = orders?.length || 0
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900">
-          Хайлтын үр дүн: <span className="text-[#4F46E5]">{account}</span>
-        </h1>
-        <p className="text-slate-500 mt-1">Нийт захиалга: {totalOrders}</p>
-      </div>
+      {/* Global Delivery Delay Warning */}
+      {settings.delivery_delay_active === "true" && (
+        <div className="mb-8 bg-amber-50 border-2 border-amber-200 rounded-2xl p-5 shadow-sm shadow-amber-100/50 flex gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="w-12 h-12 rounded-xl bg-white border border-amber-200 flex items-center justify-center shrink-0 shadow-sm text-amber-600">
+            <AlertTriangle className="w-6 h-6 fill-amber-50" />
+          </div>
+          <div className="space-y-1 text-left">
+            <h4 className="font-bold text-amber-900 leading-tight">Хүргэлтийн Анхааруулга</h4>
+            <p className="text-sm text-amber-800/80 font-medium leading-relaxed italic">
+              "{settings.delivery_delay_message}"
+            </p>
+          </div>
+        </div>
+      )}
 
-      {!success || totalOrders === 0 ? (
-        <div className="bg-white rounded-xl border border-dashed p-12 text-center text-slate-500">
-          Энэ дансны дугаар дээр бүртгэлтэй захиалга олдсонгүй.
+      {!account ? (
+        <div className="py-20 text-center">
+          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mx-auto mb-4">
+            <Search className="w-8 h-8" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Хайлт хийгдсэнгүй</h2>
+          <p className="text-slate-500">Та дээрх хайлтын хэсэгт дансны дугаараа оруулан хайна уу.</p>
         </div>
       ) : (
-        <div className="space-y-12">
-          {/* Active Orders */}
-          <div>
-            <h2 className="text-xl font-bold text-slate-800 border-b pb-3 mb-6 flex items-center gap-2">
-              <Clock className="w-5 h-5 text-blue-500" /> Идэвхтэй захиалга
-            </h2>
-            {activeGroups.length > 0 ? (
-              <div className="space-y-6">
-                <UnifiedDeliverySection groups={activeGroups} />
-                {activeGroups.map((groupOrders) => (
-                  <OrderGroup key={groupOrders[0].transactionRef || groupOrders[0].id} orders={groupOrders} />
-                ))}
-              </div>
-            ) : (
-              <div className="bg-slate-50 rounded-lg p-8 text-center text-slate-500 border border-slate-100">
-                Одоогоор идэвхтэй захиалга алга байна.
-              </div>
-            )}
+        <>
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold text-slate-900 leading-tight">
+              Хайлтын үр дүн: <span className="text-[#4F46E5]">{account}</span>
+            </h1>
+            <p className="text-slate-500 mt-1 font-medium italic">Нийт захиалга: {totalOrders}</p>
           </div>
 
-          {/* Completed Orders */}
-          {completedGroups.length > 0 && (
-            <div>
-              <h2 className="text-xl font-bold text-slate-800 border-b pb-3 mb-6 flex items-center gap-2">
-                <History className="w-5 h-5 text-green-500" /> Өмнөх түүх
-              </h2>
-              <div className="space-y-6">
-                {completedGroups.map((groupOrders) => (
-                  <OrderGroup key={groupOrders[0].transactionRef || groupOrders[0].id} orders={groupOrders} completed />
-                ))}
+          {!success || totalOrders === 0 ? (
+            <div className="bg-white rounded-xl border border-dashed p-12 text-center text-slate-500 font-medium">
+              Энэ дансны дугаар дээр бүртгэлтэй захиалга олдсонгүй.
+            </div>
+          ) : (
+            <div className="space-y-12">
+              {/* Active Orders */}
+              <div>
+                <h2 className="text-xl font-bold text-slate-800 border-b pb-3 mb-6 flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-blue-500" /> Идэвхтэй захиалга
+                </h2>
+                {activeGroups.length > 0 ? (
+                  <div className="space-y-6">
+                    <UnifiedDeliverySection groups={activeGroups} />
+                    {activeGroups.map((groupOrders) => (
+                      <OrderGroup key={groupOrders[0].transactionRef || groupOrders[0].id} orders={groupOrders} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-slate-50 rounded-lg p-8 text-center text-slate-500 border border-slate-100 font-medium italic">
+                    Одоогоор идэвхтэй захиалга алга байна.
+                  </div>
+                )}
               </div>
+
+              {/* Completed Orders */}
+              {completedGroups.length > 0 && (
+                <div>
+                  <h2 className="text-xl font-bold text-slate-800 border-b pb-3 mb-6 flex items-center gap-2">
+                    <History className="w-5 h-5 text-green-500" /> Өмнөх түүх
+                  </h2>
+                  <div className="space-y-6">
+                    {completedGroups.map((groupOrders) => (
+                      <OrderGroup key={groupOrders[0].transactionRef || groupOrders[0].id} orders={groupOrders} completed />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
-        </div>
+        </>
       )}
     </div>
   )
@@ -152,17 +171,6 @@ function UnifiedDeliverySection({ groups }: { groups: any[][] }) {
   )
 }
 
-function getStatusIcon(statusName: string | undefined) {
-  if (!statusName) return "🕒";
-  const name = statusName.toLowerCase();
-  if (name.includes("цуцлагдсан") || name.includes("rejected")) return "❌";
-  if (name.includes("солонгосоос хөдөлсөн") || name.includes("замдаа")) return "✈️";
-  if (name.includes("улаанбаатарт ирсэн") || name.includes("ирсэн")) return "✅";
-  if (name.includes("баталгаажсан")) return "🛒";
-  if (name.includes("хүргэгдсэн") || name.includes("хүргэлтэнд")) return "🚚";
-  return "🕒";
-}
-
 function OrderGroup({ orders, completed = false }: { orders: any[]; completed?: boolean }) {
   const first = orders[0]
   const totalAmount = orders.reduce((s: number, o: any) => s + Number(o.totalAmount || 0), 0)
@@ -205,7 +213,7 @@ function OrderGroup({ orders, completed = false }: { orders: any[]; completed?: 
 
   return (
     <div className={`bg-white rounded-xl border transition-all overflow-hidden ${borderClass} ${accentClass}`}>
-      <div className="bg-slate-50/30 border-b border-slate-100 px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="bg-slate-50/30 border-b border-slate-100 px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left">
         <div className="flex items-center gap-3">
           <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm border ${headerIconBg}`}>
             <HeaderIcon className="w-4 h-4" />
@@ -242,7 +250,7 @@ function OrderGroup({ orders, completed = false }: { orders: any[]; completed?: 
         />
       </div>
 
-      <div className="divide-y divide-slate-50">
+      <div className="divide-y divide-slate-50 text-left">
         {orders.map((order: any) => {
           const isCancelled = order.status?.name === "Цуцлагдсан" || order.paymentStatus === "REJECTED";
           const isPending = !isCancelled && !order.status?.isDeliverable && !order.status?.isFinal;
@@ -281,7 +289,7 @@ function OrderGroup({ orders, completed = false }: { orders: any[]; completed?: 
       </div>
 
       {allRejected && first.cancellationReason && (
-        <div className="px-5 py-3 bg-red-50/50 border-t border-red-100">
+        <div className="px-5 py-3 bg-red-50/50 border-t border-red-100 text-left">
           <div className="flex items-start gap-2.5">
             <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
             <div className="min-w-0">
