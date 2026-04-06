@@ -35,6 +35,8 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
       { name: "Хүргэлтийн захиалга", url: "/admin/orders/delivery", icon: Truck, highlight: true, roles: ["ADMIN", "CARGO_ADMIN"] },
       { name: "Бүх захиалга", url: "/admin/orders", icon: ShoppingBag, roles: ["ADMIN", "CARGO_ADMIN"] },
       { name: "Буцаалтууд", url: "/admin/orders/refunds", icon: RefreshCcw, roles: ["ADMIN"] },
+      { name: "Барааны жагсаалт", url: "/admin/products", icon: Package, roles: ["ADMIN"] },
+      { name: "Ангилал & Төрөл", url: "/admin/categories", icon: ListFilter, roles: ["ADMIN"] },
     ]
   },
   {
@@ -45,13 +47,6 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
       { name: "Хүргэгдсэн захиалга", url: "/admin/orders/delivered", icon: PackageCheck, roles: ["ADMIN", "CARGO_ADMIN"] },
       { name: "Цуцлагдсан захиалга", url: "/admin/orders/rejected", icon: XCircle, roles: ["ADMIN", "CARGO_ADMIN"] },
       { name: "Архивлагдсан багц", url: "/admin/orders/archived", icon: Archive, roles: ["ADMIN", "CARGO_ADMIN"] },
-    ]
-  },
-  {
-    label: "БАРАА & БАГЦ",
-    items: [
-      { name: "Барааны жагсаалт", url: "/admin/products", icon: Package, roles: ["ADMIN"] },
-      { name: "Ангилал & Төрөл", url: "/admin/categories", icon: ListFilter, roles: ["ADMIN"] },
     ]
   },
   {
@@ -141,4 +136,3 @@ export function AdminSidebar({ className, role }: { className?: string; role: Ad
     </aside>
   )
 }
-
