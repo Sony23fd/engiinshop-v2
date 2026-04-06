@@ -1317,7 +1317,12 @@ export async function autoCancelExpiredOrders() {
         paymentStatus: "PENDING",
         createdAt: { lt: cutoffDate },
         // Зөвхөн админ баталгаажуулаагүй (ConfirmedAt null) захиалгуудыг цуцална
-        confirmedAt: null
+        confirmedAt: null,
+        // Зөвхөн вэб захиалгуудыг цуцална — админ оруулсан захиалгыг хэзээ ч цуцлахгүй
+        OR: [
+          { creationSource: null },
+          { creationSource: { not: "ADMIN" } }
+        ]
       }
     })
 

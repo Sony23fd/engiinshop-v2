@@ -78,6 +78,8 @@ export async function POST(req: NextRequest) {
             quantity,
             batchId,
             paymentStatus: "CONFIRMED",
+            confirmedAt: new Date(),
+            confirmationMethod: "ADMIN_IMPORT",
             statusId,
             createdByAdmin: admin?.name || "System",
             creationSource: "ADMIN",
