@@ -95,7 +95,7 @@ export default async function TrackOrderPage({
                 </h2>
                 {activeGroups.length > 0 ? (
                   <div className="space-y-6">
-                    <UnifiedDeliverySection groups={activeGroups} />
+                    <UnifiedDeliverySection groups={activeGroups} deliveryScheduleDays={settings.delivery_schedule_days || "3,6"} />
                     {activeGroups.map((groupOrders) => (
                       <OrderGroup key={groupOrders[0].transactionRef || groupOrders[0].id} orders={groupOrders} deliveryScheduleDays={settings.delivery_schedule_days || "3,6"} />
                     ))}
@@ -128,12 +128,20 @@ export default async function TrackOrderPage({
   )
 }
 
-function UnifiedDeliverySection({ groups }: { groups: any[][] }) {
+function UnifiedDeliverySection({ groups, deliveryScheduleDays = "3,6" }: { groups: any[][], deliveryScheduleDays?: string }) {
   const allOrders = groups.flat()
   const alreadyDelivered = allOrders.filter((o: any) => o.wantsDelivery)
   const deliveryAddress = alreadyDelivered.find((o: any) => o.deliveryAddress)?.deliveryAddress
-  const eligibleForDelivery = allOrders.filter((o: any) => o.status?.isDeliverable && !o.wantsDelivery)
-  const notYetDeliverable = allOrders.filter((o: any) => !o.status?.isDeliverable && !o.wantsDelivery && !o.status?.isFinal)
+  const isStatusDeliverable = (status: any) => {
+    if (!status) return false;
+    if (status.isDeliverable) return true;
+    if (status.isFinal) return false;
+    const name = status.name?.toLowerCase() || "";
+    return ["ирсэн", "arrived", "монголд", "улаанбаатарт", "ub"].some(k => name.includes(k));
+  }
+
+  const eligibleForDelivery = allOrders.filter((o: any) => isStatusDeliverable(o.status) && !o.wantsDelivery)
+  const notYetDeliverable = allOrders.filter((o: any) => !isStatusDeliverable(o.status) && !o.wantsDelivery && !o.status?.isFinal)
 
   if (alreadyDelivered.length === 0 && eligibleForDelivery.length === 0 && notYetDeliverable.length === 0) return null
   const hasMixedDeliverable = eligibleForDelivery.length > 0 && notYetDeliverable.length > 0;
@@ -158,7 +166,7 @@ function UnifiedDeliverySection({ groups }: { groups: any[][] }) {
           <p className="text-sm text-slate-700 font-medium">
             🚚 <strong>{eligibleForDelivery.length}</strong> бараа хүргэлтэд бэлэн байна.
           </p>
-          <DeliveryRequestButton orderIds={eligibleForDelivery.map((o: any) => o.id)} />
+          <DeliveryRequestButton orderIds={eligibleForDelivery.map((o: any) => o.id)} deliveryScheduleDays={deliveryScheduleDays} />
           {hasMixedDeliverable && (
             <div className="mt-2 bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800 leading-relaxed font-medium">
               ⚠️ <strong className="text-amber-900">Анхаарах:</strong> Танд ирээгүй <strong>{notYetDeliverable.length}</strong> бараа байна. 

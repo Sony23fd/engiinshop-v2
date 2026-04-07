@@ -36,9 +36,12 @@ export function DeliveryGroupCard({ groupOrders }: { groupOrders: any[] }) {
                <span className="text-slate-400">·</span>
                <span className="text-slate-500 text-sm font-semibold">{first.customerPhone}</span>
             </div>
-            <p className="text-[11px] text-slate-400 mt-0.5">
-              ⏱️ Хүсэлт өгсөн: <span className="font-medium text-slate-500" suppressHydrationWarning>{new Date(first.deliveryRequestedAt || first.updatedAt).toLocaleString("mn-MN")}</span>
-            </p>
+            <div className="text-[11px] text-slate-400 mt-0.5 space-y-0.5">
+              <p>⏱️ Хүсэлт өгсөн: <span className="font-medium text-slate-500" suppressHydrationWarning>{new Date(first.deliveryRequestedAt || first.updatedAt).toLocaleString("mn-MN")}</span></p>
+              {first.deliveryDate && (
+                <p>📅 Хүргүүлэх өдөр: <span className="font-bold text-indigo-700 bg-indigo-50 px-1 rounded" suppressHydrationWarning>{new Date(first.deliveryDate).toLocaleDateString("mn-MN")}</span></p>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">

@@ -7,6 +7,7 @@ import { createOrder } from "@/app/actions/order-actions"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
+import { getUpcomingDeliveryDates } from "@/lib/utils"
 
 export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalDeliveryFee = 0, deliveryScheduleDays = "3,6" }: { 
   termsOfService?: string; 
@@ -24,6 +25,7 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
   const [error, setError] = useState<string | null>(null)
   const [phoneError, setPhoneError] = useState<string | null>(null)
   const [agreedToTerms, setAgreedToTerms] = useState(false)
+  const [selectedDeliveryDate, setSelectedDeliveryDate] = useState<string | null>(null)
 
   function validatePhone(value: string) {
     const digits = value.replace(/\D/g, "")
@@ -90,6 +92,7 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
             phoneNumber,
             accountNumber,
             deliveryAddress: (wantsDelivery && !hasPreOrder) ? deliveryAddress : "Өөрөө ирж авна",
+            deliveryDate: (wantsDelivery && !hasPreOrder && selectedDeliveryDate) ? selectedDeliveryDate : undefined,
             quantity: item.qty,
             totalAmount: item.unitPrice * item.qty + (wantsDelivery && !hasPreOrder && idx === 0 ? singleDeliveryFee : 0),
             batchId: item.batchId,
@@ -262,11 +265,26 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
                   </button>
                 </div>
                 {wantsDelivery && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 flex gap-2 items-start">
-                    <Truck className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-                    <div className="text-xs text-blue-800 leading-relaxed">
-                      <strong>🚚 Хүргэлт {deliveryScheduleDays.split(",").map(Number).map(d => ["Ням","Даваа","Мягмар","Лхагва","Пүрэв","Баасан","Бямба"][d]).filter(Boolean).join(", ")} гарагт гарна.</strong>
-                      {' '}Товлосон өдрөөс 24-72 цагийн дотор хүргэгдэнэ.
+                  <div className="space-y-3 mt-4 border-t pt-4">
+                    <label className="text-sm font-medium text-slate-700 block mb-2">Хүргүүлэх өдөр сонгох</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {getUpcomingDeliveryDates(deliveryScheduleDays, 2).map((opt, i) => (
+                        <label key={i} className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${selectedDeliveryDate === opt.date.toISOString() ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:bg-slate-50'}`}>
+                          <input 
+                            type="radio" 
+                            name="deliveryDateChoice" 
+                            className="mt-1"
+                            required
+                            checked={selectedDeliveryDate === opt.date.toISOString()}
+                            onChange={() => setSelectedDeliveryDate(opt.date.toISOString())}
+                            value={opt.date.toISOString()} 
+                          />
+                          <div>
+                            <p className={`text-sm font-bold ${selectedDeliveryDate === opt.date.toISOString() ? 'text-indigo-900' : 'text-slate-700'}`}>{opt.formatted}</p>
+                            <p className="text-[11px] text-slate-500 mt-0.5">Товлосон өдрөөс хойш 24-72ц дотор</p>
+                          </div>
+                        </label>
+                      ))}
                     </div>
                   </div>
                 )}

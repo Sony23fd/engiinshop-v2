@@ -329,6 +329,7 @@ export async function createOrder(data: {
   accountNumber: string
   deliveryAddress?: string
   deliveryInstructions?: string
+  deliveryDate?: string
   quantity: number
   totalAmount: number
   batchId: string
@@ -358,6 +359,7 @@ export async function createOrder(data: {
           customerPhone: data.phoneNumber,
           accountNumber: data.accountNumber,
           deliveryAddress: data.deliveryAddress,
+          deliveryDate: data.deliveryDate ? new Date(data.deliveryDate) : undefined,
           quantity: data.quantity,
           batchId: data.batchId,
           wantsDelivery: data.wantsDelivery ?? false,
@@ -990,7 +992,7 @@ export async function getQPayInvoiceForOrder(transactionRef: string) {
  * Customer requests home delivery from the track page.
  * Generates a QPay invoice for the delivery fee.
  */
-export async function requestDelivery(orderIds: string[], deliveryAddress: string) {
+export async function requestDelivery(orderIds: string[], deliveryAddress: string, deliveryDate?: string) {
   try {
     const orders = await (db.order as any).findMany({
       where: { id: { in: orderIds } },
@@ -1017,6 +1019,7 @@ export async function requestDelivery(orderIds: string[], deliveryAddress: strin
           wantsDelivery: true,
           deliveryFeePaid: true,
           deliveryAddress: deliveryAddress.trim(),
+          deliveryDate: deliveryDate ? new Date(deliveryDate) : undefined,
           deliveryRequestedAt: new Date()
         }
       })
@@ -1053,7 +1056,7 @@ export async function requestDelivery(orderIds: string[], deliveryAddress: strin
   }
 }
 
-export async function confirmManualDeliveryRequest(orderIds: string[], address: string) {
+export async function confirmManualDeliveryRequest(orderIds: string[], address: string, deliveryDate?: string) {
   try {
     // Fetch orders first to get customer info for notification
     const orders = await (db.order as any).findMany({
@@ -1067,6 +1070,7 @@ export async function confirmManualDeliveryRequest(orderIds: string[], address: 
         wantsDelivery: true,
         deliveryFeePaid: false, // Pending manual verification by admin
         deliveryAddress: address.trim(),
+        deliveryDate: deliveryDate ? new Date(deliveryDate) : undefined,
         deliveryRequestedAt: new Date()
       }
     })
@@ -1280,8 +1284,7 @@ export async function getArchivedConfirmedOrders(page: number = 1, limit: number
   try {
     const where: any = {
       paymentStatus: "CONFIRMED",
-      statusId: { not: null },
-      status: { isFinal: true }
+      statusId: { not: null }
     };
 
     if (search) {
