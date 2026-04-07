@@ -8,11 +8,12 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
 
-export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalDeliveryFee = 0 }: { 
+export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalDeliveryFee = 0, deliveryScheduleDays = "3,6" }: { 
   termsOfService?: string; 
   deliveryTerms?: string; 
   qpayEnabled?: boolean;
   globalDeliveryFee?: number;
+  deliveryScheduleDays?: string;
 }) {
   const { items, removeItem, updateQty, clearCart, totalPrice } = useCart()
   const router = useRouter()
@@ -260,6 +261,15 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
                     }
                   </button>
                 </div>
+                {wantsDelivery && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 flex gap-2 items-start">
+                    <Truck className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                    <div className="text-xs text-blue-800 leading-relaxed">
+                      <strong>🚚 Хүргэлт {deliveryScheduleDays.split(",").map(Number).map(d => ["Ням","Даваа","Мягмар","Лхагва","Пүрэв","Баасан","Бямба"][d]).filter(Boolean).join(", ")} гарагт гарна.</strong>
+                      {' '}Товлосон өдрөөс 24-72 цагийн дотор хүргэгдэнэ.
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-3">

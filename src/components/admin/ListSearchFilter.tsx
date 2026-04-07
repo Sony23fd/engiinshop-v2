@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
 import { useEffect, useState } from "react"
 
-export function ListSearchFilter() {
+export function ListSearchFilter({ placeholder = "Данс, утас, нэр, хаяг..." }: { placeholder?: string }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [query, setQuery] = useState(searchParams.get("q") || "")
@@ -15,8 +15,10 @@ export function ListSearchFilter() {
       const params = new URLSearchParams(searchParams.toString())
       if (query) {
         params.set("q", query)
+        params.delete("page") // Reset page on new search
       } else {
         params.delete("q")
+        params.delete("page")
       }
       router.replace(`?${params.toString()}`, { scroll: false })
     }, 400)
@@ -29,7 +31,7 @@ export function ListSearchFilter() {
       <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
       <Input
         type="search"
-        placeholder="Данс, утас, нэр, хаяг..."
+        placeholder={placeholder}
         className="pl-9 h-9 bg-white border-slate-200"
         value={query}
         onChange={(e) => setQuery(e.target.value)}

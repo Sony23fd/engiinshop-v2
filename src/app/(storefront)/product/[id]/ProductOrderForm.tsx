@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
@@ -20,9 +20,30 @@ interface Props {
   deliveryTerms?: string
   isPreOrder?: boolean
   options?: Array<{name: string, values: string[]}>
+  variantStock?: Record<string, number> | null
+  deliveryScheduleDays?: string
 }
 
-export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQuantity, termsOfService, deliveryTerms, isPreOrder, options }: Props) {
+const DAY_NAMES = ["Ням", "Даваа", "Мягмар", "Лхагва", "Пүрэв", "Баасан", "Бямба"]
+
+function getNextDeliveryDate(scheduleDaysStr: string): string {
+  const days = scheduleDaysStr.split(",").map(Number).filter(n => !isNaN(n))
+  if (days.length === 0) return ""
+  const now = new Date()
+  for (let i = 1; i <= 7; i++) {
+    const next = new Date(now)
+    next.setDate(now.getDate() + i)
+    if (days.includes(next.getDay())) {
+      const month = next.getMonth() + 1
+      const day = next.getDate()
+      const dayName = DAY_NAMES[next.getDay()]
+      return `${dayName}, ${month}-р сарын ${day}`
+    }
+  }
+  return ""
+}
+
+export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQuantity, termsOfService, deliveryTerms, isPreOrder, options, variantStock, deliveryScheduleDays = "3,6" }: Props) {
   const router = useRouter()
   const { removeItem } = useCart()
   const { toast } = useToast()
@@ -43,6 +64,28 @@ export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQua
     return defaultOpts
   })
 
+  // Compute variant key from selected options
+  const currentVariantKey = useMemo(() => {
+    if (!options || options.length === 0) return null
+    return Object.values(selectedOptions).join('-')
+  }, [selectedOptions, options])
+
+  // Determine stock for current variant
+  const currentStock = useMemo(() => {
+    if (!variantStock || !currentVariantKey) return remainingQuantity
+    return variantStock[currentVariantKey] ?? 0
+  }, [variantStock, currentVariantKey, remainingQuantity])
+
+  // Check if a specific option value is sold out
+  const isOptionSoldOut = (optName: string, optValue: string): boolean => {
+    if (!variantStock || !options) return false
+    
+    // Build a temporary selection with this option changed
+    const tempSelection = { ...selectedOptions, [optName]: optValue }
+    const key = Object.values(tempSelection).join('-')
+    return (variantStock[key] ?? 0) <= 0
+  }
+
   const itemTotal = qty * unitPrice
   const totalAmount = itemTotal + (wantsDelivery ? deliveryFee : 0)
 
@@ -58,7 +101,7 @@ export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQua
   const canSubmit =
     agreedToTerms &&
     !phoneError &&
-    (isPreOrder || remainingQuantity > 0)
+    (isPreOrder || currentStock > 0)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -73,6 +116,15 @@ export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQua
     if (!agreedToTerms) {
       setError("Нөхцөлүүдтэй зөвшөөрнө үү")
       return
+    }
+
+    // Variant stock check
+    if (variantStock && currentVariantKey && !isPreOrder) {
+      const available = variantStock[currentVariantKey] ?? 0
+      if (available < qty) {
+        setError(`Таны сонгосон хослолын үлдэгдэл хүрэлцэхгүй байна (${available} ширхэг)`)
+        return
+      }
     }
 
     setSubmitting(true)
@@ -173,24 +225,45 @@ export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQua
               <div key={i} className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{opt.name}</label>
                 <div className="flex flex-wrap gap-2">
-                  {opt.values.map(val => (
-                    <button
-                      key={val}
-                      type="button"
-                      onClick={() => setSelectedOptions({ ...selectedOptions, [opt.name]: val })}
-                      className={`text-sm px-3 py-1.5 rounded-lg border font-medium transition-all ${
-                        selectedOptions[opt.name] === val 
-                          ? "bg-[#4e3dc7] border-[#4e3dc7] text-white shadow-sm shadow-indigo-200" 
-                          : "bg-white border-slate-200 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50"
-                      }`}
-                    >
-                      {val}
-                    </button>
-                  ))}
+                  {opt.values.map(val => {
+                    const soldOut = isOptionSoldOut(opt.name, val)
+                    const isSelected = selectedOptions[opt.name] === val
+                    return (
+                      <button
+                        key={val}
+                        type="button"
+                        disabled={soldOut}
+                        onClick={() => {
+                          setSelectedOptions({ ...selectedOptions, [opt.name]: val })
+                          setQty(1) // Reset qty when changing variant
+                        }}
+                        className={`text-sm px-3 py-1.5 rounded-lg border font-medium transition-all ${
+                          soldOut
+                            ? "bg-slate-100 border-slate-200 text-slate-300 cursor-not-allowed line-through"
+                            : isSelected 
+                              ? "bg-[#4e3dc7] border-[#4e3dc7] text-white shadow-sm shadow-indigo-200" 
+                              : "bg-white border-slate-200 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50"
+                        }`}
+                      >
+                        {val}
+                        {soldOut && <span className="ml-1 text-[10px] no-underline">(дууссан)</span>}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             ))}
           </div>
+          {/* Show current variant stock */}
+          {variantStock && currentVariantKey && (
+            <div className={`text-xs font-bold px-3 py-1.5 rounded-lg border mt-2 ${
+              currentStock > 0 
+                ? "bg-green-50 border-green-200 text-green-700" 
+                : "bg-red-50 border-red-200 text-red-600"
+            }`}>
+              {currentStock > 0 ? `Энэ сонголтонд ${currentStock} ширхэг үлдсэн` : "Энэ сонголт дууссан байна"}
+            </div>
+          )}
         </div>
       )}
 
@@ -200,9 +273,9 @@ export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQua
           <button type="button" onClick={() => setQty(q => Math.max(1, q - 1))}
             className="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-slate-100 text-lg font-bold">−</button>
           <span className="min-w-[32px] text-center font-bold text-slate-900">{qty}</span>
-          <button type="button" onClick={() => setQty(q => Math.min(remainingQuantity, q + 1))}
+          <button type="button" onClick={() => setQty(q => Math.min(currentStock, q + 1))}
             className="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-slate-100 text-lg font-bold">+</button>
-          <span className="text-xs text-slate-400">/ {remainingQuantity} ш үлдсэн</span>
+          <span className="text-xs text-slate-400">/ {currentStock} ш үлдсэн</span>
         </div>
       </div>
 
@@ -233,13 +306,28 @@ export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQua
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-3 items-start">
             <Info className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div className="text-xs text-amber-800 leading-relaxed">
-              <strong>Урьдчилсан захиалга:</strong> Таны сонгосон бараа Монголд ирсний дараа хүргэлтийн асуудал тусад нь шийдэгдэх болно. Яг одоо хүргэлт сонгох боломжгүй.
+              <strong>Урьдчилсан захиалга:</strong> Таны сонгосон бараа Монголд ирсний дараа хүргэлтийн асуудал тусад нь шийдэгдэх болно.
+              {deliveryFee > 0 && (<> Хүргэлтийн үнэ <strong>₮{deliveryFee.toLocaleString()}</strong> (ирсний дараа тооцогдоно).</>)}
             </div>
           </div>
         </div>
       )}
 
-      {/* Address — only when delivery is selected OR if it is preorder to collect address in advance optionally? Actually user explicitly says no delivery option now */}
+      {/* Delivery schedule notice */}
+      {wantsDelivery && !isPreOrder && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2.5 flex gap-2 items-start">
+          <Truck className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+          <div className="text-xs text-blue-800 leading-relaxed">
+            <strong>🚚 Хүргэлт {deliveryScheduleDays.split(",").map(Number).map(d => DAY_NAMES[d]).filter(Boolean).join(", ")} гарагт гарна.</strong>
+            {(() => {
+              const next = getNextDeliveryDate(deliveryScheduleDays)
+              return next ? <> Дараагийн хүргэлт: <strong>{next}</strong>. Товлосон өдрөөс 24-72 цагийн дотор хүргэгдэнэ.</> : null
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* Address */}
       {wantsDelivery && !isPreOrder && (
         <div className="space-y-2">
           <label className="text-sm font-medium" htmlFor="deliveryAddress">Хүргүүлэх хаяг</label>
@@ -248,7 +336,7 @@ export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQua
         </div>
       )}
 
-      {/* Combined Terms — shown ABOVE total */}
+      {/* Combined Terms */}
       {(termsOfService || (wantsDelivery && deliveryTerms)) && (
         <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2">
           {termsOfService && (
@@ -302,7 +390,7 @@ export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQua
         disabled={submitting || !canSubmit}
         className="w-full bg-[#4F46E5] hover:bg-[#4338ca] py-6 text-base font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
       >
-        {submitting ? "Илгээж байна..." : (isPreOrder || remainingQuantity > 0) ? "✅ Захиалга баталгаажуулах" : "Дууссан"}
+        {submitting ? "Илгээж байна..." : (isPreOrder || currentStock > 0) ? "✅ Захиалга баталгаажуулах" : "Дууссан"}
       </Button>
 
       {!agreedToTerms && (

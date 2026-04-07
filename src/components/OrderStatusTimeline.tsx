@@ -2,16 +2,19 @@
 import { cn } from "@/lib/utils"
 import { CheckCircle2, Circle, Truck, Package, Home, Box, Clock, AlertCircle, XCircle } from "lucide-react"
 
+const DAY_NAMES = ["Ням", "Даваа", "Мягмар", "Лхагва", "Пүрэв", "Баасан", "Бямба"]
+
 interface StatusTimelineProps {
-  status: string; // Current status name
+  status: string;
   isFinal?: boolean;
+  deliveryScheduleDays?: string;
 }
 
-export function OrderStatusTimeline({ status, isFinal }: StatusTimelineProps) {
+export function OrderStatusTimeline({ status, isFinal, deliveryScheduleDays = "3,6" }: StatusTimelineProps) {
   const isRejected = status.toLowerCase().includes("цуцлагдсан") || status.toLowerCase().includes("rejected");
 
-  const steps = [
-    { name: "Хүлээн авсан", icon: Clock, matches: ["Төлбөр хүлээгдэж байна", "Хүлээн авсан", "Received", "Pending"] },
+    const steps = [
+    { name: "Захиалга үүссэн", icon: Clock, matches: ["Төлбөр хүлээгдэж байна", "Хүлээн авсан", "Received", "Pending"] },
     { name: "Баталгаажсан", icon: CheckCircle2, matches: ["Баталгаажсан", "Confirmed", "Батлагдсан"] },
     { name: "Солонгосоос гарсан", icon: Truck, matches: ["Солонгосоос гарсан", "Shipped", "Гарсан", "хөдөлсөн", "Departed"] },
     { name: "Улаанбаатарт ирсэн", icon: Box, matches: ["Ирсэн", "Arrived", "Монголд ирсэн", "Улаанбаатарт ирсэн", "UB ирсэн"] },
@@ -36,6 +39,9 @@ export function OrderStatusTimeline({ status, isFinal }: StatusTimelineProps) {
   // Progress Bar width calculation
   const progressWidth = isFinal ? 100 : (currentStepIndex / (steps.length - 1)) * 100;
 
+  // Check if current step is "Улаанбаатарт ирсэн" (index 3) and not final
+  const showDeliveryNotice = !isRejected && currentStepIndex === 3 && !isFinal;
+
   return (
     <div className="w-full py-6">
       <div className="relative flex justify-between max-w-4xl mx-auto">
@@ -49,7 +55,6 @@ export function OrderStatusTimeline({ status, isFinal }: StatusTimelineProps) {
         )}
 
         {steps.map((step, index) => {
-          // If isFinal is true, treat EVERY step up to and including current as completed
           const isCompleted = !isRejected && (index < currentStepIndex || (index === currentStepIndex && isFinal));
           const isCurrent = !isRejected && index === currentStepIndex && !isFinal;
           
@@ -57,7 +62,7 @@ export function OrderStatusTimeline({ status, isFinal }: StatusTimelineProps) {
           const Icon = showRejectedAtThisStep ? XCircle : step.icon;
 
           return (
-            <div key={step.name} className={cn(
+            <div key={`${step.name}-${index}`} className={cn(
               "relative z-10 flex flex-col items-center group transition-all duration-500",
               isRejected && index > 0 && "opacity-30"
             )}>
@@ -87,6 +92,21 @@ export function OrderStatusTimeline({ status, isFinal }: StatusTimelineProps) {
           );
         })}
       </div>
+
+      {/* Delivery info banner — full width below timeline */}
+      {showDeliveryNotice && (
+        <div className="mt-12 mx-auto max-w-md">
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5 flex items-center gap-2.5 shadow-sm">
+            <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+              <Truck className="w-3.5 h-3.5 text-emerald-600" />
+            </div>
+            <p className="text-[11px] text-emerald-700 leading-relaxed">
+              <strong>Хүргэлт захиалах боломжтой.</strong>{" "}
+              Хүргэлт <strong>{deliveryScheduleDays.split(",").map(Number).map(d => DAY_NAMES[d]).filter(Boolean).join(", ")}</strong> гарагуудад гарна. Товлосон өдрөөс <strong>24–72 цаг</strong>ийн дотор хүргэгдэнэ.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

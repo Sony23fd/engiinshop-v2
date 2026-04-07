@@ -1,22 +1,52 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { updateProduct } from "@/app/actions/product-actions"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Pencil, Loader2, Plus } from "lucide-react"
+import { Pencil, Loader2, Plus, Package } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 interface EditProductSheetProps {
   batch: any;
 }
 
+/**
+ * Generate all variant combinations from options.
+ * Example: [{ name: "Өнгө", values: ["Хар","Цагаан"] }, { name: "Хэмжээ", values: ["42","43"] }]
+ * → ["Хар-42", "Хар-43", "Цагаан-42", "Цагаан-43"]
+ */
+function generateVariantKeys(options: { name: string; values: string[] }[]): { key: string; labels: Record<string, string> }[] {
+  if (options.length === 0) return []
+  
+  const validOptions = options.filter(o => o.values.length > 0)
+  if (validOptions.length === 0) return []
+
+  let combos: { key: string; labels: Record<string, string> }[] = [{ key: "", labels: {} }]
+  
+  for (const opt of validOptions) {
+    const newCombos: typeof combos = []
+    for (const combo of combos) {
+      for (const val of opt.values) {
+        newCombos.push({
+          key: combo.key ? `${combo.key}-${val}` : val,
+          labels: { ...combo.labels, [opt.name]: val }
+        })
+      }
+    }
+    combos = newCombos
+  }
+  
+  return combos
+}
+
 export function EditProductSheet({ batch }: EditProductSheetProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [options, setOptions] = useState<{name: string, values: string}[]>([])
+  const [variantStock, setVariantStock] = useState<Record<string, number>>({})
   const router = useRouter()
 
   useEffect(() => {
@@ -28,6 +58,10 @@ export function EditProductSheet({ batch }: EditProductSheetProps) {
       }))
       setOptions(formatted)
     }
+    // Load existing variantStock
+    if (batch.variantStock && typeof batch.variantStock === 'object') {
+      setVariantStock(batch.variantStock as Record<string, number>)
+    }
   }, [batch])
 
   const addOption = () => setOptions([...options, { name: "", values: "" }])
@@ -38,14 +72,36 @@ export function EditProductSheet({ batch }: EditProductSheetProps) {
     setOptions(newOpts)
   }
 
-  async function onSubmit(formData: FormData) {
-    setLoading(true)
-    const formattedOptions = options
+  // Parse options into structured format for variant generation
+  const parsedOptions = useMemo(() => {
+    return options
       .filter(o => o.name.trim() && o.values.trim())
       .map(o => ({
         name: o.name.trim(),
         values: o.values.split(",").map(v => v.trim()).filter(v => v)
-      }));
+      }))
+  }, [options])
+
+  // Generate variant combinations
+  const variantCombos = useMemo(() => generateVariantKeys(parsedOptions), [parsedOptions])
+  
+  // Total variant stock
+  const totalVariantStock = useMemo(() => {
+    return variantCombos.reduce((sum, v) => sum + (variantStock[v.key] || 0), 0)
+  }, [variantCombos, variantStock])
+
+  async function onSubmit(formData: FormData) {
+    setLoading(true)
+    const formattedOptions = parsedOptions
+
+    // Build variantStock only if we have variants
+    const finalVariantStock = variantCombos.length > 0 
+      ? Object.fromEntries(variantCombos.map(v => [v.key, variantStock[v.key] || 0]))
+      : null
+
+    const remainingQuantity = variantCombos.length > 0 
+      ? totalVariantStock 
+      : Number(formData.get("remainingQuantity") || 0)
 
     const res = await updateProduct({
       productId: batch.product?.id,
@@ -53,11 +109,12 @@ export function EditProductSheet({ batch }: EditProductSheetProps) {
       name: formData.get("name") as string,
       description: formData.get("description") as string,
       targetQuantity: Number(formData.get("targetQuantity") || 0),
-      remainingQuantity: Number(formData.get("remainingQuantity") || 0),
+      remainingQuantity,
       price: Number(formData.get("price") || 0),
       weight: Number(formData.get("weight") || 0),
       sourceLink: formData.get("sourceLink") as string,
-      options: formattedOptions.length > 0 ? formattedOptions : []
+      options: formattedOptions.length > 0 ? formattedOptions : [],
+      variantStock: finalVariantStock
     })
 
     setLoading(false)
@@ -119,6 +176,41 @@ export function EditProductSheet({ batch }: EditProductSheetProps) {
             </div>
           </div>
 
+          {/* Variant Stock Matrix */}
+          {variantCombos.length > 0 && (
+            <div className="space-y-3 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
+              <div className="flex items-center gap-2">
+                <Package className="w-4 h-4 text-indigo-600" />
+                <label className="text-sm font-bold text-slate-800">Variant бүрийн үлдэгдэл</label>
+              </div>
+              <div className="space-y-2">
+                {variantCombos.map(v => (
+                  <div key={v.key} className="flex items-center justify-between gap-3 bg-white p-2.5 rounded-lg border shadow-sm">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-slate-700 truncate">
+                        {Object.entries(v.labels).map(([k, val]) => `${k}: ${val}`).join(' · ')}
+                      </p>
+                    </div>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={variantStock[v.key] ?? 0}
+                      onChange={(e) => setVariantStock(prev => ({
+                        ...prev,
+                        [v.key]: Math.max(0, Number(e.target.value) || 0)
+                      }))}
+                      className="w-20 h-8 text-xs text-center font-bold"
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t border-indigo-200">
+                <span className="text-xs font-bold text-slate-600">Нийт үлдэгдэл (= remainingQuantity)</span>
+                <span className="text-sm font-black text-indigo-700">{totalVariantStock}</span>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
             <label htmlFor="description" className="text-sm font-medium">Тайлбар</label>
             <Textarea id="description" name="description" defaultValue={batch.description || batch.product?.description} />
@@ -126,7 +218,7 @@ export function EditProductSheet({ batch }: EditProductSheetProps) {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label htmlFor="price" className="text-sm font-medium">Үнэ (₮)</label>
-              <Input id="price" name="price" type="number" required defaultValue={Number(batch.price || batch.product?.price || 0)} />
+              <Input id="price" name="price" type="number" required defaultValue={(() => { const bp = parseFloat(String(batch.price ?? 0)); const pp = parseFloat(String(batch.product?.price ?? 0)); return bp > 0 ? bp : pp; })()} />
             </div>
             <div className="space-y-2">
               <label htmlFor="weight" className="text-sm font-medium">Жин (кг)</label>
@@ -139,8 +231,19 @@ export function EditProductSheet({ batch }: EditProductSheetProps) {
               <Input id="targetQuantity" name="targetQuantity" type="number" required defaultValue={batch.targetQuantity} />
             </div>
             <div className="space-y-2">
-              <label htmlFor="remainingQuantity" className="text-sm font-medium">Үлдэгдэл</label>
-              <Input id="remainingQuantity" name="remainingQuantity" type="number" required defaultValue={batch.remainingQuantity} />
+              <label htmlFor="remainingQuantity" className="text-sm font-medium">
+                Үлдэгдэл {variantCombos.length > 0 && <span className="text-indigo-600 text-[10px]">(auto)</span>}
+              </label>
+              <Input 
+                id="remainingQuantity" 
+                name="remainingQuantity" 
+                type="number" 
+                required 
+                defaultValue={batch.remainingQuantity}
+                disabled={variantCombos.length > 0}
+                value={variantCombos.length > 0 ? totalVariantStock : undefined}
+                className={variantCombos.length > 0 ? "bg-slate-100 text-slate-500" : ""}
+              />
             </div>
           </div>
           <div className="space-y-2">

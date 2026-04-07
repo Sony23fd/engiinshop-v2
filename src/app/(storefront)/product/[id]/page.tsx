@@ -33,7 +33,9 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     getShopSettings()
   ])
 
-  const unitPrice = Number(batch.price || batch.product?.price || 0)
+  const batchPrice = parseFloat(String(batch.price ?? 0))
+  const productPrice = parseFloat(String(batch.product?.price ?? 0))
+  const unitPrice = batchPrice > 0 ? batchPrice : productPrice
   const batchFee = Number((batch as any).deliveryFee || 0)
   const globalFee = Number(shopSettings.delivery_fee || 0)
   const deliveryFee = batchFee > 0 ? batchFee : globalFee
@@ -93,7 +95,10 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                   <Truck className="w-4 h-4 text-indigo-400" /> Хүргэлтийн үнэ:
                 </span>
                 <span className="font-semibold text-slate-800">
-                  {Number(batch.deliveryFee) > 0 ? `₮${Number(batch.deliveryFee).toLocaleString()}` : "Үнэгүй"}
+                  {(batch as any).isPreOrder 
+                    ? `₮${deliveryFee.toLocaleString()} (ирсний дараа)`
+                    : `₮${deliveryFee.toLocaleString()}`
+                  }
                 </span>
               </div>
             )}
@@ -106,8 +111,16 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
               <div>
                 <p className="text-xs text-slate-500 font-medium">Хүргэгдэх хугацаа</p>
                 <p className="text-sm font-bold text-slate-800">
-                  {Number(batch.cargoFeeStatus) > 0 ? "Ойролцоогоор 7-14 хоног (Солонгосоос)" : "Бэлэн байгаа (Өнөөдөр / Маргааш)"}
+                  {Number(batch.cargoFeeStatus) > 0 ? "Ойролцоогоор 7-14 хоног (Солонгосоос)" : (() => {
+                    const DAY_NAMES = ["Ням", "Даваа", "Мягмар", "Лхагва", "Пүрэв", "Баасан", "Бямба"]
+                    const scheduleDays = (shopSettings.delivery_schedule_days || "3,6").split(",").map(Number)
+                    const dayNames = scheduleDays.map(d => DAY_NAMES[d]).filter(Boolean).join(", ")
+                    return dayNames ? `🚚 Хүргэлт ${dayNames} гарагт гарна` : "Бэлэн байгаа"
+                  })()}
                 </p>
+                {Number(batch.cargoFeeStatus) <= 0 && (
+                  <p className="text-[11px] text-slate-400 mt-0.5">Товлосон өдрөөс 24-72 цагийн дотор хүргэгдэнэ</p>
+                )}
               </div>
             </div>
 
@@ -137,6 +150,8 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
             deliveryTerms={shopSettings.delivery_terms}
             isPreOrder={(batch as any).isPreOrder}
             options={(batch.product as any)?.options}
+            variantStock={(batch as any).variantStock}
+            deliveryScheduleDays={shopSettings.delivery_schedule_days || "3,6"}
           />
         </div>
 

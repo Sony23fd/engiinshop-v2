@@ -92,7 +92,7 @@ export function ActiveBatchesList({
                     <div className="flex justify-between items-end mb-3">
                       <div>
                         <p className="text-xl font-black text-slate-900 tracking-tight">
-                          ₮{Number(batch.price || batch.product?.price || 0).toLocaleString()}
+                          ₮{(() => { const bp = parseFloat(String(batch.price ?? 0)); const pp = parseFloat(String(batch.product?.price ?? 0)); return (bp > 0 ? bp : pp).toLocaleString(); })()}
                         </p>
                         {Number(batch.deliveryFee) > 0 && (
                           <p className="text-[11px] text-slate-500 font-medium mt-0.5">+₮{Number(batch.deliveryFee).toLocaleString()} хүргэлт</p>
@@ -134,7 +134,7 @@ export function ActiveBatchesList({
                       batchId={batch.id}
                       name={batch.product?.name ?? ""}
                       imageUrl={batch.product?.imageUrl}
-                      unitPrice={Number(batch.price || batch.product?.price || 0)}
+                      unitPrice={(() => { const bp = parseFloat(String(batch.price ?? 0)); const pp = parseFloat(String(batch.product?.price ?? 0)); return bp > 0 ? bp : pp; })()}
                       deliveryFee={Number(batch.deliveryFee || 0)}
                       isPreOrder={batch.isPreOrder}
                     />

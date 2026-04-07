@@ -94,7 +94,10 @@ export async function getPickedUpOrders(days: number = 30) {
 export async function getDeliveredOrders(days: number = 30) {
   try {
     const whereClause: any = {
-      status: { isFinal: true, name: "Хүргэлтээр авсан" },
+      status: { 
+        isFinal: true, 
+        name: { notIn: ["Цуцлагдсан", "Rejected", "Canceled"] } 
+      },
       paymentStatus: { not: "REJECTED" }
     };
 
@@ -219,6 +222,45 @@ export async function confirmDeliveryGroup(orderIds: string[]) {
   }
 }
 
+export async function markDeliveryAsPickedUp(orderIds: string[]) {
+  try {
+    const admin = await getCurrentAdmin()
+    if (!admin) return { success: false, error: "Хандах эрхгүй" }
+
+    const pickedUpStatus = await db.orderStatusType.findFirst({
+      where: { name: "Өөрөө ирж авсан", isFinal: true }
+    })
+    if (!pickedUpStatus) return { success: false, error: "\"Өөрөө ирж авсан\" статус олдсонгүй" }
+
+    await db.order.updateMany({
+      where: { id: { in: orderIds } },
+      data: { 
+        statusId: pickedUpStatus.id,
+        wantsDelivery: false
+      } as any
+    })
+
+    await logActivity({
+      userId: admin.id,
+      userName: admin.name || "Админ",
+      userRole: admin.role,
+      action: "Хүргэлтээс → Өөрөө авсан руу шилжүүлэв",
+      target: "Захиалгууд",
+      detail: `${orderIds.length} ширхэг захиалга хүргэлтийн жагсаалтаас хасагдав (хэрэглэгч өөрөө ирж авсан)`,
+    })
+
+    revalidatePath("/admin/orders/delivery")
+    revalidatePath("/admin/orders/picked-up")
+    revalidatePath("/admin/orders")
+    revalidatePath("/track")
+
+    return { success: true }
+  } catch (err: any) {
+    console.error("markDeliveryAsPickedUp error:", err)
+    return { success: false, error: err.message }
+  }
+}
+
 export async function getRejectedOrders(days: number = 30) {
   try {
     const whereClause: any = {
@@ -328,11 +370,26 @@ export async function createOrder(data: {
         } as any
       });
 
-      // 3. Decrement remaining quantity (clamp to 0, don't auto-close)
+      // 3. Decrement remaining quantity AND variant stock if applicable
       const newQty = Math.max(0, batch.remainingQuantity - data.quantity)
+      const updateData: any = { remainingQuantity: newQty }
+
+      // Variant stock management
+      if ((batch as any).variantStock && data.selectedOptions && typeof data.selectedOptions === 'object') {
+        const variantStock = { ...((batch as any).variantStock as Record<string, number>) }
+        const optionValues = Object.values(data.selectedOptions as Record<string, string>)
+        const variantKey = optionValues.join('-')
+        
+        if (variantKey && variantStock[variantKey] !== undefined) {
+          const newVariantQty = Math.max(0, variantStock[variantKey] - data.quantity)
+          variantStock[variantKey] = newVariantQty
+          updateData.variantStock = variantStock
+        }
+      }
+
       await tx.batch.update({
         where: { id: data.batchId },
-        data: { remainingQuantity: newQty } as any
+        data: updateData
       });
 
       return order;
@@ -527,10 +584,21 @@ export async function updateOrderStatus(orderId: string, statusId: string, reaso
       if (isToCancelled && !isFromCancelled) {
         updateData.paymentStatus = "REJECTED"
         updateData.cancellationReason = reason || null
-        // Increment batch remaining quantity
+        // Increment batch remaining quantity + variant stock
+        const batchUpdateData: any = { remainingQuantity: { increment: order.quantity } }
+        
+        if (order.batch.variantStock && order.selectedOptions && typeof order.selectedOptions === 'object') {
+          const variantStock = { ...(order.batch.variantStock as Record<string, number>) }
+          const variantKey = Object.values(order.selectedOptions as Record<string, string>).join('-')
+          if (variantKey && variantStock[variantKey] !== undefined) {
+            variantStock[variantKey] += order.quantity
+            batchUpdateData.variantStock = variantStock
+          }
+        }
+        
         await (tx.batch as any).update({
           where: { id: order.batchId },
-          data: { remainingQuantity: { increment: order.quantity } }
+          data: batchUpdateData
         })
       } 
       // 2. Transition FROM Cancelled (Restore)
@@ -542,11 +610,28 @@ export async function updateOrderStatus(orderId: string, statusId: string, reaso
 
         updateData.paymentStatus = "PENDING" // Reset to pending for admin to re-confirm if needed
         updateData.cancellationReason = null // Clear reason on restore
-        // Decrement batch remaining quantity
+        // Decrement batch remaining quantity + variant stock
+        const batchUpdateData: any = { remainingQuantity: { decrement: order.quantity } }
+        
+        if (order.batch.variantStock && order.selectedOptions && typeof order.selectedOptions === 'object') {
+          const variantStock = { ...(order.batch.variantStock as Record<string, number>) }
+          const variantKey = Object.values(order.selectedOptions as Record<string, string>).join('-')
+          if (variantKey && variantStock[variantKey] !== undefined) {
+            variantStock[variantKey] = Math.max(0, variantStock[variantKey] - order.quantity)
+            batchUpdateData.variantStock = variantStock
+          }
+        }
+        
         await (tx.batch as any).update({
           where: { id: order.batchId },
-          data: { remainingQuantity: { decrement: order.quantity } }
+          data: batchUpdateData
         })
+      }
+
+      // 3. If transitioning to a "self-pickup" final status, reset wantsDelivery
+      //    so the order is removed from the delivery queue
+      if (newStatus.isFinal && newStatus.name === "Өөрөө ирж авсан" && order.wantsDelivery) {
+        updateData.wantsDelivery = false
       }
 
       return await (tx.order as any).update({
@@ -558,6 +643,8 @@ export async function updateOrderStatus(orderId: string, statusId: string, reaso
     revalidatePath("/admin/orders/search")
     revalidatePath("/admin/orders")
     revalidatePath("/admin/orders/rejected")
+    revalidatePath("/admin/orders/delivery")
+    revalidatePath("/admin/orders/picked-up")
     return { success: true, order: JSON.parse(JSON.stringify(result)) }
   } catch (error: any) {
     console.error("Failed to update order status:", error)
@@ -1348,10 +1435,24 @@ export async function autoCancelExpiredOrders() {
             }
           })
 
-          // Барааны үлдэгдлийг буцаан нэмэх
+          // Барааны үлдэгдлийг буцаан нэмэх + variant stock
+          const batchUpdateData: any = { remainingQuantity: { increment: order.quantity } }
+          
+          if (order.selectedOptions && typeof order.selectedOptions === 'object') {
+            const batch = await (tx.batch as any).findUnique({ where: { id: order.batchId } })
+            if (batch?.variantStock) {
+              const variantStock = { ...(batch.variantStock as Record<string, number>) }
+              const variantKey = Object.values(order.selectedOptions as Record<string, string>).join('-')
+              if (variantKey && variantStock[variantKey] !== undefined) {
+                variantStock[variantKey] += order.quantity
+                batchUpdateData.variantStock = variantStock
+              }
+            }
+          }
+
           await (tx.batch as any).update({
             where: { id: order.batchId },
-            data: { remainingQuantity: { increment: order.quantity } }
+            data: batchUpdateData
           })
         })
         results.push({ id: order.id, success: true })

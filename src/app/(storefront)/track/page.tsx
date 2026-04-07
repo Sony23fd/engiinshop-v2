@@ -97,7 +97,7 @@ export default async function TrackOrderPage({
                   <div className="space-y-6">
                     <UnifiedDeliverySection groups={activeGroups} />
                     {activeGroups.map((groupOrders) => (
-                      <OrderGroup key={groupOrders[0].transactionRef || groupOrders[0].id} orders={groupOrders} />
+                      <OrderGroup key={groupOrders[0].transactionRef || groupOrders[0].id} orders={groupOrders} deliveryScheduleDays={settings.delivery_schedule_days || "3,6"} />
                     ))}
                   </div>
                 ) : (
@@ -115,7 +115,7 @@ export default async function TrackOrderPage({
                   </h2>
                   <div className="space-y-6">
                     {completedGroups.map((groupOrders) => (
-                      <OrderGroup key={groupOrders[0].transactionRef || groupOrders[0].id} orders={groupOrders} completed />
+                      <OrderGroup key={groupOrders[0].transactionRef || groupOrders[0].id} orders={groupOrders} completed deliveryScheduleDays={settings.delivery_schedule_days || "3,6"} />
                     ))}
                   </div>
                 </div>
@@ -171,7 +171,7 @@ function UnifiedDeliverySection({ groups }: { groups: any[][] }) {
   )
 }
 
-function OrderGroup({ orders, completed = false }: { orders: any[]; completed?: boolean }) {
+function OrderGroup({ orders, completed = false, deliveryScheduleDays = "3,6" }: { orders: any[]; completed?: boolean; deliveryScheduleDays?: string }) {
   const first = orders[0]
   const totalAmount = orders.reduce((s: number, o: any) => s + Number(o.totalAmount || 0), 0)
   const allRejected = orders.every((o: any) => o.status?.name === "Цуцлагдсан" || o.paymentStatus === "REJECTED")
@@ -247,6 +247,7 @@ function OrderGroup({ orders, completed = false }: { orders: any[]; completed?: 
         <OrderStatusTimeline 
           status={allRejected ? "Цуцлагдсан" : (first.status?.name || "")} 
           isFinal={first.status?.isFinal} 
+          deliveryScheduleDays={deliveryScheduleDays}
         />
       </div>
 

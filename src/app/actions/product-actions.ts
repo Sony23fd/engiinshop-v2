@@ -4,21 +4,35 @@ import { db } from "@/lib/db"
 import { revalidatePath } from "next/cache"
 import { BatchStatus } from "@prisma/client"
 
-export async function getProducts() {
+export async function getProducts({ search, page = 1, limit = 20 }: { search?: string, page?: number, limit?: number } = {}) {
   try {
-    // Fetch only the batch data without the heavy orders array
-    const batches = await db.batch.findMany({
-      include: {
-        product: true,
-        category: true,
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const whereClause: any = {}
+    if (search && search.trim()) {
+      whereClause.product = {
+        name: { contains: search.trim(), mode: 'insensitive' }
+      }
+    }
+
+    const [batches, totalCount] = await Promise.all([
+      db.batch.findMany({
+        where: whereClause,
+        include: {
+          product: true,
+          category: true,
+        },
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      db.batch.count({ where: whereClause })
+    ])
 
     // Let the database quickly sum quantities for valid orders grouped by batch
+    const batchIds = batches.map(b => b.id)
     const validOrderAggregations = await db.order.groupBy({
       by: ['batchId'],
       where: {
+        batchId: { in: batchIds },
         paymentStatus: 'CONFIRMED',
         status: {
           name: { not: 'Цуцлагдсан' }
@@ -27,7 +41,7 @@ export async function getProducts() {
       _sum: {
         quantity: true
       }
-    });
+    })
 
     const quantityMap = new Map();
     validOrderAggregations.forEach(agg => {
@@ -39,10 +53,16 @@ export async function getProducts() {
       _calculatedOrderedSum: quantityMap.get(batch.id) || 0
     }));
 
-    return { success: true, products: JSON.parse(JSON.stringify(enrichedBatches)) };
+    return { 
+      success: true, 
+      products: JSON.parse(JSON.stringify(enrichedBatches)),
+      totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+      currentPage: page
+    };
   } catch (error) {
     console.error("Failed to fetch batches:", error)
-    return { success: false, error: "Failed to fetch batches" }
+    return { success: false, error: "Failed to fetch batches", totalCount: 0, totalPages: 0, currentPage: 1 }
   }
 }
 
@@ -160,6 +180,7 @@ export async function createProduct(data: {
   sourceLink?: string
   categoryId?: string
   options?: any[]
+  variantStock?: Record<string, number>
 }) {
   try {
     let status: BatchStatus = BatchStatus.OPEN
@@ -186,6 +207,7 @@ export async function createProduct(data: {
         status: status,
         price: data.price,
         description: data.description,
+        ...(data.variantStock && { variantStock: data.variantStock }),
         category: { connect: { id: categoryId } },
         product: {
           create: {
@@ -218,6 +240,7 @@ export async function updateProduct(data: {
   weight?: number
   sourceLink?: string
   options?: any[]
+  variantStock?: Record<string, number> | null
 }) {
   try {
     // 1. Update the Product entity
@@ -241,15 +264,20 @@ export async function updateProduct(data: {
       status = BatchStatus.OPEN
     }
 
+    const batchUpdateData: any = {
+      price: data.price,
+      description: data.description,
+      targetQuantity: data.targetQuantity,
+      remainingQuantity: data.remainingQuantity,
+      status: status,
+    }
+    if (data.variantStock !== undefined) {
+      batchUpdateData.variantStock = data.variantStock ?? undefined
+    }
+
     await db.batch.update({
       where: { id: data.batchId },
-      data: {
-        price: data.price,
-        description: data.description,
-        targetQuantity: data.targetQuantity,
-        remainingQuantity: data.remainingQuantity,
-        status: status
-      }
+      data: batchUpdateData
     })
 
     revalidatePath("/admin/products")

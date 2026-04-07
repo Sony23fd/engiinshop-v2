@@ -11,6 +11,7 @@ export default async function CartPage() {
       deliveryTerms={settings.delivery_terms}
       qpayEnabled={settings.qpay_enabled === "true"}
       globalDeliveryFee={Number(settings.delivery_fee || 0)}
+      deliveryScheduleDays={settings.delivery_schedule_days || "3,6"}
     />
   )
 }

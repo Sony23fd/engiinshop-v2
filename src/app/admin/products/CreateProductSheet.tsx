@@ -1,19 +1,41 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { createProduct } from "@/app/actions/product-actions"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus, Loader2 } from "lucide-react"
+import { Plus, Loader2, Package } from "lucide-react"
 import { useRouter } from "next/navigation"
+
+function generateVariantKeys(options: { name: string; values: string[] }[]): { key: string; labels: Record<string, string> }[] {
+  if (options.length === 0) return []
+  const validOptions = options.filter(o => o.values.length > 0)
+  if (validOptions.length === 0) return []
+
+  let combos: { key: string; labels: Record<string, string> }[] = [{ key: "", labels: {} }]
+  for (const opt of validOptions) {
+    const newCombos: typeof combos = []
+    for (const combo of combos) {
+      for (const val of opt.values) {
+        newCombos.push({
+          key: combo.key ? `${combo.key}-${val}` : val,
+          labels: { ...combo.labels, [opt.name]: val }
+        })
+      }
+    }
+    combos = newCombos
+  }
+  return combos
+}
 
 export function CreateProductSheet({ categories }: { categories: any[] }) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [selectedCategoryId, setSelectedCategoryId] = useState("")
   const [options, setOptions] = useState<{name: string, values: string}[]>([])
+  const [variantStock, setVariantStock] = useState<Record<string, number>>({})
   const router = useRouter()
 
   const addOption = () => setOptions([...options, { name: "", values: "" }])
@@ -24,30 +46,50 @@ export function CreateProductSheet({ categories }: { categories: any[] }) {
     setOptions(newOpts)
   }
 
-  async function onSubmit(formData: FormData) {
-    setLoading(true)
-    const formattedOptions = options
+  const parsedOptions = useMemo(() => {
+    return options
       .filter(o => o.name.trim() && o.values.trim())
       .map(o => ({
         name: o.name.trim(),
         values: o.values.split(",").map(v => v.trim()).filter(v => v)
-      }));
+      }))
+  }, [options])
+
+  const variantCombos = useMemo(() => generateVariantKeys(parsedOptions), [parsedOptions])
+  
+  const totalVariantStock = useMemo(() => {
+    return variantCombos.reduce((sum, v) => sum + (variantStock[v.key] || 0), 0)
+  }, [variantCombos, variantStock])
+
+  async function onSubmit(formData: FormData) {
+    setLoading(true)
+    const formattedOptions = parsedOptions
+
+    const finalVariantStock = variantCombos.length > 0 
+      ? Object.fromEntries(variantCombos.map(v => [v.key, variantStock[v.key] || 0]))
+      : undefined
+
+    const remainingQuantity = variantCombos.length > 0 
+      ? totalVariantStock 
+      : Number(formData.get("remainingQuantity") || 0)
 
     const res = await createProduct({
       name: formData.get("name") as string,
       description: formData.get("description") as string,
       targetQuantity: Number(formData.get("targetQuantity") || 0),
-      remainingQuantity: Number(formData.get("remainingQuantity") || 0),
+      remainingQuantity,
       price: Number(formData.get("price") || 0),
       weight: Number(formData.get("weight") || 0),
       sourceLink: formData.get("sourceLink") as string,
       categoryId: selectedCategoryId || undefined,
-      options: formattedOptions.length > 0 ? formattedOptions : undefined
+      options: formattedOptions.length > 0 ? formattedOptions : undefined,
+      variantStock: finalVariantStock
     })
     setLoading(false)
     if (res.success) {
       setOpen(false)
       setOptions([])
+      setVariantStock({})
       setSelectedCategoryId("")
       router.refresh()
     } else {
@@ -125,6 +167,41 @@ export function CreateProductSheet({ categories }: { categories: any[] }) {
             )}
           </div>
 
+          {/* Variant Stock Matrix */}
+          {variantCombos.length > 0 && (
+            <div className="space-y-3 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
+              <div className="flex items-center gap-2">
+                <Package className="w-4 h-4 text-indigo-600" />
+                <label className="text-sm font-bold text-slate-800">Variant бүрийн үлдэгдэл</label>
+              </div>
+              <div className="space-y-2">
+                {variantCombos.map(v => (
+                  <div key={v.key} className="flex items-center justify-between gap-3 bg-white p-2.5 rounded-lg border shadow-sm">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-slate-700 truncate">
+                        {Object.entries(v.labels).map(([k, val]) => `${k}: ${val}`).join(' · ')}
+                      </p>
+                    </div>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={variantStock[v.key] ?? 0}
+                      onChange={(e) => setVariantStock(prev => ({
+                        ...prev,
+                        [v.key]: Math.max(0, Number(e.target.value) || 0)
+                      }))}
+                      className="w-20 h-8 text-xs text-center font-bold"
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t border-indigo-200">
+                <span className="text-xs font-bold text-slate-600">Нийт үлдэгдэл (= remainingQuantity)</span>
+                <span className="text-sm font-black text-indigo-700">{totalVariantStock}</span>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
             <label htmlFor="description" className="text-sm font-medium">Тайлбар</label>
             <Textarea id="description" name="description" placeholder="Барааны дэлгэрэнгүй..." />
@@ -145,8 +222,19 @@ export function CreateProductSheet({ categories }: { categories: any[] }) {
               <Input id="targetQuantity" name="targetQuantity" type="number" required placeholder="0" />
             </div>
             <div className="space-y-2">
-              <label htmlFor="remainingQuantity" className="text-sm font-medium">Үлдэгдэл</label>
-              <Input id="remainingQuantity" name="remainingQuantity" type="number" required placeholder="0" />
+              <label htmlFor="remainingQuantity" className="text-sm font-medium">
+                Үлдэгдэл {variantCombos.length > 0 && <span className="text-indigo-600 text-[10px]">(auto)</span>}
+              </label>
+              <Input 
+                id="remainingQuantity" 
+                name="remainingQuantity" 
+                type="number" 
+                required 
+                placeholder="0"
+                disabled={variantCombos.length > 0}
+                value={variantCombos.length > 0 ? totalVariantStock : undefined}
+                className={variantCombos.length > 0 ? "bg-slate-100 text-slate-500" : ""}
+              />
             </div>
           </div>
           <div className="space-y-2">

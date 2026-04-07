@@ -50,7 +50,7 @@ export function RelatedBatches({ batches, title }: { batches: any[], title: stri
               
               <div className="mt-auto">
                 <p className="text-lg font-bold text-slate-900 leading-none">
-                  ₮{Number(batch.price || batch.product?.price || 0).toLocaleString()}
+                  ₮{(() => { const bp = parseFloat(String(batch.price ?? 0)); const pp = parseFloat(String(batch.product?.price ?? 0)); return (bp > 0 ? bp : pp).toLocaleString(); })()}
                 </p>
               </div>
             </div>

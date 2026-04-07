@@ -18,7 +18,8 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   cargo_bank_holder: "",
   cargo_payment_instruction: "Гүйлгээний утга дээр утасныхаа дугаарыг заавал бичнэ үү.",
   delivery_delay_active: "false",
-  delivery_delay_message: "Хүргэлтийн захиалга хэт олон байгаагаас шалтгаалан таны захиалга бага зэрэг саатаж очих магадлалтайг анхаарна уу."
+  delivery_delay_message: "Хүргэлтийн захиалга хэт олон байгаагаас шалтгаалан таны захиалга бага зэрэг саатаж очих магадлалтайг анхаарна уу.",
+  delivery_schedule_days: "3,6"
 }
 
 export async function getShopSettings(): Promise<Record<string, string>> {

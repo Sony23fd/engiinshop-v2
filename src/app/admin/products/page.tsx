@@ -6,16 +6,21 @@ import { BatchSaleToggle } from "./BatchSaleToggle"
 import { ImageUploader } from "@/components/admin/ImageUploader"
 import { VideoUploader } from "@/components/admin/VideoUploader"
 import { ProductFilters } from "@/components/admin/ProductFilters"
+import { ListSearchFilter } from "@/components/admin/ListSearchFilter"
+import Link from "next/link"
+import { ChevronLeft, ChevronRight, Package } from "lucide-react"
 
 export const dynamic = "force-dynamic"
 
-export default async function AdminProductsPage({ searchParams }: { searchParams: Promise<{ stock?: string, sort?: string }> }) {
+export default async function AdminProductsPage({ searchParams }: { searchParams: Promise<{ stock?: string, sort?: string, q?: string, page?: string }> }) {
   const p = await searchParams;
   const stockFilter = p.stock || "all";
-  const sortFilter = p.sort || "remaining_desc"; // user requested highest remaining first
+  const sortFilter = p.sort || "remaining_desc";
+  const search = p.q || "";
+  const page = Math.max(1, Number(p.page || 1));
 
-  const [{ products, success }, { categories }] = await Promise.all([
-    getProducts(),
+  const [{ products, success, totalCount = 0, totalPages = 1, currentPage = 1 }, { categories }] = await Promise.all([
+    getProducts({ search: search || undefined, page, limit: 20 }),
     getCategories()
   ])
   
@@ -44,15 +49,29 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
     return 0;
   });
 
+  // Build pagination URL params
+  function buildPageUrl(pageNum: number) {
+    const params = new URLSearchParams()
+    if (search) params.set("q", search)
+    if (stockFilter !== "all") params.set("stock", stockFilter)
+    if (sortFilter !== "remaining_desc") params.set("sort", sortFilter)
+    params.set("page", String(pageNum))
+    return `/admin/products?${params.toString()}`
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Бараанууд</h1>
-          <p className="text-sm text-slate-500 mt-1">Монголд бэлэн байгаа барааг нүүр хуудсанд гаргах</p>
+          <p className="text-sm text-slate-500 mt-1">
+            Нийт <strong>{totalCount}</strong> бараа
+            {search && <> · "<span className="text-indigo-600 font-medium">{search}</span>" хайлт</>}
+          </p>
         </div>
         
         <div className="flex flex-col sm:flex-row items-center gap-3">
+          <ListSearchFilter placeholder="Барааны нэрээр хайх..." />
           <ProductFilters currentStock={stockFilter} currentSort={sortFilter} />
           <CreateProductSheet categories={categories || []} />
         </div>
@@ -82,7 +101,12 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
             </thead>
             <tbody className="divide-y">
               {success && filteredProducts && filteredProducts.length > 0 ? (
-                filteredProducts.map((batch: any) => (
+                filteredProducts.map((batch: any) => {
+                  const variantStock = batch.variantStock as Record<string, number> | null
+                  const variantCount = variantStock ? Object.keys(variantStock).length : 0
+                  const variantTotal = variantStock ? Object.values(variantStock).reduce((s: number, v: number) => s + v, 0) : 0
+
+                  return (
                   <tr key={batch.id} className="hover:bg-slate-50/50">
                     <td className="px-4 py-4 font-medium">#{batch.batchNumber}</td>
                     <td className="px-4 py-4 font-medium text-slate-900 max-w-[200px] truncate">{batch.product?.name}</td>
@@ -109,15 +133,33 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                         const ordered = batch._calculatedOrderedSum || 0
                         const remaining = batch.targetQuantity - ordered
                         return (
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            remaining > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                          }`}>
-                            {remaining} / {batch.targetQuantity}
-                          </span>
+                          <div className="space-y-1">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              remaining > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            }`}>
+                              {remaining} / {batch.targetQuantity}
+                            </span>
+                            {/* Variant stock tooltip */}
+                            {variantCount > 0 && (
+                              <div className="group relative">
+                                <span className="text-[10px] text-indigo-500 font-bold cursor-help border-b border-dashed border-indigo-300">
+                                  {variantCount} variant · Нийт {variantTotal}ш
+                                </span>
+                                <div className="absolute left-0 bottom-full mb-1 bg-slate-900 text-white text-[10px] rounded-lg p-2 hidden group-hover:block z-50 min-w-[140px] shadow-lg">
+                                  {Object.entries(variantStock!).map(([key, val]) => (
+                                    <div key={key} className="flex justify-between gap-4 py-0.5">
+                                      <span className="font-medium opacity-80">{key}</span>
+                                      <span className="font-bold">{val}ш</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         )
                       })()}
                     </td>
-                    <td className="px-4 py-4 text-slate-600">₮{Number(batch.price || batch.product?.price || 0).toLocaleString()}</td>
+                    <td className="px-4 py-4 text-slate-600">₮{(() => { const bp = parseFloat(String(batch.price ?? 0)); const pp = parseFloat(String(batch.product?.price ?? 0)); return (bp > 0 ? bp : pp).toLocaleString(); })()}</td>
                     <td className="px-4 py-4 text-slate-600">{Number(batch.product?.weight || 0)} кг</td>
                     <td className="px-4 py-4">
                       <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded-full text-xs font-medium">
@@ -138,17 +180,71 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                       />
                     </td>
                   </tr>
-                ))
+                )})
               ) : (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-slate-500">
-                    Одоогоор бараа бүртгэгдээгүй байна
+                  <td colSpan={10} className="px-4 py-12 text-center text-slate-500">
+                    <Package className="w-8 h-8 mx-auto text-slate-300 mb-2" />
+                    {search ? `"${search}" хайлтад тохирох бараа олдсонгүй` : "Одоогоор бараа бүртгэгдээгүй байна"}
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between pt-4 border-t mt-4">
+            <p className="text-xs text-slate-500">
+              Нийт <strong>{totalCount}</strong> барааны <strong>{currentPage}</strong> / <strong>{totalPages}</strong> хуудас
+            </p>
+            <div className="flex items-center gap-1">
+              {currentPage > 1 && (
+                <Link
+                  href={buildPageUrl(currentPage - 1)}
+                  className="w-8 h-8 rounded-lg border flex items-center justify-center hover:bg-slate-50 text-slate-600"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Link>
+              )}
+              {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                let pageNum: number
+                if (totalPages <= 7) {
+                  pageNum = i + 1
+                } else if (currentPage <= 4) {
+                  pageNum = i + 1
+                } else if (currentPage >= totalPages - 3) {
+                  pageNum = totalPages - 6 + i
+                } else {
+                  pageNum = currentPage - 3 + i
+                }
+
+                return (
+                  <Link
+                    key={pageNum}
+                    href={buildPageUrl(pageNum)}
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-semibold transition-colors ${
+                      pageNum === currentPage
+                        ? "bg-indigo-600 text-white shadow-sm"
+                        : "border text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    {pageNum}
+                  </Link>
+                )
+              })}
+              {currentPage < totalPages && (
+                <Link
+                  href={buildPageUrl(currentPage + 1)}
+                  className="w-8 h-8 rounded-lg border flex items-center justify-center hover:bg-slate-50 text-slate-600"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

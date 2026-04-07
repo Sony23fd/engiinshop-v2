@@ -29,6 +29,14 @@ export function GeneralSettingsClient({ initialSettings, userRole }: Props) {
   
   const [heroBgColor, setHeroBgColor] = useState(initialSettings["hero_bg_color"] || "#5442cc")
   
+  // Delivery schedule days
+  const [deliveryScheduleDays, setDeliveryScheduleDays] = useState<number[]>(() => {
+    const str = initialSettings["delivery_schedule_days"] || "3,6"
+    return str.split(",").map(Number).filter(n => !isNaN(n))
+  })
+
+  const DAY_NAMES = ["Ням", "Даваа", "Мягмар", "Лхагва", "Пүрэв", "Баасан", "Бямба"]
+
   const initialCarouselStr = initialSettings["hero_carousel_images"]
   const [carouselImages, setCarouselImages] = useState<string[]>(
     initialCarouselStr ? JSON.parse(initialCarouselStr) : []
@@ -104,6 +112,14 @@ export function GeneralSettingsClient({ initialSettings, userRole }: Props) {
         body: JSON.stringify({ key: "hero_bg_color", value: heroBgColor }),
       })
       if (!resColor.ok) throw new Error("Арын өнгө хадгалахад алдаа гарлаа")
+
+      // Save delivery schedule days
+      const resSchedule = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "delivery_schedule_days", value: deliveryScheduleDays.join(",") }),
+      })
+      if (!resSchedule.ok) throw new Error("Хүргэлтийн хуваарь хадгалахад алдаа гарлаа")
 
       // Save carousel images
       const resCarousel = await fetch("/api/admin/settings", {
@@ -223,6 +239,41 @@ export function GeneralSettingsClient({ initialSettings, userRole }: Props) {
                   className="w-20 h-10 cursor-pointer rounded overflow-hidden" 
                 />
               </div>
+            </div>
+
+            <div className="w-full pt-4 border-t border-slate-100 space-y-3">
+              <div className="space-y-0.5">
+                <label className="text-base font-semibold text-slate-800">🚚 Хүргэлтийн Хуваарь</label>
+                <p className="text-sm text-slate-500">
+                  Хүргэлт ямар гарагуудад гарахыг сонгоно уу. Хэрэглэгчдэд энэ мэдээлэл автоматаар харагдана.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {DAY_NAMES.map((name, idx) => {
+                  const isActive = deliveryScheduleDays.includes(idx)
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setDeliveryScheduleDays(prev =>
+                          isActive ? prev.filter(d => d !== idx) : [...prev, idx].sort()
+                        )
+                      }}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-all ${
+                        isActive
+                          ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                          : "bg-white text-slate-600 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50"
+                      }`}
+                    >
+                      {name}
+                    </button>
+                  )
+                })}
+              </div>
+              {deliveryScheduleDays.length === 0 && (
+                <p className="text-xs text-amber-600 font-medium">⚠️ Хүргэлтийн өдөр сонгогдоогүй байна!</p>
+              )}
             </div>
 
             <div className="w-full pt-4 border-t border-slate-100 space-y-4">
