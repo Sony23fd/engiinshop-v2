@@ -189,6 +189,13 @@ function OrderGroup({ orders, completed = false, deliveryScheduleDays = "3,6" }:
   const allDeliveryRequested = orders.every((o: any) => o.wantsDelivery)
   const someDeliveryRequested = orders.some((o: any) => o.wantsDelivery)
 
+  // Get delivery address from any order that has it
+  const deliveryAddressObj = orders.find((o: any) => {
+    const addr = o.deliveryAddress?.trim() || "";
+    return addr && addr !== "Өөрөө ирж авна" && addr !== "Өөрөө авна" && addr !== "Дэлгүүрээс авна";
+  });
+  const deliveryAddress = deliveryAddressObj?.deliveryAddress;
+
   // Determine styles (Neutralize if completed)
   let borderClass = "border-slate-200/60 shadow-slate-200/50"
   let accentClass = ""
@@ -296,6 +303,21 @@ function OrderGroup({ orders, completed = false, deliveryScheduleDays = "3,6" }:
           )
         })}
       </div>
+
+      {/* Delivery address display */}
+      {deliveryAddress && someDeliveryRequested && (
+        <div className="px-5 py-3 bg-blue-50/50 border-t border-blue-100 text-left">
+          <div className="flex items-start gap-2.5">
+            <Truck className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-[10px] font-black text-blue-800/60 uppercase tracking-widest mb-1">Хүргэлтийн хаяг:</p>
+              <p className="text-sm text-blue-900 font-semibold leading-relaxed">
+                {deliveryAddress}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {allRejected && first.cancellationReason && (
         <div className="px-5 py-3 bg-red-50/50 border-t border-red-100 text-left">

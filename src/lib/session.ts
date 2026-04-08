@@ -10,7 +10,7 @@ export interface AdminSessionData {
 }
 
 const SESSION_OPTIONS = {
-  password: process.env.SESSION_SECRET || "anar-shop-secret-key-must-be-at-least-32-chars!!",
+  password: process.env.SESSION_SECRET!,
   cookieName: "anar-admin-session",
   cookieOptions: {
     secure: process.env.NODE_ENV === "production",

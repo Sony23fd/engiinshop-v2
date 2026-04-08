@@ -8,6 +8,7 @@ export function ProductFilters({ currentStock, currentSort }: { currentStock: st
   const updateParam = (key: string, value: string) => {
     const newParams = new URLSearchParams(searchParams.toString())
     newParams.set(key, value)
+    newParams.delete("page") // Reset to page 1 on filter/sort change
     router.push(`/admin/products?${newParams.toString()}`)
   }
 

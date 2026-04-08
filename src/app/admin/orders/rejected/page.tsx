@@ -6,10 +6,12 @@ import { ArchiveX, Package, Truck, User } from "lucide-react"
 
 export const dynamic = "force-dynamic"
 
-export default async function RejectedOrdersPage({ searchParams }: { searchParams: Promise<{ days?: string, q?: string }> }) {
+export default async function RejectedOrdersPage({ searchParams }: { searchParams: Promise<{ days?: string, q?: string, page?: string }> }) {
   const p = await searchParams;
   const days = p.days ? parseInt(p.days, 10) : 30;
   const q = p.q?.toLowerCase() || "";
+  const page = p.page ? parseInt(p.page, 10) : 1;
+  const itemsPerPage = 50;
   const { orders } = await getRejectedOrders(days)
 
   let filteredOrders = orders || []
@@ -32,7 +34,9 @@ export default async function RejectedOrdersPage({ searchParams }: { searchParam
     if (!grouped[key]) grouped[key] = []
     grouped[key].push(order)
   }
-  const groups = Object.values(grouped)
+  const allGroups = Object.values(grouped)
+  const totalPages = Math.ceil(allGroups.length / itemsPerPage);
+  const groups = allGroups.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto mt-4">
@@ -43,7 +47,7 @@ export default async function RejectedOrdersPage({ searchParams }: { searchParam
             Цуцлагдсан захиалга
           </h1>
           <p className="text-slate-500 text-sm mt-1">
-            Нийт <strong>{filteredOrders.length}</strong> цуцлагдсан барааны захиалга — <strong>{groups.length}</strong> бүлэг
+            Нийт <strong>{filteredOrders.length}</strong> цуцлагдсан барааны захиалга — <strong>{allGroups.length}</strong> бүлэг
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -52,7 +56,7 @@ export default async function RejectedOrdersPage({ searchParams }: { searchParam
         </div>
       </div>
 
-      {groups.length === 0 ? (
+      {allGroups.length === 0 ? (
         <div className="bg-white rounded-xl border p-12 text-center shadow-sm">
           <Package className="w-10 h-10 text-slate-300 mx-auto mb-3" />
           <p className="text-slate-500 font-medium">Одоогоор цуцлагдсан бүлэг захиалга байхгүй.</p>
@@ -154,6 +158,22 @@ export default async function RejectedOrdersPage({ searchParams }: { searchParam
               </div>
             )
           })}
+
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center gap-2 mt-8">
+              <a href={`?days=${days}&q=${q}&page=${page > 1 ? page - 1 : 1}`}
+                className={`px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${page <= 1 ? "opacity-50 pointer-events-none bg-slate-50" : "hover:bg-slate-50 bg-white"}`}>
+                Өмнөх
+              </a>
+              <span className="text-sm font-medium text-slate-600 px-4">
+                Хуудас {page} / {totalPages}
+              </span>
+              <a href={`?days=${days}&q=${q}&page=${page < totalPages ? page + 1 : totalPages}`}
+                className={`px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${page >= totalPages ? "opacity-50 pointer-events-none bg-slate-50" : "hover:bg-slate-50 bg-white"}`}>
+                Дараах
+              </a>
+            </div>
+          )}
         </div>
       )}
     </div>

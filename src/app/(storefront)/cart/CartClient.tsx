@@ -3,7 +3,7 @@
 import { useCart } from "@/context/CartContext"
 import { useState } from "react"
 import { Trash2, Minus, Plus, ShoppingCart, Truck, ShoppingBag, Package, AlertCircle, Info } from "lucide-react"
-import { createOrder } from "@/app/actions/order-actions"
+import { createOrder, validateCartStock } from "@/app/actions/order-actions"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
@@ -80,6 +80,14 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
       const phoneNumber = formData.get("phoneNumber") as string
       const accountNumber = formData.get("accountNumber") as string
       const deliveryAddress = formData.get("deliveryAddress") as string
+
+      // Validate stock before placing orders
+      const stockCheck = await validateCartStock(items.map(i => ({ batchId: i.batchId, qty: i.qty })))
+      if (!stockCheck.success) {
+        setError(stockCheck.errors[0])
+        setSubmitting(false)
+        return
+      }
 
       // Generate one shared transactionRef for all cart orders
       const sharedRef = `ANR${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`

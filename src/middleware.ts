@@ -6,7 +6,9 @@ import type { AdminSessionData } from "@/lib/session"
 // CARGO_ADMIN allowed route prefixes (must match auth.ts)
 const CARGO_ADMIN_ALLOWED_ROUTES = [
   "/admin/home",
-  "/admin/orders",
+  "/admin/orders/batch",
+  "/admin/orders/search",
+  "/admin/orders/category",
   "/admin/cargo-settings",
 ]
 
@@ -20,7 +22,7 @@ const DATAADMIN_ALLOWED_ROUTES = [
 
 // We can't import from src/lib directly in middleware (edge runtime), so inline constants
 const SESSION_OPTIONS = {
-  password: process.env.SESSION_SECRET || "anar-shop-secret-key-must-be-at-least-32-chars!!",
+  password: process.env.SESSION_SECRET!,
   cookieName: "anar-admin-session",
   cookieOptions: {
     secure: process.env.NODE_ENV === "production",

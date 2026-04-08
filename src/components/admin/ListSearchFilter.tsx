@@ -11,15 +11,18 @@ export function ListSearchFilter({ placeholder = "Данс, утас, нэр, х
   const [query, setQuery] = useState(searchParams.get("q") || "")
 
   useEffect(() => {
+    // Only trigger if query actually changed from what is in the URL
+    const currentQ = searchParams.get("q") || ""
+    if (query === currentQ) return;
+
     const timer = setTimeout(() => {
       const params = new URLSearchParams(searchParams.toString())
       if (query) {
         params.set("q", query)
-        params.delete("page") // Reset page on new search
       } else {
         params.delete("q")
-        params.delete("page")
       }
+      params.delete("page") // Reset page only when search query changes
       router.replace(`?${params.toString()}`, { scroll: false })
     }, 400)
 

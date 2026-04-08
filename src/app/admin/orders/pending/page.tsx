@@ -8,10 +8,12 @@ export const dynamic = "force-dynamic"
 export default async function PendingOrdersPage({
   searchParams
 }: {
-  searchParams?: Promise<{ q?: string }>
+  searchParams?: Promise<{ q?: string, page?: string }>
 }) {
   const resolvedParams = searchParams ? await searchParams : {}
   const q = resolvedParams.q?.toLowerCase() || ""
+  const page = resolvedParams.page ? parseInt(resolvedParams.page, 10) : 1;
+  const itemsPerPage = 50;
 
   const { orders } = await getPendingOrders()
 
@@ -35,7 +37,9 @@ export default async function PendingOrdersPage({
     if (!grouped[key]) grouped[key] = []
     grouped[key].push(order)
   }
-  const groups = Object.values(grouped)
+  const allGroups = Object.values(grouped)
+  const totalPages = Math.ceil(allGroups.length / itemsPerPage);
+  const groups = allGroups.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto mt-4">
@@ -46,7 +50,7 @@ export default async function PendingOrdersPage({
             Төлбөр хүлээгдэж байна
           </h1>
           <p className="text-slate-500 text-sm mt-1">
-            Нийт <strong>{filteredOrders.length}</strong> захиалга — <strong>{groups.length}</strong> хэрэглэгч
+            Нийт <strong>{filteredOrders.length}</strong> захиалга — <strong>{allGroups.length}</strong> хэрэглэгч
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -54,8 +58,8 @@ export default async function PendingOrdersPage({
         </div>
       </div>
 
-      {groups.length === 0 ? (
-        <div className="bg-white rounded-xl border p-12 text-center">
+      {allGroups.length === 0 ? (
+        <div className="bg-white rounded-xl border p-12 text-center shadow-sm">
           <Package className="w-10 h-10 text-slate-300 mx-auto mb-3" />
           <p className="text-slate-500 font-medium">Одоогоор хүлээгдэж буй захиалга байхгүй</p>
         </div>
@@ -171,6 +175,22 @@ export default async function PendingOrdersPage({
               </div>
             )
           })}
+
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center gap-2 mt-8">
+              <a href={`?q=${q}&page=${page > 1 ? page - 1 : 1}`}
+                className={`px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${page <= 1 ? "opacity-50 pointer-events-none bg-slate-50" : "hover:bg-slate-50 bg-white"}`}>
+                Өмнөх
+              </a>
+              <span className="text-sm font-medium text-slate-600 px-4">
+                Хуудас {page} / {totalPages}
+              </span>
+              <a href={`?q=${q}&page=${page < totalPages ? page + 1 : totalPages}`}
+                className={`px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${page >= totalPages ? "opacity-50 pointer-events-none bg-slate-50" : "hover:bg-slate-50 bg-white"}`}>
+                Дараах
+              </a>
+            </div>
+          )}
         </div>
       )}
     </div>

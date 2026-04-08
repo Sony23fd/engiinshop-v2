@@ -36,12 +36,14 @@ export default async function CategoryBatchesPage({
   searchParams
 }: { 
   params: Promise<{ categoryId: string }> 
-  searchParams?: Promise<{ q?: string; filter?: string }>
+  searchParams?: Promise<{ q?: string; filter?: string; page?: string }>
 }) {
   const { categoryId } = await params;
-  const sp = searchParams ? await searchParams : ({} as { q?: string; filter?: string });
+  const sp = searchParams ? await searchParams : ({} as { q?: string; filter?: string; page?: string });
   const query = sp.q?.toLowerCase() || "";
   const filterPreOrder = sp.filter === 'preorder';
+  const page = sp.page ? parseInt(sp.page, 10) : 1;
+  const itemsPerPage = 50;
 
   const admin = await getCurrentAdmin()
   const role = admin?.role || "ADMIN"
@@ -101,6 +103,8 @@ export default async function CategoryBatchesPage({
           categoryId={categoryId}
           role={role}
           categories={categories || []}
+          page={page}
+          itemsPerPage={itemsPerPage}
         />
       </div>
     </div>

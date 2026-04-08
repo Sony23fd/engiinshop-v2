@@ -6,10 +6,16 @@ import { DateRangeFilter } from "@/components/admin/DateRangeFilter"
 
 export const dynamic = "force-dynamic"
 
-export default async function ArchivedCategoriesPage({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
+export default async function ArchivedCategoriesPage({ searchParams }: { searchParams: Promise<{ days?: string, page?: string }> }) {
   const p = await searchParams;
   const days = p.days ? parseInt(p.days, 10) : 30;
+  const page = p.page ? parseInt(p.page, 10) : 1;
+  const itemsPerPage = 50;
   const { categories } = await getArchivedCategories(days)
+  
+  const allCategories = categories || [];
+  const totalPages = Math.ceil(allCategories.length / itemsPerPage);
+  const paginatedCategories = allCategories.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   return (
     <div className="space-y-6">
@@ -31,7 +37,7 @@ export default async function ArchivedCategoriesPage({ searchParams }: { searchP
         </div>
       </div>
 
-      {!categories?.length ? (
+      {!allCategories?.length ? (
         <div className="bg-white rounded-xl border p-12 text-center">
           <Archive className="w-10 h-10 text-slate-300 mx-auto mb-3" />
           <p className="text-slate-500 font-medium">Архивласан ангилал байхгүй</p>
@@ -39,7 +45,7 @@ export default async function ArchivedCategoriesPage({ searchParams }: { searchP
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {categories.map((category: any) => {
+          {paginatedCategories.map((category: any) => {
             const allOrders = category.batches?.flatMap((b: any) => b.orders ?? []) ?? []
             const totalOrders = allOrders.length
             const completedOrders = allOrders.filter((o: any) => o.status?.isFinal === true).length
@@ -71,6 +77,22 @@ export default async function ArchivedCategoriesPage({ searchParams }: { searchP
               </div>
             )
           })}
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 mt-8">
+          <a href={`?days=${days}&page=${page > 1 ? page - 1 : 1}`}
+            className={`px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${page <= 1 ? "opacity-50 pointer-events-none bg-slate-50" : "hover:bg-slate-50 bg-white"}`}>
+            Өмнөх
+          </a>
+          <span className="text-sm font-medium text-slate-600 px-4">
+            Хуудас {page} / {totalPages}
+          </span>
+          <a href={`?days=${days}&page=${page < totalPages ? page + 1 : totalPages}`}
+            className={`px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${page >= totalPages ? "opacity-50 pointer-events-none bg-slate-50" : "hover:bg-slate-50 bg-white"}`}>
+            Дараах
+          </a>
         </div>
       )}
     </div>

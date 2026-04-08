@@ -24,14 +24,18 @@ export function CategoryBatchesTable({
   filterPreOrder, 
   categoryId, 
   role, 
-  categories 
+  categories,
+  page,
+  itemsPerPage
 }: { 
   batches: any[], 
   query: string, 
   filterPreOrder: boolean, 
   categoryId: string, 
   role: string, 
-  categories: any[] 
+  categories: any[],
+  page: number,
+  itemsPerPage: number
 }) {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
@@ -42,6 +46,9 @@ export function CategoryBatchesTable({
     const matchP = !filterPreOrder || b.isPreOrder;
     return matchQ && matchP;
   });
+
+  const totalPages = Math.ceil(filteredBatches.length / itemsPerPage);
+  const paginatedBatches = filteredBatches.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   const toggleSelectAll = () => {
     if (selectedIds.length === filteredBatches.length) {
@@ -132,7 +139,7 @@ export function CategoryBatchesTable({
             <tr>
               <th className="px-4 py-3 w-[40px]">
                 <Checkbox 
-                  checked={selectedIds.length === filteredBatches.length && filteredBatches.length > 0} 
+                  checked={selectedIds.length === paginatedBatches.length && paginatedBatches.length > 0} 
                   onCheckedChange={toggleSelectAll}
                 />
               </th>
@@ -148,8 +155,8 @@ export function CategoryBatchesTable({
             </tr>
           </thead>
           <tbody className="divide-y relative">
-            {filteredBatches.length > 0 ? (
-              filteredBatches.map((batch: any) => {
+            {paginatedBatches.length > 0 ? (
+              paginatedBatches.map((batch: any) => {
                 const orderedAmount = batch.orders?.filter((o: any) => o.paymentStatus === 'CONFIRMED' && o.status?.name !== 'Цуцлагдсан').reduce((acc: number, o: any) => acc + o.quantity, 0) || 0;
                 const remaining = Math.max(0, batch.targetQuantity - orderedAmount);
                 const progressPercent = Math.min(100, Math.round((orderedAmount / (batch.targetQuantity || 1)) * 100));
@@ -234,6 +241,22 @@ export function CategoryBatchesTable({
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 mt-8">
+          <a href={`?q=${query}&filter=${filterPreOrder ? 'preorder' : ''}&page=${page > 1 ? page - 1 : 1}`}
+            className={`px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${page <= 1 ? "opacity-50 pointer-events-none bg-slate-50" : "hover:bg-slate-50 bg-white"}`}>
+            Өмнөх
+          </a>
+          <span className="text-sm font-medium text-slate-600 px-4">
+            Хуудас {page} / {totalPages}
+          </span>
+          <a href={`?q=${query}&filter=${filterPreOrder ? 'preorder' : ''}&page=${page < totalPages ? page + 1 : totalPages}`}
+            className={`px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${page >= totalPages ? "opacity-50 pointer-events-none bg-slate-50" : "hover:bg-slate-50 bg-white"}`}>
+            Дараах
+          </a>
+        </div>
+      )}
     </div>
   )
 }

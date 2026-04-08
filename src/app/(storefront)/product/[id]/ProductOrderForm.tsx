@@ -20,7 +20,7 @@ interface Props {
   termsOfService?: string
   deliveryTerms?: string
   isPreOrder?: boolean
-  options?: Array<{name: string, values: string[]}>
+  options?: Array<{ name: string, values: string[] }>
   variantStock?: Record<string, number> | null
   deliveryScheduleDays?: string
 }
@@ -81,7 +81,7 @@ export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQua
   // Check if a specific option value is sold out
   const isOptionSoldOut = (optName: string, optValue: string): boolean => {
     if (!variantStock || !options) return false
-    
+
     // Build a temporary selection with this option changed
     const tempSelection = { ...selectedOptions, [optName]: optValue }
     const key = Object.values(tempSelection).join('-')
@@ -240,13 +240,12 @@ export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQua
                           setSelectedOptions({ ...selectedOptions, [opt.name]: val })
                           setQty(1) // Reset qty when changing variant
                         }}
-                        className={`text-sm px-3 py-1.5 rounded-lg border font-medium transition-all ${
-                          soldOut
+                        className={`text-sm px-3 py-1.5 rounded-lg border font-medium transition-all ${soldOut
                             ? "bg-slate-100 border-slate-200 text-slate-300 cursor-not-allowed line-through"
-                            : isSelected 
-                              ? "bg-[#4e3dc7] border-[#4e3dc7] text-white shadow-sm shadow-indigo-200" 
+                            : isSelected
+                              ? "bg-[#4e3dc7] border-[#4e3dc7] text-white shadow-sm shadow-indigo-200"
                               : "bg-white border-slate-200 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50"
-                        }`}
+                          }`}
                       >
                         {val}
                         {soldOut && <span className="ml-1 text-[10px] no-underline">(дууссан)</span>}
@@ -259,11 +258,10 @@ export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQua
           </div>
           {/* Show current variant stock */}
           {variantStock && currentVariantKey && (
-            <div className={`text-xs font-bold px-3 py-1.5 rounded-lg border mt-2 ${
-              currentStock > 0 
-                ? "bg-green-50 border-green-200 text-green-700" 
+            <div className={`text-xs font-bold px-3 py-1.5 rounded-lg border mt-2 ${currentStock > 0
+                ? "bg-green-50 border-green-200 text-green-700"
                 : "bg-red-50 border-red-200 text-red-600"
-            }`}>
+              }`}>
               {currentStock > 0 ? `Энэ сонголтонд ${currentStock} ширхэг үлдсэн` : "Энэ сонголт дууссан байна"}
             </div>
           )}
@@ -319,18 +317,18 @@ export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQua
       {/* Delivery schedule selection */}
       {wantsDelivery && !isPreOrder && (
         <div className="space-y-3 mt-4 border-t pt-4">
-          <label className="text-sm font-medium text-slate-700 block mb-2">Хүргүүлэх өдөр сонгох</label>
+          <label className="text-sm font-medium text-slate-700 block mb-2">Хүргэлт гарах өдрийг сонгон уу.</label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {getUpcomingDeliveryDates(deliveryScheduleDays, 2).map((opt, i) => (
               <label key={i} className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${selectedDeliveryDate === opt.date.toISOString() ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:bg-slate-50'}`}>
-                <input 
-                  type="radio" 
-                  name="deliveryDateChoice" 
+                <input
+                  type="radio"
+                  name="deliveryDateChoice"
                   className="mt-1"
                   required
                   checked={selectedDeliveryDate === opt.date.toISOString()}
                   onChange={() => setSelectedDeliveryDate(opt.date.toISOString())}
-                  value={opt.date.toISOString()} 
+                  value={opt.date.toISOString()}
                 />
                 <div>
                   <p className={`text-sm font-bold ${selectedDeliveryDate === opt.date.toISOString() ? 'text-indigo-900' : 'text-slate-700'}`}>{opt.formatted}</p>
