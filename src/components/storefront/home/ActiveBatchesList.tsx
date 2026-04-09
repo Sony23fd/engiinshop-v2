@@ -1,5 +1,5 @@
 import Link from "next/link"
-import Image from "next/image"
+import { ProductImage } from "@/components/storefront/ProductImage"
 import { AddToCartButton } from "@/components/storefront/AddToCartButton"
 import { Clock, TrendingUp } from "lucide-react"
 import { PreOrderCountdown } from "@/components/storefront/home/PreOrderCountdown"
@@ -36,7 +36,7 @@ export function ActiveBatchesList({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {batches.map((batch: any) => {
+          {batches.map((batch: any, index: number) => {
             const progress = batch.targetQuantity > 0 
               ? Math.min(100, Math.max(0, ((batch.targetQuantity - batch.remainingQuantity) / batch.targetQuantity) * 100))
               : 0;
@@ -57,12 +57,13 @@ export function ActiveBatchesList({
                       className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500 pointer-events-none"
                     />
                   ) : batch.product?.imageUrl ? (
-                    <Image
+                    <ProductImage
                       src={batch.product.imageUrl}
                       alt={batch.product.name || "Бараа"}
                       fill
                       className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                      priority={index < 4}
                     />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center text-slate-400 font-medium">Зураггүй</div>

@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Clock } from "lucide-react"
+import { ProductImage } from "@/components/storefront/ProductImage"
 
 export function RelatedBatches({ batches, title }: { batches: any[], title: string }) {
   if (!batches || batches.length === 0) return null
@@ -26,10 +27,12 @@ export function RelatedBatches({ batches, title }: { batches: any[], title: stri
                   className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500 pointer-events-none"
                 />
               ) : batch.product?.imageUrl ? (
-                <img
+                <ProductImage
                   src={batch.product.imageUrl}
                   alt={batch.product.name}
+                  fill
                   className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
+                  sizes="280px"
                 />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center text-slate-400 font-medium text-sm">Зураггүй</div>

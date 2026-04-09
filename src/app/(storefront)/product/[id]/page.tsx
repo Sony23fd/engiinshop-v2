@@ -2,7 +2,7 @@ import { db } from "@/lib/db"
 import { notFound } from "next/navigation"
 import { Package, Truck, ShoppingBag, ArrowLeft } from "lucide-react"
 import Link from "next/link"
-import Image from "next/image"
+import { ProductImage } from "@/components/storefront/ProductImage"
 import { ProductOrderForm } from "./ProductOrderForm"
 import { RelatedBatches } from "@/components/storefront/product/RelatedBatches"
 import { getShopSettings } from "@/app/actions/settings-actions"
@@ -55,7 +55,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
             {(batch.product as any)?.videoUrl ? (
               <video src={(batch.product as any).videoUrl} autoPlay loop muted playsInline className="object-cover w-full h-full" />
             ) : batch.product?.imageUrl ? (
-              <Image src={batch.product.imageUrl} alt={batch.product.name} fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover w-full h-full" />
+              <ProductImage src={batch.product.imageUrl} alt={batch.product.name} fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover w-full h-full" />
             ) : (
               <div className="flex flex-col items-center text-slate-400 gap-2">
                 <Package className="w-12 h-12" />

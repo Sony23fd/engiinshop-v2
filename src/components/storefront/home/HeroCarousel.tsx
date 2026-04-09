@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import Image from "next/image"
+import { ProductImage } from "@/components/storefront/ProductImage"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
 interface Props {
@@ -40,7 +40,7 @@ export function HeroCarousel({ images }: Props) {
             idx === currentIndex ? "opacity-100 z-10" : "opacity-0 z-0"
           }`}
         >
-          <Image
+          <ProductImage
             src={img}
             alt={`Slide ${idx + 1}`}
             fill
