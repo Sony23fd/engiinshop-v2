@@ -1461,6 +1461,18 @@ export async function autoCancelExpiredOrders() {
     for (const order of expiredOrders) {
       try {
         await db.$transaction(async (tx) => {
+          // Цуцлахын өмнө захиалга PENDING хэвээр байгаа эсэхийг дахин шалгах (race condition-аас хамгаалах)
+          const freshOrder = await (tx.order as any).findUnique({
+            where: { id: order.id },
+            select: { paymentStatus: true, confirmedAt: true }
+          })
+
+          if (!freshOrder || freshOrder.paymentStatus !== "PENDING" || freshOrder.confirmedAt !== null) {
+            console.log(`[CRON] Order ${order.id} is no longer PENDING — skipping.`)
+            results.push({ id: order.id, success: true, skipped: true })
+            return
+          }
+
           // Захиалгыг цуцлах
           await (tx.order as any).update({
             where: { id: order.id },
