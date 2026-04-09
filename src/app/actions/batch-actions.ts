@@ -3,6 +3,7 @@
 import { db } from "@/lib/db"
 import { revalidatePath } from "next/cache"
 import { BatchStatus } from "@prisma/client"
+import { getCurrentAdmin } from "@/lib/auth"
 
 export async function getBatches() {
   try {
@@ -119,6 +120,13 @@ export async function updateBatch(id: string, data: {
   cargoFeeStatus?: string
 }) {
   try {
+    const admin = await getCurrentAdmin()
+
+    // CARGO_ADMIN cannot change targetQuantity
+    if (admin?.role === "CARGO_ADMIN" && data.targetQuantity !== undefined) {
+      return { success: false, error: "Cargo admin cannot change target quantity" }
+    }
+
     const batch = await db.batch.findUnique({ where: { id }, include: { product: true } })
     if (!batch) throw new Error("Batch not found")
 

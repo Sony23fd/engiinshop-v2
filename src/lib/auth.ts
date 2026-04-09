@@ -51,10 +51,9 @@ export async function logActivity({
  * CARGO_ADMIN allowed routes (prefix match)
  */
 export const CARGO_ADMIN_ALLOWED_ROUTES = [
-  "/admin/orders/batch",
-  "/admin/orders/search",
-  "/admin/orders/category",
+  "/admin/orders",
   "/admin/cargo-settings",
+  "/admin/guide",
 ]
 
 export const DATAADMIN_ALLOWED_ROUTES = [
