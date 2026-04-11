@@ -167,7 +167,7 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ ba
 
 
       {/* Client Component with Checkboxes */}
-      <BatchOrdersClient activeOrders={activeOrders} batch={batch} statuses={statuses || []} role={admin?.role || "CARGO_ADMIN"} />
+      <BatchOrdersClient activeOrders={activeOrders} completedOrders={validOrders.filter((o: any) => o.status?.isFinal)} batch={batch} statuses={statuses || []} role={admin?.role || "CARGO_ADMIN"} />
     </div>
   )
 }

@@ -3,6 +3,7 @@ import { GroupDeliveredActions } from "./GroupDeliveredActions"
 import { DateRangeFilter } from "@/components/admin/DateRangeFilter"
 import { ListSearchFilter } from "@/components/admin/ListSearchFilter"
 import { PackageCheck, Package, Truck, User } from "lucide-react"
+import { groupOrdersByCustomer } from "@/lib/customer-utils"
 
 export const dynamic = "force-dynamic"
 
@@ -29,13 +30,8 @@ export default async function DeliveredOrdersPage({ searchParams }: { searchPara
     )
   }
 
-  // Group by transactionRef (same cart = same ref) then by customerPhone
-  const grouped: Record<string, any[]> = {}
-  for (const order of filteredOrders) {
-    const key = order.transactionRef || order.customerPhone || order.id
-    if (!grouped[key]) grouped[key] = []
-    grouped[key].push(order)
-  }
+  // Group by canonical customer ID (normalized phone > account > transactionRef > id)
+  const grouped = groupOrdersByCustomer(filteredOrders)
   // Filter groups: only keep those that are REALLY delivered (not picked up)
   // We check if at least one order in the group wants delivery or has a valid delivery address
   const rawGroups = Object.values(grouped)

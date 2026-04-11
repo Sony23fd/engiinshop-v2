@@ -529,23 +529,38 @@ export async function searchOrders(query?: string) {
       ]
     }
 
-    // Check if query is a number for totalAmount search
+    // Check if query is a number for totalAmount range search
     const isNumericQuery = query && !isNaN(Number(query))
     const numericQuery = isNumericQuery ? Number(query) : undefined
+
+    const searchConditions: any[] = [
+      { accountNumber: { contains: query, mode: 'insensitive' } },
+      { customerPhone: { contains: query, mode: 'insensitive' } },
+      { customerName: { contains: query, mode: 'insensitive' } },
+      { transactionRef: { contains: query, mode: 'insensitive' } },
+      { batch: { product: { name: { contains: query, mode: 'insensitive' } } } },
+    ]
+
+    // For numeric queries, search totalAmount using range (e.g., "5000" matches 5000-5999, "50" matches 50-59)
+    if (numericQuery !== undefined) {
+      const queryStr = query!
+      const multiplier = Math.pow(10, Math.max(0, 6 - queryStr.length)) // Adjust range based on input length
+      const rangeStart = numericQuery
+      const rangeEnd = numericQuery + multiplier - 1
+
+      searchConditions.push({
+        totalAmount: {
+          gte: rangeStart,
+          lte: rangeEnd
+        }
+      })
+    }
 
     const orders = await db.order.findMany({
       where: query ? {
         AND: [
           activeFilter,
-          {
-            OR: [
-              { accountNumber: { contains: query, mode: 'insensitive' } },
-              { customerPhone: { contains: query, mode: 'insensitive' } },
-              { customerName: { contains: query, mode: 'insensitive' } },
-              { batch: { product: { name: { contains: query, mode: 'insensitive' } } } },
-              ...(numericQuery !== undefined ? [{ totalAmount: numericQuery }] : []),
-            ]
-          }
+          { OR: searchConditions }
         ]
       } : activeFilter,
       include: {

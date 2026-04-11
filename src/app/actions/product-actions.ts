@@ -4,14 +4,62 @@ import { db } from "@/lib/db"
 import { revalidatePath } from "next/cache"
 import { BatchStatus } from "@prisma/client"
 
-export async function getProducts({ search, page = 1, limit = 20 }: { search?: string, page?: number, limit?: number } = {}) {
+export async function getProducts({
+  search,
+  page = 1,
+  limit = 20,
+  stockFilter = "all",
+  sortFilter = "newest",
+  saleFilter = "all",
+  categoryFilter,
+  preOrderFilter = "all"
+}: {
+  search?: string,
+  page?: number,
+  limit?: number,
+  stockFilter?: "all" | "in_stock" | "out_of_stock",
+  sortFilter?: "remaining_desc" | "remaining_asc" | "newest" | "oldest",
+  saleFilter?: "all" | "on_sale" | "not_on_sale",
+  categoryFilter?: string,
+  preOrderFilter?: "all" | "pre_order" | "regular"
+} = {}) {
   try {
     const whereClause: any = {}
+
+    // Search filter
     if (search && search.trim()) {
       whereClause.product = {
         name: { contains: search.trim(), mode: 'insensitive' }
       }
     }
+
+    // Sale status filter
+    if (saleFilter === "on_sale") {
+      whereClause.isAvailableForSale = true
+    } else if (saleFilter === "not_on_sale") {
+      whereClause.isAvailableForSale = false
+    }
+
+    // Category filter
+    if (categoryFilter && categoryFilter !== "all") {
+      whereClause.categoryId = categoryFilter
+    }
+
+    // Pre-order filter
+    if (preOrderFilter === "pre_order") {
+      whereClause.isPreOrder = true
+    } else if (preOrderFilter === "regular") {
+      whereClause.isPreOrder = false
+    }
+
+    // Build orderBy based on sortFilter
+    let orderBy: any = { createdAt: "desc" }
+    if (sortFilter === "newest") {
+      orderBy = { createdAt: "desc" }
+    } else if (sortFilter === "oldest") {
+      orderBy = { createdAt: "asc" }
+    }
+    // Note: remaining_desc/asc requires post-processing since it's calculated
 
     const [batches, totalCount] = await Promise.all([
       db.batch.findMany({
@@ -20,7 +68,7 @@ export async function getProducts({ search, page = 1, limit = 20 }: { search?: s
           product: true,
           category: true,
         },
-        orderBy: { createdAt: "desc" },
+        orderBy,
         skip: (page - 1) * limit,
         take: limit,
       }),
@@ -48,13 +96,33 @@ export async function getProducts({ search, page = 1, limit = 20 }: { search?: s
       quantityMap.set(agg.batchId, agg._sum.quantity || 0);
     });
 
-    const enrichedBatches = batches.map(batch => ({
+    let enrichedBatches = batches.map(batch => ({
       ...batch,
       _calculatedOrderedSum: quantityMap.get(batch.id) || 0
     }));
 
-    return { 
-      success: true, 
+    // Apply stock filter on enriched data
+    if (stockFilter === "in_stock") {
+      enrichedBatches = enrichedBatches.filter(b =>
+        (b.targetQuantity - b._calculatedOrderedSum) > 0
+      )
+    } else if (stockFilter === "out_of_stock") {
+      enrichedBatches = enrichedBatches.filter(b =>
+        (b.targetQuantity - b._calculatedOrderedSum) <= 0
+      )
+    }
+
+    // Apply remaining sort if needed
+    if (sortFilter === "remaining_desc" || sortFilter === "remaining_asc") {
+      enrichedBatches.sort((a, b) => {
+        const aRem = a.targetQuantity - a._calculatedOrderedSum
+        const bRem = b.targetQuantity - b._calculatedOrderedSum
+        return sortFilter === "remaining_desc" ? bRem - aRem : aRem - bRem
+      })
+    }
+
+    return {
+      success: true,
       products: JSON.parse(JSON.stringify(enrichedBatches)),
       totalCount,
       totalPages: Math.ceil(totalCount / limit),
@@ -62,7 +130,7 @@ export async function getProducts({ search, page = 1, limit = 20 }: { search?: s
     };
   } catch (error) {
     console.error("Failed to fetch batches:", error)
-    return { success: false, error: "Failed to fetch batches", totalCount: 0, totalPages: 0, currentPage: 1 }
+    return { success: false, error: "Failed to fetch batches", products: [], totalCount: 0, totalPages: 0, currentPage: 1 }
   }
 }
 

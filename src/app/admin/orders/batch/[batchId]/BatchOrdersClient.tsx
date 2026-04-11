@@ -11,7 +11,8 @@ import { Loader2, Pencil, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 
-export function BatchOrdersClient({ activeOrders, batch, statuses, role }: { activeOrders: any[], batch: any, statuses: any[], role: string }) {
+export function BatchOrdersClient({ activeOrders, completedOrders = [], batch, statuses, role }: { activeOrders: any[], completedOrders?: any[], batch: any, statuses: any[], role: string }) {
+  const [showCompleted, setShowCompleted] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState("")
@@ -250,6 +251,70 @@ export function BatchOrdersClient({ activeOrders, batch, statuses, role }: { act
           </tbody>
         </table>
       </div>
+
+      {/* Completed Orders Section */}
+      {completedOrders.length > 0 && (
+        <div className="border-t pt-4">
+          <button
+            type="button"
+            onClick={() => setShowCompleted(v => !v)}
+            className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-700 transition-colors"
+          >
+            <span className={`transition-transform ${showCompleted ? "rotate-90" : ""}`}>▶</span>
+            Дууссан захиалгууд ({completedOrders.length})
+          </button>
+
+          {showCompleted && (
+            <div className="overflow-x-auto w-full mt-3 opacity-60">
+              <table className="w-full text-sm text-left border-collapse">
+                <thead className="bg-slate-50 border-b text-[10px] uppercase text-slate-400 font-bold whitespace-nowrap tracking-wider">
+                  <tr>
+                    <th className="px-4 py-3">Захиалгын дугаар</th>
+                    <th className="px-4 py-3">Нэр</th>
+                    <th className="px-4 py-3">Дансны дугаар</th>
+                    <th className="px-4 py-3 text-center">Гүйлгээний утга</th>
+                    <th className="px-4 py-3 text-center">Тоо</th>
+                    <th className="px-4 py-3 text-center">Статус</th>
+                    <th className="px-4 py-3 text-center">Хаяг</th>
+                    <th className="px-4 py-3 text-center">Карго үнэ</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {completedOrders.map((order: any) => {
+                    const unitCargoFee = Number(batch.cargoFeeStatus || 0) * Number(batch.product?.weight || 0)
+                    const orderCustomFee = Number(order.cargoFee || 0)
+                    const finalCargoFee = orderCustomFee > 0 ? orderCustomFee * Number(order.quantity || 1) : unitCargoFee * Number(order.quantity || 1)
+                    return (
+                      <tr key={order.id} className="border-b border-slate-100 bg-slate-50/50">
+                        <td className="px-4 py-4 font-medium text-slate-400">{order.orderNumber}</td>
+                        <td className="px-4 py-4 min-w-[200px]">
+                          <div className="text-slate-400 text-xs space-y-0.5">
+                            <p className="text-slate-500 text-sm uppercase">{order.customerName}</p>
+                            <p>{order.customerPhone}</p>
+                            <p>{batch.product?.name}</p>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-slate-400">{order.accountNumber}</td>
+                        <td className="px-4 py-4 text-center">
+                          <span className="text-[11px] font-mono text-slate-400 bg-slate-100 px-2 py-1 rounded">
+                            {order.transactionRef || "-"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-center text-slate-400">{order.quantity}</td>
+                        <td className="px-4 py-4 text-center">
+                          <StatusBadge status={order.status?.name || ""} color={order.status?.color} />
+                        </td>
+                        <td className="px-4 py-4 text-center text-slate-400">{order.deliveryAddress || "-"}</td>
+                        <td className="px-4 py-4 text-center text-slate-400">{finalCargoFee.toLocaleString()} ₮</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       <Sheet open={!!editingOrder} onOpenChange={(open) => !open && !loading && setEditingOrder(null)}>
         <SheetContent className="overflow-y-auto sm:max-w-md">

@@ -87,15 +87,15 @@ function InlineEditDate({ label, value, onSave }: {
   )
 }
 
-export function BatchSaleToggle({ batchId, initialEnabled, initialPreOrder, initialFee, dynamicRemainingQty, targetQty, initialClosingDate }: {
-  batchId: string
-  initialEnabled: boolean
-  initialPreOrder: boolean
-  initialFee: number
-  dynamicRemainingQty: number  // computed: targetQty - total ordered
-  targetQty: number
-  initialClosingDate?: Date | null
-}) {
+export function BatchSaleToggle({ batch }: { batch: any }) {
+  const batchId = batch.id
+  const initialEnabled = batch.isAvailableForSale ?? false
+  const initialPreOrder = batch.isPreOrder ?? false
+  const initialFee = Number(batch.deliveryFee || 0)
+  const dynamicRemainingQty = batch.targetQuantity - (batch._calculatedOrderedSum || 0)
+  const targetQty = batch.targetQuantity
+  const initialClosingDate = batch.closingDate ? new Date(batch.closingDate) : null
+
   const [enabled, setEnabled] = useState(initialEnabled)
   const [preOrder, setPreOrder] = useState(initialPreOrder)
   const [loading, setLoading] = useState(false)
@@ -117,9 +117,12 @@ export function BatchSaleToggle({ batchId, initialEnabled, initialPreOrder, init
 
   return (
     <div className="flex flex-col gap-1.5 items-end">
-      {/* Toggle */}
+      {/* Toggle with Visual Indicator */}
       <div className="flex items-center gap-2">
         {loading && <Loader2 className="w-3 h-3 animate-spin text-slate-400" />}
+        <div className={`w-2 h-2 rounded-full ${
+          enabled ? 'bg-green-500 animate-pulse' : 'bg-slate-300'
+        }`} />
         <Switch checked={enabled} onCheckedChange={handleToggle} disabled={loading}
           className="data-[state=checked]:bg-green-500" />
         <span className={`text-xs font-medium ${enabled ? "text-green-600" : "text-slate-400"}`}>

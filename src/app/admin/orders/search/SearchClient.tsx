@@ -27,6 +27,7 @@ import { StatusBadge } from "@/components/admin/StatusBadge"
 import { GroupStatusUpdater } from "./GroupStatusUpdater"
 import { GroupAdminDeliveryButton } from "./GroupAdminDeliveryButton"
 import { RejectionDialog } from "@/components/admin/RejectionDialog"
+import { groupOrdersByCustomer } from "@/lib/customer-utils"
 
 export default function SearchClient({ statuses }: { statuses: any[] }) {
   const [query, setQuery] = useState("")
@@ -111,13 +112,8 @@ export default function SearchClient({ statuses }: { statuses: any[] }) {
     }
   }
 
-  // Grouping logic based on `customerPhone` or `transactionRef` fallback
-  const groupedOrders: Record<string, any[]> = {}
-  orders.forEach((o) => {
-    const key = o.customerPhone || o.transactionRef || o.id
-    if (!groupedOrders[key]) groupedOrders[key] = []
-    groupedOrders[key].push(o)
-  })
+  // Grouping logic based on canonical customer ID (normalized phone > account > transactionRef > id)
+  const groupedOrders = groupOrdersByCustomer(orders)
   const groups = Object.values(groupedOrders)
 
   // Multi-select logic per group

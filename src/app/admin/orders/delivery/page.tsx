@@ -3,6 +3,7 @@ import { Truck, Package, User } from "lucide-react"
 import { DeliveryGroupCard } from "./DeliveryGroupCard"
 import { DeliveryFilter } from "./DeliveryFilter"
 import { ListSearchFilter } from "@/components/admin/ListSearchFilter"
+import { groupOrdersByCustomer } from "@/lib/customer-utils"
 
 export const dynamic = "force-dynamic"
 
@@ -33,13 +34,8 @@ export default async function DeliveryQueuePage({
     )
   }
 
-  // Group by customerPhone
-  const grouped: Record<string, any[]> = {}
-  for (const order of filteredOrders) {
-    const key = order.customerPhone || order.id
-    if (!grouped[key]) grouped[key] = []
-    grouped[key].push(order)
-  }
+  // Group by canonical customer ID (normalized phone > account > transactionRef > id)
+  const grouped = groupOrdersByCustomer(filteredOrders)
   const allGroups = Object.values(grouped)
   const totalPages = Math.ceil(allGroups.length / itemsPerPage);
   const groups = allGroups.slice((page - 1) * itemsPerPage, page * itemsPerPage);
