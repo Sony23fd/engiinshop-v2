@@ -14,13 +14,13 @@ export const dynamic = "force-dynamic"
 
 export default async function AdminProductsPage({ searchParams }: { searchParams: Promise<{ stock?: string, sort?: string, q?: string, page?: string, view?: string, category?: string, preOrder?: string }> }) {
   const p = await searchParams;
-  const stockFilter = p.stock || "all";
-  const sortFilter = p.sort || "remaining_desc";
+  const stockFilter = (p.stock || "all") as "all" | "in_stock" | "out_of_stock";
+  const sortFilter = (p.sort || "remaining_desc") as "remaining_desc" | "remaining_asc" | "newest" | "oldest";
   const search = p.q || "";
   const page = Math.max(1, Number(p.page || 1));
-  const viewFilter = p.view || "on_sale"; // Default to "on_sale" tab
+  const viewFilter = p.view || "on_sale";
   const categoryFilter = p.category || "all";
-  const preOrderFilter = p.preOrder || "all";
+  const preOrderFilter = (p.preOrder || "all") as "all" | "pre_order" | "regular";
 
   const [{ products, success, totalCount = 0, totalPages = 1, currentPage = 1 }, { categories }] = await Promise.all([
     getProducts({
