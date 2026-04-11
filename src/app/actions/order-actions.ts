@@ -528,6 +528,11 @@ export async function searchOrders(query?: string) {
         { status: { isFinal: false } }
       ]
     }
+
+    // Check if query is a number for totalAmount search
+    const isNumericQuery = query && !isNaN(Number(query))
+    const numericQuery = isNumericQuery ? Number(query) : undefined
+
     const orders = await db.order.findMany({
       where: query ? {
         AND: [
@@ -538,6 +543,7 @@ export async function searchOrders(query?: string) {
               { customerPhone: { contains: query, mode: 'insensitive' } },
               { customerName: { contains: query, mode: 'insensitive' } },
               { batch: { product: { name: { contains: query, mode: 'insensitive' } } } },
+              ...(numericQuery !== undefined ? [{ totalAmount: numericQuery }] : []),
             ]
           }
         ]

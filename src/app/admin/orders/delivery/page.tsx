@@ -21,14 +21,15 @@ export default async function DeliveryQueuePage({
   
   let filteredOrders = orders || []
   if (q) {
-    filteredOrders = filteredOrders.filter((o: any) => 
+    filteredOrders = filteredOrders.filter((o: any) =>
       o.customerName?.toLowerCase().includes(q) ||
       o.customerPhone?.includes(q) ||
       o.accountNumber?.toLowerCase().includes(q) ||
       o.batch?.product?.name?.toLowerCase().includes(q) ||
       o.deliveryAddress?.toLowerCase().includes(q) ||
       o.orderNumber?.toString().includes(q) ||
-      o.transactionRef?.toLowerCase().includes(q)
+      o.transactionRef?.toLowerCase().includes(q) ||
+      o.totalAmount?.toString().includes(q)
     )
   }
 
