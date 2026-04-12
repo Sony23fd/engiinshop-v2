@@ -87,6 +87,9 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
           </Link>
 
           <div className="flex items-center gap-4 w-full md:w-auto mt-2 md:mt-0">
+            <Link href="/shop" className="text-white/80 hover:text-white text-sm font-medium transition-colors whitespace-nowrap hidden md:block">
+              Дэлгүүр
+            </Link>
             <form action="/track" className="flex relative group w-full md:w-auto shadow-lg hover:shadow-xl transition-shadow rounded-full font-sans">
               <input
                 type="text"

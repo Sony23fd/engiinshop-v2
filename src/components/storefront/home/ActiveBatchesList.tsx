@@ -33,6 +33,10 @@ export function ActiveBatchesList({
             <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">{title}</h2>
             {subtitle && <p className="text-slate-500 mt-2 text-lg">{subtitle}</p>}
           </div>
+          <Link href={`/shop${theme === "preorder" ? "?type=preorder" : "?type=ready"}`}
+            className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 whitespace-nowrap flex items-center gap-1 transition-colors">
+            Бүх бараа харах →
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

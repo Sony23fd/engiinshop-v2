@@ -134,23 +134,31 @@ export async function getProducts({
   }
 }
 
-export async function getActiveProducts() {
+export async function getActiveProducts({ limit, search, categoryId }: { limit?: number, search?: string, categoryId?: string } = {}) {
   try {
+    const where: any = {
+      isAvailableForSale: true,
+      category: {
+        isArchived: false,
+        name: { not: { contains: "Сарын захиалга" } }
+      }
+    }
+    if (search?.trim()) {
+      where.product = { name: { contains: search.trim(), mode: 'insensitive' } }
+    }
+    if (categoryId) {
+      where.categoryId = categoryId
+    }
     const batches = await db.batch.findMany({
-      where: { 
-        isAvailableForSale: true,
-        category: {
-          isArchived: false,
-          name: { not: { contains: "Сарын захиалга" } }
-        }
-      },
+      where,
       include: { product: true, category: true },
       orderBy: { createdAt: "desc" },
+      ...(limit ? { take: limit } : {})
     })
     return { success: true, products: JSON.parse(JSON.stringify(batches)) }
   } catch (error) {
     console.error("Failed to fetch active batches:", error)
-    return { success: false, error: "Failed to fetch active batches" }
+    return { success: false, error: "Failed to fetch active batches", products: [] }
   }
 }
 
