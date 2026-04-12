@@ -7,7 +7,7 @@ import { LiveTicker } from "@/components/storefront/home/LiveTicker"
 export const dynamic = "force-dynamic"
 
 export default async function StorefrontHomePage() {
-  const { products, success } = await getActiveProducts({ limit: 12 })
+  const { products, success } = await getActiveProducts()
 
   return (
     <div className="bg-white min-h-screen">
