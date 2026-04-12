@@ -151,8 +151,8 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
                 <a href="https://www.facebook.com/profile.php?id=100086582256535" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full bg-gradient-to-b from-blue-500 to-blue-700 flex items-center justify-center text-white hover:scale-110 shadow-sm transition-transform" title="Facebook">
                   <Facebook className="w-5 h-5 fill-white drop-shadow-sm" />
                 </a>
-              </div>2м
-              аа            </div>
+              </div>
+            </div>
 
             <div className="space-y-4">
               <h3 className="text-white font-semibold text-sm uppercase tracking-wider mb-6">Холбоо барих</h3>
@@ -203,7 +203,7 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
               <p>© {new Date().getFullYear()} <strong className="text-white font-medium">Anar Korea Shop</strong>.</p>
             </div>
             <div className="md:w-1/3 text-center">
-              <p>Хөгжүүлсэн: <a href="https://www.facebook.com/engiineeer" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors hover:underline underline-offset-4">Engiineer</a></p>
+              <p>Хөгжүүлсэн: <a href="https://www.facebook.com/engiineeer" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors hover:underline underline-offset-4">EngiineeR</a></p>
             </div>
             <div className="md:w-1/3 flex justify-center md:justify-end gap-6">
               <a href="#" className="hover:text-white transition-colors">Үйлчилгээний нөхцөл</a>

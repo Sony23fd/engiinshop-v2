@@ -14,20 +14,22 @@ export default async function StorefrontHomePage() {
       <HeroSection />
       {/* Active Ready Stock */}
       <ActiveBatchesList 
-        batches={success && products ? products.filter((p: any) => !p.isPreOrder) : []} 
+        batches={success && products ? products.filter((p: any) => !p.isPreOrder).slice(0, 8) : []} 
         title="Монголд бэлэн байгаа"
         subtitle="Яг одоо бэлэн байгаа барааг шууд авах боломжтой"
         badge="Онцлох бараа"
         theme="ready"
+        viewAllLink="/shop?type=ready"
       />
       
       {/* Pre-Orders */}
       <ActiveBatchesList 
-        batches={success && products ? products.filter((p: any) => p.isPreOrder) : []} 
+        batches={success && products ? products.filter((p: any) => p.isPreOrder).slice(0, 8) : []} 
         title="Урьдчилсан захиалга"
         subtitle="Урьдчилж захиалаад илүү хямдаар аваарай"
         badge="Тун удахгүй ирэх"
         theme="preorder"
+        viewAllLink="/shop?type=preorder"
       />
       
       <HowItWorks />

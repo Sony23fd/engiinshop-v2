@@ -1,26 +1,36 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react"
 import { confirmGroupPayment, rejectGroupPayment } from "@/app/actions/settings-actions"
 import { RejectionDialog } from "@/components/admin/RejectionDialog"
 
 export function GroupPendingActions({ orderIds }: { orderIds: string[] }) {
+  const router = useRouter()
   const [status, setStatus] = useState<"idle" | "confirming" | "rejecting" | "confirmed" | "rejected">("idle")
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false)
 
   async function handleConfirm() {
     setStatus("confirming")
     const res = await confirmGroupPayment(orderIds)
-    if (res.success) setStatus("confirmed")
-    else setStatus("idle")
+    if (res.success) {
+      setStatus("confirmed")
+      router.refresh()
+    } else {
+      setStatus("idle")
+    }
   }
 
   async function handleReject(reason: string) {
     setStatus("rejecting")
     const res = await rejectGroupPayment(orderIds, reason)
-    if (res.success) setStatus("rejected")
-    else setStatus("idle")
+    if (res.success) {
+      setStatus("rejected")
+      router.refresh()
+    } else {
+      setStatus("idle")
+    }
   }
 
   if (status === "confirmed") {
