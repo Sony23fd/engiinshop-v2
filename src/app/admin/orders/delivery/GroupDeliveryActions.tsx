@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { CheckCircle2, Loader2, PackageCheck, Handshake } from "lucide-react"
+import { CheckCircle2, Loader2, PackageCheck, Handshake, Printer } from "lucide-react"
 import { confirmDeliveryGroup, markDeliveryAsPickedUp } from "@/app/actions/order-actions"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
@@ -62,6 +62,14 @@ export function GroupDeliveryActions({ orderIds }: { orderIds: string[] }) {
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
+      <Button 
+        onClick={() => window.open(`/admin/print/sticker?ids=${orderIds.join(',')}`, '_blank')}
+        variant="outline"
+        size="sm"
+        className="border-blue-200 text-blue-700 hover:bg-blue-50 h-8 text-xs font-semibold px-3 transition-colors"
+      >
+        <Printer className="w-3.5 h-3.5 mr-1.5" /> Стиккер
+      </Button>
       <Button 
         onClick={handlePickedUp} 
         disabled={!!loading}

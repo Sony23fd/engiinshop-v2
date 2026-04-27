@@ -5,6 +5,7 @@ import { Clock, CreditCard, CheckCircle2, AlertCircle } from "lucide-react"
 import { CopyButton } from "../../[orderId]/CopyButton"
 import { QRCodeSVG } from "qrcode.react"
 import { PaymentCheckClient } from "./PaymentCheckClient"
+import CopyTrackingLink from "../../../track/CopyTrackingLink"
 
 export const dynamic = "force-dynamic"
 
@@ -74,6 +75,8 @@ export default async function OrderPendingByRefPage({ params }: { params: Promis
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-12">
       <div className="max-w-md w-full space-y-4">
+
+        <CopyTrackingLink trackingRef={transactionRef} />
 
         {/* Status */}
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3">

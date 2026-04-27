@@ -2,6 +2,7 @@ import { getOrderForPayment, getShopSettings } from "@/app/actions/settings-acti
 import { notFound } from "next/navigation"
 import { CheckCircle2, Clock, AlertCircle, CreditCard } from "lucide-react"
 import { CopyButton } from "./CopyButton"
+import CopyTrackingLink from "../../track/CopyTrackingLink"
 
 export const dynamic = "force-dynamic"
 
@@ -28,6 +29,7 @@ export default async function OrderPendingPage({ params }: { params: Promise<{ o
           <h1 className="text-2xl font-bold text-slate-900 mb-2">Захиалга баталгаажлаа! 🎉</h1>
           <p className="text-slate-500 text-sm mb-6">Таны төлбөр хүлээн авагдаж, захиалга баталгаажлаа.</p>
           <p className="text-xs text-slate-400">Гүйлгээний утга: <span className="font-mono font-semibold">{transactionRef}</span></p>
+          <CopyTrackingLink trackingRef={transactionRef} />
         </div>
       </div>
     )
@@ -50,6 +52,8 @@ export default async function OrderPendingPage({ params }: { params: Promise<{ o
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-12">
       <div className="max-w-md w-full space-y-4">
+
+        <CopyTrackingLink trackingRef={transactionRef} />
 
         {/* Status header */}
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3">

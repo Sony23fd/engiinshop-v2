@@ -1,4 +1,4 @@
-import { getOrdersByAccount } from "@/app/actions/order-actions"
+import { getOrdersByQuery } from "@/app/actions/order-actions"
 import { getShopSettings } from "@/app/actions/settings-actions"
 import { 
   CheckCircle2, 
@@ -12,6 +12,7 @@ import {
   AlertTriangle
 } from "lucide-react"
 import DeliveryRequestButton from "./DeliveryRequestButton"
+import PhoneTracker from "./PhoneTracker"
 import { OrderStatusTimeline } from "@/components/OrderStatusTimeline"
 
 export const dynamic = "force-dynamic"
@@ -19,16 +20,16 @@ export const dynamic = "force-dynamic"
 export default async function TrackOrderPage({
   searchParams,
 }: {
-  searchParams: Promise<{ account?: string }>
+  searchParams: Promise<{ account?: string, q?: string }>
 }) {
   const resolvedParams = await searchParams
-  const account = resolvedParams.account
+  const q = resolvedParams.q || resolvedParams.account
 
   const [settings, accountData] = await Promise.all([
     getShopSettings(),
-    account ? getOrdersByAccount(account) : Promise.resolve({ orders: [], success: true })
+    q ? getOrdersByQuery(q) : Promise.resolve({ orders: [], success: true, needsVerification: false, phone: "" })
   ])
-  const { orders, success } = accountData
+  const { orders, success, needsVerification, phone } = accountData as any
 
   // Define logic used in results
   const grouped: Record<string, any[]> = {}
@@ -65,7 +66,9 @@ export default async function TrackOrderPage({
         </div>
       )}
 
-      {!account ? (
+      {needsVerification && phone ? (
+        <PhoneTracker phone={phone} />
+      ) : !q ? (
         <div className="py-20 text-center">
           <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mx-auto mb-4">
             <Search className="w-8 h-8" />
@@ -77,14 +80,14 @@ export default async function TrackOrderPage({
         <>
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-slate-900 leading-tight">
-              Хайлтын үр дүн: <span className="text-[#4F46E5]">{account}</span>
+              Хайлтын үр дүн: <span className="text-[#4F46E5]">{q}</span>
             </h1>
             <p className="text-slate-500 mt-1 font-medium italic">Нийт захиалга: {totalOrders}</p>
           </div>
 
           {!success || totalOrders === 0 ? (
             <div className="bg-white rounded-xl border border-dashed p-12 text-center text-slate-500 font-medium">
-              Энэ дансны дугаар дээр бүртгэлтэй захиалга олдсонгүй.
+              Хайлтын илэрц олдсонгүй. Утас, данс, эсвэл линкээ шалгана уу.
             </div>
           ) : (
             <div className="space-y-12">
@@ -166,7 +169,7 @@ function UnifiedDeliverySection({ groups, deliveryScheduleDays = "3,6" }: { grou
           <p className="text-sm text-slate-700 font-medium">
             🚚 <strong>{eligibleForDelivery.length}</strong> бараа хүргэлтэд бэлэн байна.
           </p>
-          <DeliveryRequestButton orderIds={eligibleForDelivery.map((o: any) => o.id)} deliveryScheduleDays={deliveryScheduleDays} />
+          <DeliveryRequestButton orderIds={eligibleForDelivery.map((o: any) => o.id)} deliveryScheduleDays={deliveryScheduleDays} customerPhone={eligibleForDelivery[0]?.customerPhone} />
           {hasMixedDeliverable && (
             <div className="mt-2 bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800 leading-relaxed font-medium">
               ⚠️ <strong className="text-amber-900">Анхаарах:</strong> Танд ирээгүй <strong>{notYetDeliverable.length}</strong> бараа байна. 

@@ -1,8 +1,12 @@
 import Link from "next/link"
 import { CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import CopyTrackingLink from "../track/CopyTrackingLink"
 
-export default function OrderSuccessPage() {
+export default async function OrderSuccessPage({ searchParams }: { searchParams: Promise<{ ref?: string }> }) {
+  const resolvedParams = await searchParams;
+  const ref = resolvedParams.ref;
+
   return (
     <div className="min-h-[70vh] flex items-center justify-center px-4">
       <div className="text-center max-w-md">
@@ -16,8 +20,15 @@ export default function OrderSuccessPage() {
           Таны захиалга хүлээн авлаа. Бид удахгүй та рүү холбогдох болно.
         </p>
         <p className="text-slate-400 text-xs mb-8">
-          Захиалгаа шалгахдаа нүүр хуудас дээрх "Захиалга шалгах" хэсэгт дансны дугаараа оруулна уу.
+          Захиалгаа шалгахдаа нүүр хуудас дээрх "Захиалга шалгах" хэсэгт утасны дугаар эсвэл дансны дугаараа оруулна уу.
         </p>
+
+        {ref && (
+          <div className="mb-8">
+            <CopyTrackingLink trackingRef={ref} />
+          </div>
+        )}
+
         <div className="flex gap-3 justify-center">
           <Link href="/">
             <Button className="bg-[#4F46E5] hover:bg-[#4338ca]">Нүүр хуудас</Button>

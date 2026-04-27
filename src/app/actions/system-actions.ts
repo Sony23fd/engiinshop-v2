@@ -32,6 +32,7 @@ export async function updateSystemFromServer() {
       "npm install",
       "npx prisma generate",
       "npx prisma db push",
+      "npx tsx fix-invalid-phones.ts",
       "npm run build",
       "pm2 restart engiinshop"
     ].join(" && ")

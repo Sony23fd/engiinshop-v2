@@ -29,8 +29,8 @@ import { GroupAdminDeliveryButton } from "./GroupAdminDeliveryButton"
 import { RejectionDialog } from "@/components/admin/RejectionDialog"
 import { groupOrdersByCustomer } from "@/lib/customer-utils"
 
-export default function SearchClient({ statuses }: { statuses: any[] }) {
-  const [query, setQuery] = useState("")
+export default function SearchClient({ statuses, initialQuery = "" }: { statuses: any[], initialQuery?: string }) {
+  const [query, setQuery] = useState(initialQuery)
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [hasSearched, setHasSearched] = useState(false)
@@ -38,11 +38,14 @@ export default function SearchClient({ statuses }: { statuses: any[] }) {
   const [pendingRejection, setPendingRejection] = useState<{orderId: string, newStatusId: string} | null>(null)
   const { toast } = useToast()
 
-  async function handleSearch(e?: React.FormEvent) {
+  async function handleSearch(e?: React.FormEvent, searchQuery?: string) {
     if (e) e.preventDefault()
     
+    const queryToUse = searchQuery ?? query;
+    if (!queryToUse) return;
+
     setLoading(true)
-    const result = await searchOrders(query)
+    const result = await searchOrders(queryToUse)
     setLoading(false)
     setHasSearched(true)
     
@@ -56,6 +59,13 @@ export default function SearchClient({ statuses }: { statuses: any[] }) {
       })
     }
   }
+
+  // Trigger search automatically if initialQuery is provided
+  useEffect(() => {
+    if (initialQuery && !hasSearched) {
+      handleSearch(undefined, initialQuery)
+    }
+  }, [initialQuery])
 
   async function handleStatusChange(orderId: string, newStatusId: string, oldStatusId: string | null) {
     const statusName = statuses.find(s => s.id === newStatusId)?.name
@@ -277,10 +287,12 @@ export default function SearchClient({ statuses }: { statuses: any[] }) {
                   
                   {group.map((order) => {
                     const isChecked = selectedInGroup.includes(order.id)
+                    const isInactive = order.paymentStatus === 'REJECTED' || order.status?.isFinal === true || order.status?.name === 'Цуцлагдсан'
+
                     return (
                       <div 
                         key={order.id} 
-                        className={`px-5 py-4 flex items-center gap-4 transition-colors ${isChecked ? 'bg-indigo-50/20' : 'hover:bg-slate-50'}`}
+                        className={`px-5 py-4 flex items-center gap-4 transition-colors ${isChecked ? 'bg-indigo-50/20' : 'hover:bg-slate-50'} ${isInactive ? 'opacity-60 bg-slate-50/50 grayscale-[0.3]' : ''}`}
                       >
                         <input 
                           type="checkbox" 
@@ -322,28 +334,35 @@ export default function SearchClient({ statuses }: { statuses: any[] }) {
                           
                           {/* Status Dropdown */}
                           <div className="md:col-span-3 flex justify-end">
-                            <Select 
-                              defaultValue={order.statusId || "none"} 
-                              onValueChange={(val) => {
-                                if (val === "none") return;
-                                handleStatusChange(order.id, val, order.statusId)
-                              }}
-                            >
-                              <SelectTrigger className="w-full sm:w-[160px] bg-slate-50 border-slate-200 h-9">
-                                <SelectValue placeholder="Төлөв сонгох">
-                                  {order.statusId ? (
-                                    <StatusBadge status={statuses.find(s => s.id === order.statusId)?.name || ""} color={statuses.find(s => s.id === order.statusId)?.color} />
-                                  ) : "Сонгох..."}
-                                </SelectValue>
-                              </SelectTrigger>
-                              <SelectContent>
-                                {statuses.map((s) => (
-                                  <SelectItem key={s.id} value={String(s.id)}>
-                                    <StatusBadge status={s.name} color={s.color} />
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            {order.paymentStatus === "REJECTED" ? (
+                              <div className="px-3 py-1.5 rounded-full bg-red-100 text-red-700 text-xs font-bold border border-red-200">
+                                ТӨЛБӨР ЦУЦЛАГДСАН
+                              </div>
+                            ) : (
+                              <Select 
+                                defaultValue={order.statusId || "none"} 
+                                onValueChange={(val) => {
+                                  if (val === "none") return;
+                                  handleStatusChange(order.id, val, order.statusId)
+                                }}
+                                disabled={isInactive && order.status?.isFinal}
+                              >
+                                <SelectTrigger className="w-full sm:w-[160px] bg-slate-50 border-slate-200 h-9">
+                                  <SelectValue placeholder="Төлөв сонгох">
+                                    {order.statusId ? (
+                                      <StatusBadge status={statuses.find(s => s.id === order.statusId)?.name || ""} color={statuses.find(s => s.id === order.statusId)?.color} />
+                                    ) : "Сонгох..."}
+                                  </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {statuses.map((s) => (
+                                    <SelectItem key={s.id} value={String(s.id)}>
+                                      <StatusBadge status={s.name} color={s.color} />
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
                           </div>
                         </div>
                       </div>

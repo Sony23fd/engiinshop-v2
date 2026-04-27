@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
         await (db.order as any).create({
           data: {
             customerName,
-            customerPhone: customerPhone || "00000000",
+            customerPhone: customerPhone || "",
             accountNumber,
             quantity,
             batchId,

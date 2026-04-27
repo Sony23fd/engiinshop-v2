@@ -4,6 +4,8 @@ import { db } from "@/lib/db"
 import { revalidatePath } from "next/cache"
 import { emitNewOrder } from "@/lib/orderEvents"
 import { getCurrentAdmin, logActivity } from "@/lib/auth"
+import { isValidPhone } from "@/lib/customer-utils"
+import { isPhoneVerified } from "@/lib/verify-mn"
 
 export async function validateCartStock(items: { batchId: string; qty: number }[]) {
   const batchIds = items.map(i => i.batchId)
@@ -349,6 +351,56 @@ export async function getOrdersByAccount(accountNumber: string) {
   }
 }
 
+export async function getOrdersByQuery(query: string) {
+  try {
+    const cleanQuery = query.trim();
+    const isPhone = cleanQuery.match(/^(9|8|7|6)\d{7}$/) !== null;
+    let whereClause: any = {};
+
+    if (isPhone) {
+      if (!isPhoneVerified(cleanQuery)) {
+        return { success: false, error: "Утасны дугаар баталгаажаагүй байна", needsVerification: true, phone: cleanQuery };
+      }
+      whereClause = { customerPhone: cleanQuery };
+    } else if (cleanQuery.startsWith("ORD-") || cleanQuery.startsWith("ANR") || cleanQuery.length === 8) {
+      whereClause = { 
+        OR: [
+          { transactionRef: cleanQuery },
+          { orderNumber: !isNaN(Number(cleanQuery)) ? Number(cleanQuery) : undefined }
+        ]
+      };
+    } else {
+      whereClause = { accountNumber: cleanQuery };
+    }
+
+    const orders = await db.order.findMany({
+      where: whereClause,
+      include: {
+        batch: {
+          include: { product: true, category: true }
+        },
+        status: true
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    
+    // If it was a transactionRef search but found nothing, fallback to account search
+    if (orders.length === 0 && !isPhone) {
+       const fallbackOrders = await db.order.findMany({
+         where: { accountNumber: cleanQuery },
+         include: { batch: { include: { product: true, category: true } }, status: true },
+         orderBy: { createdAt: "desc" },
+       });
+       return { success: true, orders: JSON.parse(JSON.stringify(fallbackOrders)) };
+    }
+
+    return { success: true, orders: JSON.parse(JSON.stringify(orders)) };
+  } catch (error) {
+    console.error("Failed to fetch orders by query:", error);
+    return { success: false, error: "Failed to fetch orders" };
+  }
+}
+
 export async function createOrder(data: {
   customerName: string
   phoneNumber: string
@@ -364,6 +416,11 @@ export async function createOrder(data: {
   selectedOptions?: any
 }) {
   try {
+    // Server-side phone validation (prevent DevTools bypass)
+    if (data.phoneNumber && !isValidPhone(data.phoneNumber)) {
+      return { success: false, error: "Зөв утасны дугаар оруулна уу (жишээ: 99112233)" }
+    }
+
     const result = await db.$transaction(async (tx) => {
       // 1. Get batch current state
       const batch = await tx.batch.findUnique({
@@ -474,6 +531,11 @@ export async function addOrderToBatch(batchId: string, data: {
   cargoFee?: number
 }) {
   try {
+    // Validate phone number if provided
+    if (data.customerPhone && !isValidPhone(data.customerPhone)) {
+      return { success: false, error: "Зөв утасны дугаар оруулна уу (жишээ: 99112233)" }
+    }
+
     const result = await db.$transaction(async (tx) => {
       const batch = await tx.batch.findUnique({
         where: { id: batchId }
@@ -541,6 +603,10 @@ export async function searchOrders(query?: string) {
       { batch: { product: { name: { contains: query, mode: 'insensitive' } } } },
     ]
 
+    if (isNumericQuery) {
+      searchConditions.push({ orderNumber: numericQuery })
+    }
+
     // For numeric queries, search totalAmount using range (e.g., "5000" matches 5000-5999, "50" matches 50-59)
     if (numericQuery !== undefined) {
       const queryStr = query!
@@ -558,10 +624,7 @@ export async function searchOrders(query?: string) {
 
     const orders = await db.order.findMany({
       where: query ? {
-        AND: [
-          activeFilter,
-          { OR: searchConditions }
-        ]
+        OR: searchConditions
       } : activeFilter,
       include: {
         batch: {

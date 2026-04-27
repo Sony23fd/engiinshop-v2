@@ -1,5 +1,5 @@
 import { db } from "@/lib/db"
-import { Database, Download, AlertTriangle } from "lucide-react"
+import { Database, Download, AlertTriangle, Terminal } from "lucide-react"
 import { getCurrentAdmin } from "@/lib/auth"
 import { notFound } from "next/navigation"
 import ClearDataButton from "./ClearDataButton"
@@ -50,28 +50,40 @@ export default async function DataCenterPage() {
          </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl border shadow-sm p-6 space-y-4 border-t-4 border-t-purple-500 flex flex-col">
            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-             <Download className="w-5 h-5 text-purple-500" /> Нөөцлөх (Backup)
+             <Download className="w-5 h-5 text-purple-500" /> Нөөцлөх
            </h2>
            <p className="text-sm text-slate-600 flex-1">
-             Мэдээллийн сан дахь бүх хүснэгтийн өгөгдлийг нэгтгэн JSON форматаар татаж авна. Аливаа устгал засвар хийхээс өмнө татаж нөөцлөхийг зөвлөж байна.
+             Бүх датаг JSON форматаар татаж авна. Аливаа устгал хийхээс өмнө татаж нөөцлөхийг зөвлөж байна.
            </p>
            <a href="/api/admin/backup" target="_blank" className="inline-flex items-center justify-center gap-2 bg-purple-600 text-white hover:bg-purple-700 px-4 py-2.5 rounded-lg font-medium transition-colors text-sm w-full">
-              <Download className="w-4 h-4" /> Одоо татаж авах
+              <Download className="w-4 h-4" /> Татаж авах
            </a>
         </div>
 
         <div className="bg-white rounded-xl border shadow-sm p-6 space-y-4 border-t-4 border-t-blue-500 flex flex-col">
            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-             <Database className="w-5 h-5 text-blue-500" /> Импортлох & Цэвэрлэх
+             <Database className="w-5 h-5 text-blue-500" /> Импортлох
            </h2>
            <p className="text-sm text-slate-600 flex-1">
-             Excel файлаас эсвэл хуучин системээс бөөнөөр оруулж байгаа өгөгдлийг яг системийн зөв бүтэц рүү хөрвүүлэн импортлох ухаалаг хэрэгсэл.
+             Хуучин системээс бөөнөөр оруулж байгаа өгөгдлийг шинэ систем рүү хөрвүүлэн импортлох хэрэгсэл.
            </p>
            <a href="/admin/data-center/import" className="inline-flex items-center justify-center gap-2 bg-blue-600 text-white hover:bg-blue-700 px-4 py-2.5 rounded-lg font-medium transition-colors text-sm w-full">
-              <Database className="w-4 h-4" /> Импортын хэрэгсэл рүү очих
+              <Database className="w-4 h-4" /> Импортлох
+           </a>
+        </div>
+
+        <div className="bg-slate-900 rounded-xl border border-slate-800 shadow-sm p-6 space-y-4 border-t-4 border-t-indigo-500 flex flex-col">
+           <h2 className="text-lg font-bold text-white flex items-center gap-2">
+             <Terminal className="w-5 h-5 text-indigo-400" /> Систем шинэчлэл
+           </h2>
+           <p className="text-sm text-slate-400 flex-1">
+             .env файлыг засах, Github-аас сүүлийн хувилбар татах болон fix скриптүүдийг шууд ажиллуулах (Deploy).
+           </p>
+           <a href="/admin/data-center/system" className="inline-flex items-center justify-center gap-2 bg-indigo-600 text-white hover:bg-indigo-700 px-4 py-2.5 rounded-lg font-medium transition-colors text-sm w-full">
+              <Terminal className="w-4 h-4" /> Тохиргоо руу орох
            </a>
         </div>
       </div>

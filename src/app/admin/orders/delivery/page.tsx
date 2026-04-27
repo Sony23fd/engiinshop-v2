@@ -58,6 +58,18 @@ export default async function DeliveryQueuePage({
         </div>
       </div>
 
+      {groups.length > 0 && (
+        <div className="flex justify-end mt-2">
+          <a 
+            href={`/admin/print/sticker?ids=${groups.flatMap(g => g.map((o: any) => o.id)).join(',')}`} 
+            target="_blank"
+            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow hover:bg-indigo-700 transition-colors"
+          >
+            🖨️ Энэ хуудасны бүх стиккерийг хэвлэх
+          </a>
+        </div>
+      )}
+
       {groups.length === 0 ? (
         <div className="bg-white rounded-xl border p-12 text-center shadow-sm">
           <Truck className="w-10 h-10 text-slate-300 mx-auto mb-3" />

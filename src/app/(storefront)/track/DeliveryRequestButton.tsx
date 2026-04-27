@@ -1,13 +1,14 @@
 "use client"
 
-import { useState } from "react"
-import { Truck, Copy, CheckCircle2, QrCode } from "lucide-react"
+import { useState, useRef, useCallback, useEffect } from "react"
+import { Truck, Copy, CheckCircle2, QrCode, Loader2, MessageSquare, AlertCircle } from "lucide-react"
 import { requestDelivery, checkDeliveryPayment, confirmManualDeliveryRequest } from "@/app/actions/order-actions"
+import { startPhoneVerification } from "@/app/actions/verify-actions"
 import Image from "next/image"
 import { useToast } from "@/components/ui/use-toast"
 import { getUpcomingDeliveryDates } from "@/lib/utils"
 
-export default function DeliveryRequestButton({ orderIds, deliveryScheduleDays = "3,6" }: { orderIds: string[], deliveryScheduleDays?: string }) {
+export default function DeliveryRequestButton({ orderIds, deliveryScheduleDays = "3,6", customerPhone }: { orderIds: string[], deliveryScheduleDays?: string, customerPhone?: string }) {
   const [open, setOpen] = useState(false)
   const [address, setAddress] = useState("")
   const [selectedDeliveryDate, setSelectedDeliveryDate] = useState<string | null>(null)
@@ -20,6 +21,88 @@ export default function DeliveryRequestButton({ orderIds, deliveryScheduleDays =
   const [manualData, setManualData] = useState<any>(null)
   const [checkingPayment, setCheckingPayment] = useState(false)
   const [copiedData, setCopiedData] = useState("")
+
+  // ─── Phone Verification for Delivery ───
+  const [phoneVerified, setPhoneVerified] = useState(false)
+  const [verifySessionId, setVerifySessionId] = useState<string | null>(null)
+  const [verifySmsUri, setVerifySmsUri] = useState<string | null>(null)
+  const [verifyInstruction, setVerifyInstruction] = useState<string | null>(null)
+  const [verifyLoading, setVerifyLoading] = useState(false)
+  const [verifyError, setVerifyError] = useState<string | null>(null)
+  const pollRef = useRef<NodeJS.Timeout | null>(null)
+
+  const VERIFY_STORAGE_KEY = "anar_verified_phone"
+  const VERIFY_TTL_MS = 24 * 60 * 60 * 1000
+
+  function getStoredVerifiedPhone(): string | null {
+    try {
+      const raw = localStorage.getItem(VERIFY_STORAGE_KEY)
+      if (!raw) return null
+      const { phone, verifiedAt } = JSON.parse(raw)
+      if (Date.now() - verifiedAt > VERIFY_TTL_MS) { localStorage.removeItem(VERIFY_STORAGE_KEY); return null }
+      return phone
+    } catch { return null }
+  }
+
+  function saveVerifiedPhone(phone: string) {
+    try { localStorage.setItem(VERIFY_STORAGE_KEY, JSON.stringify({ phone, verifiedAt: Date.now() })) } catch {}
+  }
+
+  // Check localStorage on mount
+  useEffect(() => {
+    if (customerPhone) {
+      const digits = customerPhone.replace(/\D/g, "")
+      const stored = getStoredVerifiedPhone()
+      if (stored === digits) setPhoneVerified(true)
+    }
+    return () => { if (pollRef.current) clearInterval(pollRef.current) }
+  }, [customerPhone])
+
+  const startPolling = useCallback((sid: string, exp: string) => {
+    if (pollRef.current) clearInterval(pollRef.current)
+    pollRef.current = setInterval(async () => {
+      if (Date.now() > new Date(exp).getTime()) {
+        if (pollRef.current) clearInterval(pollRef.current)
+        setVerifyError("Хугацаа дууслаа. Дахин оролдоно уу."); setVerifySessionId(null); return
+      }
+      try {
+        const res = await fetch(`/api/verify-mn/status/${sid}`)
+        const data = await res.json()
+        if (data.status === "VERIFIED") {
+          if (pollRef.current) clearInterval(pollRef.current)
+          setPhoneVerified(true); setVerifySessionId(null); setVerifySmsUri(null); setVerifyInstruction(null)
+          if (customerPhone) saveVerifiedPhone(customerPhone.replace(/\D/g, ""))
+          toast({ title: "✅ Утас баталгаажлаа!", description: "Та хүргэлт захиалж болно." })
+        } else if (data.status === "EXPIRED") {
+          if (pollRef.current) clearInterval(pollRef.current)
+          setVerifyError("Хугацаа дууслаа. Дахин оролдоно уу."); setVerifySessionId(null)
+        }
+      } catch {}
+    }, 3000)
+  }, [toast, customerPhone])
+
+  async function handleVerifyForDelivery() {
+    if (!customerPhone) { setOpen(true); return } // No phone on record, allow anyway
+    const digits = customerPhone.replace(/\D/g, "")
+    if (!digits || digits.length !== 8) { setOpen(true); return }
+
+    const stored = getStoredVerifiedPhone()
+    if (stored === digits) { setPhoneVerified(true); setOpen(true); return }
+
+    setVerifyLoading(true); setVerifyError(null)
+    const result = await startPhoneVerification(digits)
+    setVerifyLoading(false)
+
+    if (!result.success) { setVerifyError(result.error || "Алдаа гарлаа"); return }
+    if (result.sessionId === "already-verified" || result.sessionId === "skipped") {
+      setPhoneVerified(true); saveVerifiedPhone(digits); setOpen(true); return
+    }
+
+    setVerifySessionId(result.sessionId!)
+    setVerifySmsUri(result.smsUri || null)
+    setVerifyInstruction(result.displayInstruction || null)
+    if (result.sessionId && result.expiresAt) startPolling(result.sessionId, result.expiresAt)
+  }
 
   async function copyToClipboard(text: string) {
     await navigator.clipboard.writeText(text)
@@ -190,13 +273,37 @@ export default function DeliveryRequestButton({ orderIds, deliveryScheduleDays =
   return (
     <div className="space-y-3">
       {!open ? (
-        <button
-          onClick={() => setOpen(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
-        >
-          <Truck className="w-4 h-4" />
-          Хүргэлт захиалах
-        </button>
+        <div className="space-y-3">
+          <button
+            onClick={phoneVerified ? () => setOpen(true) : handleVerifyForDelivery}
+            disabled={verifyLoading}
+            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors shadow-sm disabled:opacity-50"
+          >
+            {verifyLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Truck className="w-4 h-4" />}
+            {verifyLoading ? "Шалгаж байна..." : "Хүргэлт захиалах"}
+          </button>
+          {verifyError && (
+            <p className="text-xs text-red-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {verifyError}</p>
+          )}
+          {verifySessionId && !phoneVerified && (
+            <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 space-y-3 animate-in fade-in">
+              <div className="flex items-start gap-2">
+                <MessageSquare className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
+                <div className="space-y-1.5">
+                  <p className="text-sm font-semibold text-indigo-900">SMS баталгаажуулалт</p>
+                  {verifyInstruction && <p className="text-xs text-indigo-700">{verifyInstruction}</p>}
+                  <p className="text-xs text-indigo-600">Утсаа баталгаажуулсны дараа хүргэлт захиалах боломжтой.</p>
+                </div>
+              </div>
+              {verifySmsUri && (
+                <a href={verifySmsUri} className="flex items-center justify-center gap-2 w-full py-3 bg-indigo-600 text-white rounded-lg font-semibold text-sm hover:bg-indigo-700 transition-colors shadow-sm">
+                  <MessageSquare className="w-4 h-4" /> 📱 SMS илгээх (144773)
+                </a>
+              )}
+              <div className="flex items-center gap-2 text-xs text-indigo-500"><Loader2 className="w-3.5 h-3.5 animate-spin" />SMS хүлээж байна...</div>
+            </div>
+          )}
+        </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-3 bg-indigo-50 rounded-xl border border-indigo-100 p-4 animate-in fade-in">
           <label className="block text-sm font-semibold text-slate-800">

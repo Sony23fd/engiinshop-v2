@@ -3,7 +3,7 @@
 import { useState } from "react"
 import * as XLSX from "xlsx"
 import { UploadCloud, CheckCircle, Database, AlertCircle, FileSpreadsheet, Download, RefreshCcw, ArrowLeft } from "lucide-react"
-import { runImportTransaction } from "@/app/actions/import-actions"
+import { runImportTransaction, restoreFullDatabase } from "@/app/actions/import-actions"
 
 type OrderStatus = { id: string; name: string; color: string | null }
 
@@ -12,6 +12,7 @@ export function ImportWizard({ existingStatuses }: { existingStatuses: OrderStat
   const [rows, setRows] = useState<any[]>([])
   const [uniqueStatuses, setUniqueStatuses] = useState<string[]>([])
   const [statusMap, setStatusMap] = useState<Record<string, string>>({})
+  const [nativeBackupData, setNativeBackupData] = useState<any>(null)
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -95,8 +96,12 @@ export function ImportWizard({ existingStatuses }: { existingStatuses: OrderStat
            let rawData: any[] = [];
            if (Array.isArray(parsed)) {
              rawData = parsed;
+           } else if (parsed && parsed.metadata && parsed.data && Array.isArray(parsed.data.orders)) {
+             // Real Database Backup Formatter - Switch to Native Restore Mode
+             setNativeBackupData(parsed.data);
+             setStep(4);
+             return;
            } else if (parsed && parsed.data && Array.isArray(parsed.data.orders)) {
-             // Real Database Backup Formatter (flat tables)
              const dbData = parsed.data;
              dbData.orders.forEach((o: any) => {
                 const batch = dbData.batches?.find((b: any) => b.id === o.batchId);
@@ -259,6 +264,24 @@ export function ImportWizard({ existingStatuses }: { existingStatuses: OrderStat
         throw new Error(res.error || "Импорт бүтэлгүйтлээ")
       }
 
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleRestoreNative() {
+    setLoading(true)
+    setError("")
+    try {
+      const res = await restoreFullDatabase(nativeBackupData)
+      if (res.success) {
+        setSuccess(true)
+        setStep(3)
+      } else {
+        throw new Error(res.error || "Сэргээх явцад алдаа гарлаа")
+      }
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -478,6 +501,54 @@ export function ImportWizard({ existingStatuses }: { existingStatuses: OrderStat
                  </div>
                )}
              </div>
+          </div>
+        </div>
+      )}
+
+      {/* Step 4: Native Backup Mode */}
+      {step === 4 && nativeBackupData && (
+        <div className="bg-white rounded-xl border shadow-sm p-8 max-w-2xl mx-auto space-y-6">
+          <div className="text-center space-y-2">
+            <div className="mx-auto w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-4">
+              <Database className="w-8 h-8" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900">Бүтэн Өгөгдлийн Сан (Backup)</h2>
+            <p className="text-sm text-slate-500">
+              Та системийн бүтэн нөөц файлыг оруулсан байна. <br/>
+              Үүнийг сэргээснээр одоогийн системийн <strong className="text-red-500">БҮХ ДАТА</strong> устгагдаж, энэ файлд байгаа датагаар бүрэн солигдох болно. (Бараанууд, зураг, видео, хэрэглэгчид г.м бүх дата хуучин хэвэндээ орно).
+            </p>
+          </div>
+
+          <div className="bg-slate-50 border rounded-lg p-5">
+            <h3 className="font-semibold text-slate-800 text-sm mb-3">Олдсон мэдээллийн хураангуй:</h3>
+            <ul className="text-sm text-slate-600 space-y-1.5 list-disc list-inside">
+              <li>Бараа (Products): <strong>{nativeBackupData.products?.length || 0}</strong></li>
+              <li>Багц (Batches): <strong>{nativeBackupData.batches?.length || 0}</strong></li>
+              <li>Ангилал (Categories): <strong>{nativeBackupData.categories?.length || 0}</strong></li>
+              <li>Захиалга (Orders): <strong>{nativeBackupData.orders?.length || 0}</strong></li>
+              <li>Хэрэглэгчид (Users): <strong>{nativeBackupData.users?.length || 0}</strong></li>
+            </ul>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button 
+              onClick={() => { setStep(1); setNativeBackupData(null); }} 
+              className="px-5 py-2.5 rounded-lg border text-slate-600 bg-white hover:bg-slate-50 font-medium"
+            >
+              Буцах
+            </button>
+            <button 
+              onClick={handleRestoreNative} 
+              disabled={loading}
+              className="flex-1 bg-red-600 text-white px-5 py-2.5 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-red-700 disabled:opacity-70"
+            >
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Database className="w-5 h-5" />
+              )}
+              {loading ? "Сэргээж байна..." : "ТИЙМ, БҮХ ДАТАГ СЭРГЭЭХ"}
+            </button>
           </div>
         </div>
       )}

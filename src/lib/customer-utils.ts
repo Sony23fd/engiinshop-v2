@@ -13,6 +13,29 @@ export function normalizePhone(phone: string | null | undefined): string {
 }
 
 /**
+ * Validates that a phone number is a real, usable phone number.
+ * Rejects: all-same digits (00000000, 11111111), sequential (12345678),
+ * too short, or empty values.
+ */
+export function isValidPhone(phone: string | null | undefined): boolean {
+  const digits = normalizePhone(phone);
+  
+  // Must be exactly 8 digits (Mongolian phone standard)
+  if (digits.length !== 8) return false;
+  
+  // Reject all-same digits: 00000000, 11111111, etc.
+  if (/^(\d)\1{7}$/.test(digits)) return false;
+  
+  // Reject ascending sequence: 12345678
+  if (digits === "12345678") return false;
+  
+  // Reject descending sequence: 87654321
+  if (digits === "87654321") return false;
+  
+  return true;
+}
+
+/**
  * Normalizes account numbers by trimming and lowercasing
  * Examples: "  ABC123  " -> "abc123"
  */
@@ -23,7 +46,7 @@ export function normalizeAccount(account: string | null | undefined): string {
 
 /**
  * Generates canonical customer identifier for grouping
- * Priority: normalized_phone > normalized_account > transactionRef > id
+ * Priority: normalized_phone (if valid) > normalized_account > transactionRef > id
  */
 export function getCanonicalCustomerId(order: {
   customerPhone?: string | null;
@@ -32,9 +55,11 @@ export function getCanonicalCustomerId(order: {
   id: string;
 }): string {
   const normalizedPhone = normalizePhone(order.customerPhone);
-  const normalizedAccount = normalizeAccount(order.accountNumber);
 
-  if (normalizedPhone) return `phone:${normalizedPhone}`;
+  // Only group by phone if it's a valid, real phone number
+  if (normalizedPhone && isValidPhone(normalizedPhone)) return `phone:${normalizedPhone}`;
+  
+  const normalizedAccount = normalizeAccount(order.accountNumber);
   if (normalizedAccount) return `account:${normalizedAccount}`;
   if (order.transactionRef) return `txn:${order.transactionRef}`;
   return `order:${order.id}`;

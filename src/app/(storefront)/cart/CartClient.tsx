@@ -1,13 +1,15 @@
 "use client"
 
 import { useCart } from "@/context/CartContext"
-import { useState } from "react"
-import { Trash2, Minus, Plus, ShoppingCart, Truck, ShoppingBag, Package, AlertCircle, Info } from "lucide-react"
+import { useState, useRef, useCallback, useEffect } from "react"
+import { Trash2, Minus, Plus, ShoppingCart, Truck, ShoppingBag, Package, AlertCircle, Info, CheckCircle2, Loader2, MessageSquare } from "lucide-react"
 import { createOrder, validateCartStock } from "@/app/actions/order-actions"
+import { startPhoneVerification } from "@/app/actions/verify-actions"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
 import { getUpcomingDeliveryDates } from "@/lib/utils"
+import { isValidPhone } from "@/lib/customer-utils"
 
 export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalDeliveryFee = 0, deliveryScheduleDays = "3,6" }: { 
   termsOfService?: string; 
@@ -27,9 +29,151 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [selectedDeliveryDate, setSelectedDeliveryDate] = useState<string | null>(null)
 
+  // ─── Phone Verification State ───
+  const [phoneVerified, setPhoneVerified] = useState(false)
+  const [verifySessionId, setVerifySessionId] = useState<string | null>(null)
+  const [verifySmsUri, setVerifySmsUri] = useState<string | null>(null)
+  const [verifyInstruction, setVerifyInstruction] = useState<string | null>(null)
+  const [verifyExpiresAt, setVerifyExpiresAt] = useState<string | null>(null)
+  const [verifyLoading, setVerifyLoading] = useState(false)
+  const [verifyError, setVerifyError] = useState<string | null>(null)
+  const pollRef = useRef<NodeJS.Timeout | null>(null)
+
+  // ─── localStorage helpers for persistent verification ───
+  const VERIFY_STORAGE_KEY = "anar_verified_phone"
+  const VERIFY_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
+
+  function getStoredVerifiedPhone(): string | null {
+    try {
+      const raw = localStorage.getItem(VERIFY_STORAGE_KEY)
+      if (!raw) return null
+      const { phone, verifiedAt } = JSON.parse(raw)
+      if (Date.now() - verifiedAt > VERIFY_TTL_MS) {
+        localStorage.removeItem(VERIFY_STORAGE_KEY)
+        return null
+      }
+      return phone
+    } catch { return null }
+  }
+
+  function saveVerifiedPhone(phone: string) {
+    try {
+      localStorage.setItem(VERIFY_STORAGE_KEY, JSON.stringify({ phone, verifiedAt: Date.now() }))
+    } catch { /* ignore */ }
+  }
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current)
+    }
+  }, [])
+
+  // Poll verify.mn status
+  const startPolling = useCallback((sessionId: string, expiresAt: string) => {
+    if (pollRef.current) clearInterval(pollRef.current)
+
+    pollRef.current = setInterval(async () => {
+      // Check if expired
+      if (Date.now() > new Date(expiresAt).getTime()) {
+        if (pollRef.current) clearInterval(pollRef.current)
+        setVerifyError("Хугацаа дууслаа. Дахин оролдоно уу.")
+        setVerifySessionId(null)
+        setVerifySmsUri(null)
+        setVerifyInstruction(null)
+        return
+      }
+
+      try {
+        const res = await fetch(`/api/verify-mn/status/${sessionId}`)
+        const data = await res.json()
+
+        if (data.status === "VERIFIED") {
+          if (pollRef.current) clearInterval(pollRef.current)
+          setPhoneVerified(true)
+          setVerifySessionId(null)
+          setVerifySmsUri(null)
+          setVerifyInstruction(null)
+          // Save to localStorage for persistence
+          const phoneInput = document.querySelector('input[name="phoneNumber"]') as HTMLInputElement
+          if (phoneInput) saveVerifiedPhone(phoneInput.value.replace(/\D/g, ""))
+          toast({ title: "✅ Утас баталгаажлаа!", description: "Та захиалгаа үргэлжлүүлж болно." })
+        } else if (data.status === "EXPIRED") {
+          if (pollRef.current) clearInterval(pollRef.current)
+          setVerifyError("Хугацаа дууслаа. Дахин оролдоно уу.")
+          setVerifySessionId(null)
+          setVerifySmsUri(null)
+          setVerifyInstruction(null)
+        }
+      } catch {
+        // Silent — will retry on next interval
+      }
+    }, 3000)
+  }, [toast])
+
+  async function handleVerifyPhone(phoneValue: string) {
+    const digits = phoneValue.replace(/\D/g, "")
+    if (!isValidPhone(digits)) return
+
+    // Check localStorage first
+    const storedPhone = getStoredVerifiedPhone()
+    if (storedPhone === digits) {
+      setPhoneVerified(true)
+      return
+    }
+
+    setVerifyLoading(true)
+    setVerifyError(null)
+
+    const result = await startPhoneVerification(digits)
+
+    if (!result.success) {
+      setVerifyError(result.error || "Алдаа гарлаа")
+      setVerifyLoading(false)
+      return
+    }
+
+    // If already verified or skipped (no API key)
+    if (result.sessionId === "already-verified" || result.sessionId === "skipped") {
+      setPhoneVerified(true)
+      saveVerifiedPhone(digits)
+      setVerifyLoading(false)
+      return
+    }
+
+    setVerifySessionId(result.sessionId!)
+    setVerifySmsUri(result.smsUri || null)
+    setVerifyInstruction(result.displayInstruction || null)
+    setVerifyExpiresAt(result.expiresAt || null)
+    setVerifyLoading(false)
+
+    // Start polling
+    if (result.sessionId && result.expiresAt) {
+      startPolling(result.sessionId, result.expiresAt)
+    }
+  }
+
   function validatePhone(value: string) {
     const digits = value.replace(/\D/g, "")
-    setPhoneError(digits.length !== 8 ? "Утасны дугаар заавал 8 оронтой байх ёстой" : null)
+    if (digits.length !== 8) {
+      setPhoneError("Утасны дугаар заавал 8 оронтой байх ёстой")
+      setPhoneVerified(false)
+    } else if (!isValidPhone(digits)) {
+      setPhoneError("Зөв утасны дугаар оруулна уу (жишээ: 99112233)")
+      setPhoneVerified(false)
+    } else {
+      setPhoneError(null)
+      // Check if this phone is already verified in localStorage
+      const storedPhone = getStoredVerifiedPhone()
+      if (storedPhone === digits) {
+        setPhoneVerified(true)
+      } else if (phoneVerified) {
+        // Phone changed to a different number — reset
+        setPhoneVerified(false)
+      }
+    }
+    // Stop any active polling
+    if (pollRef.current) clearInterval(pollRef.current)
   }
 
   const hasPreOrder = items.some(i => i.isPreOrder)
@@ -206,6 +350,10 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
                 setPhoneError("Утасны дугаар заавал 8 оронтой байх ёстой")
                 return
               }
+              if (!isValidPhone(phone)) {
+                setPhoneError("Зөв утасны дугаар оруулна уу (жишээ: 99112233)")
+                return
+              }
               if (!agreedToTerms) { setError("Нөхцөлүүдтэй зөвшөөрнө үү"); return }
               await handleCheckout(fd)
             }}
@@ -227,27 +375,99 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700">Утасны дугаар</label>
-              <input
-                name="phoneNumber"
-                type="tel"
-                inputMode="numeric"
-                required
-                maxLength={8}
-                placeholder="Утасны дугаар"
-                onChange={e => validatePhone(e.target.value)}
-                className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${phoneError ? "border-red-400 focus:ring-red-300" : "focus:ring-indigo-300"}`}
-              />
+              <div className="flex gap-2">
+                <input
+                  name="phoneNumber"
+                  type="tel"
+                  inputMode="numeric"
+                  required
+                  maxLength={8}
+                  placeholder="Утасны дугаар"
+                  disabled={phoneVerified}
+                  onChange={e => validatePhone(e.target.value)}
+                  className={`flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${phoneVerified ? "bg-green-50 border-green-300 text-green-800" : phoneError ? "border-red-400 focus:ring-red-300" : "focus:ring-indigo-300"}`}
+                />
+                {phoneVerified ? (
+                  <div className="flex items-center gap-1 text-green-600 text-xs font-semibold px-3 bg-green-50 border border-green-200 rounded-lg whitespace-nowrap">
+                    <CheckCircle2 className="w-4 h-4" /> Баталгаажсан
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={!!phoneError || verifyLoading || !!verifySessionId}
+                    onClick={() => {
+                      const phoneInput = document.querySelector('input[name="phoneNumber"]') as HTMLInputElement
+                      if (phoneInput) handleVerifyPhone(phoneInput.value)
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                  >
+                    {verifyLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageSquare className="w-3.5 h-3.5" />}
+                    {verifyLoading ? "Уншиж байна..." : "Баталгаажуулах"}
+                  </button>
+                )}
+              </div>
               {phoneError && (
                 <p className="text-xs text-red-500 flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" /> {phoneError}
                 </p>
               )}
+              {verifyError && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" /> {verifyError}
+                </p>
+              )}
+
+              {/* SMS Verification Instructions */}
+              {verifySessionId && !phoneVerified && (
+                <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 space-y-3 mt-2">
+                  <div className="flex items-start gap-2">
+                    <MessageSquare className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
+                    <div className="space-y-1.5">
+                      <p className="text-sm font-semibold text-indigo-900">SMS баталгаажуулалт</p>
+                      {verifyInstruction && (
+                        <p className="text-xs text-indigo-700 leading-relaxed">{verifyInstruction}</p>
+                      )}
+                      <p className="text-xs text-indigo-600">
+                        Доорх товчийг дарж SMS мессежээ илгээнэ үү. Илгээсний дараа автоматаар баталгаажна.
+                      </p>
+                    </div>
+                  </div>
+
+                  {verifySmsUri && (
+                    <a
+                      href={verifySmsUri}
+                      className="flex items-center justify-center gap-2 w-full py-3 bg-indigo-600 text-white rounded-lg font-semibold text-sm hover:bg-indigo-700 transition-colors shadow-sm"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      📱 SMS илгээх (144773)
+                    </a>
+                  )}
+
+                  <div className="flex items-center gap-2 text-xs text-indigo-500">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    SMS хүлээж байна...
+                  </div>
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700">Дансны дугаар</label>
-              <input name="accountNumber" required placeholder="Төлбөр төлсөн дансны дугаар" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-              <p className="text-xs text-slate-400 flex items-center gap-1.5">
-                <Info className="w-3 h-3 shrink-0" /> Үнэн зөв оруулна уу
+              <input
+                name="accountNumber"
+                type="tel"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                required
+                placeholder="Жишээ: 5000123456"
+                onInput={(e) => {
+                  // Strip non-digit characters as user types
+                  const target = e.target as HTMLInputElement
+                  target.value = target.value.replace(/\D/g, "")
+                }}
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              />
+              <p className="text-xs text-amber-600 flex items-center gap-1.5 bg-amber-50 border border-amber-100 rounded-md px-2 py-1.5">
+                <AlertCircle className="w-3 h-3 shrink-0" /> IBAN оруулах шаардлагагүй! Зөвхөн дансны тоон дугаарыг бичнэ үү.
               </p>
             </div>
 
@@ -377,9 +597,15 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
               </div>
             )}
 
+            {!phoneVerified && !phoneError && (
+              <div className="bg-indigo-50 text-indigo-700 text-xs px-3 py-2 rounded-lg border border-indigo-100 flex items-center gap-2">
+                <MessageSquare className="w-3.5 h-3.5 shrink-0" /> Утасны дугаараа баталгаажуулсны дараа захиалга илгээх боломжтой.
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={submitting || !agreedToTerms || !!phoneError}
+              disabled={submitting || !agreedToTerms || !!phoneError || !phoneVerified}
               className="w-full bg-[#4F46E5] hover:bg-[#4338ca] text-white py-3 rounded-xl font-bold text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {submitting ? "Илгээж байна..." : "📦 Захиалга илгээх"}

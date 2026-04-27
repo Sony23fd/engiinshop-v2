@@ -99,3 +99,72 @@ export async function runImportTransaction(payload: any) {
     return { success: false, error: err.message };
   }
 }
+
+export async function restoreFullDatabase(data: any) {
+  try {
+    const admin = await getCurrentAdmin();
+    if (!admin || (admin.role !== "ADMIN" && admin.role !== "DATAADMIN")) {
+      throw new Error("Unauthorized");
+    }
+
+    await db.$transaction(async (tx) => {
+      // 1. Delete existing data in proper dependency order (child tables first)
+      if ((tx as any).activityLog) await (tx as any).activityLog.deleteMany({});
+      await tx.order.deleteMany({});
+      await tx.batch.deleteMany({});
+      await tx.product.deleteMany({});
+      await tx.category.deleteMany({});
+      await tx.orderStatusType.deleteMany({});
+      await tx.shopSettings.deleteMany({});
+      
+      // Preserve current admin so session doesn't break
+      await tx.user.deleteMany({
+        where: { id: { not: admin.id } }
+      });
+
+      // 2. Insert data from backup in proper dependency order (parent tables first)
+      if (data.users && data.users.length > 0) {
+        // Filter out current admin from insert to prevent unique constraint violations
+        const usersToInsert = data.users.filter((u: any) => u.id !== admin.id);
+        if (usersToInsert.length > 0) await tx.user.createMany({ data: usersToInsert });
+      }
+
+      if (data.orderStatusTypes && data.orderStatusTypes.length > 0) {
+        await tx.orderStatusType.createMany({ data: data.orderStatusTypes });
+      }
+
+      if (data.shopSettings && data.shopSettings.length > 0) {
+        await tx.shopSettings.createMany({ data: data.shopSettings });
+      }
+
+      if (data.categories && data.categories.length > 0) {
+        await tx.category.createMany({ data: data.categories });
+      }
+
+      if (data.products && data.products.length > 0) {
+        await tx.product.createMany({ data: data.products });
+      }
+
+      if (data.batches && data.batches.length > 0) {
+        await tx.batch.createMany({ data: data.batches });
+      }
+
+      if (data.orders && data.orders.length > 0) {
+        await tx.order.createMany({ data: data.orders });
+      }
+
+      if (data.activityLogs && data.activityLogs.length > 0 && (tx as any).activityLog) {
+        await (tx as any).activityLog.createMany({ data: data.activityLogs });
+      }
+    }, {
+      maxWait: 20000, 
+      timeout: 900000 // 15 minutes
+    });
+
+    revalidatePath("/admin", "layout"); // Revalidate entire admin area
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+

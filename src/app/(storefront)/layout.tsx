@@ -90,9 +90,9 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
             <form action="/track" className="flex relative group w-full md:w-auto shadow-lg hover:shadow-xl transition-shadow rounded-full font-sans">
               <input
                 type="text"
-                name="account"
+                name="q"
                 required
-                placeholder="Захиалгаа шалгах (данс: 500..)"
+                placeholder="Захиалгаа шалгах (Утас, Данс, Линк)"
                 className="w-full md:w-80 lg:w-96 bg-white border-2 border-transparent text-slate-800 px-6 py-3.5 rounded-full focus:outline-none focus:border-indigo-300 focus:ring-4 focus:ring-indigo-300/30 transition-all placeholder:text-slate-400 font-medium"
               />
               <button type="submit" className="absolute right-1.5 top-1.5 bottom-1.5 bg-gradient-to-r from-indigo-600 to-[#3c27c4] text-white px-7 rounded-full text-sm font-bold hover:shadow-md hover:scale-[1.02] active:scale-95 transition-all">
@@ -156,17 +156,23 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
 
             <div className="space-y-4">
               <h3 className="text-white font-semibold text-sm uppercase tracking-wider mb-6">Холбоо барих</h3>
-              <div className="flex items-start gap-3 text-sm">
-                <MapPin className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
-                <p className="leading-relaxed">БЗД, 26-р хороо Саруул хороолол<br />122-р байр, Үйлчилгээний хэсгийн 3 давхарт</p>
+              <div className="flex items-start gap-3 text-sm group">
+                <MapPin className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5 group-hover:text-indigo-300 transition-colors" />
+                <a href="https://maps.google.com/?q=Саруул+хороолол+122-р+байр,+Улаанбаатар" target="_blank" rel="noopener noreferrer" className="leading-relaxed hover:text-indigo-300 transition-colors">
+                  БЗД, 26-р хороо Саруул хороолол<br />122-р байр, Үйлчилгээний хэсгийн 3 давхарт
+                </a>
               </div>
-              <div className="flex items-center gap-3 text-sm">
-                <Phone className="w-5 h-5 text-indigo-400 shrink-0" />
-                <p>+976 8853 9667</p>
+              <div className="flex items-center gap-3 text-sm group">
+                <Phone className="w-5 h-5 text-indigo-400 shrink-0 group-hover:text-indigo-300 transition-colors" />
+                <a href="tel:+97688539667" className="hover:text-indigo-300 transition-colors">
+                  +976 8853 9667
+                </a>
               </div>
-              <div className="flex items-center gap-3 text-sm">
-                <Mail className="w-5 h-5 text-indigo-400 shrink-0" />
-                <p>info@anarkorea.mn</p>
+              <div className="flex items-center gap-3 text-sm group">
+                <Mail className="w-5 h-5 text-indigo-400 shrink-0 group-hover:text-indigo-300 transition-colors" />
+                <a href="mailto:info@anarkorea.mn" className="hover:text-indigo-300 transition-colors">
+                  info@anarkorea.mn
+                </a>
               </div>
             </div>
 
@@ -206,8 +212,8 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
               <p>Хөгжүүлсэн: <a href="https://www.facebook.com/engiineeer" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors hover:underline underline-offset-4">EngiineeR</a></p>
             </div>
             <div className="md:w-1/3 flex justify-center md:justify-end gap-6">
-              <a href="#" className="hover:text-white transition-colors">Үйлчилгээний нөхцөл</a>
-              <a href="#" className="hover:text-white transition-colors">Нууцлалын бодлого</a>
+              <Link href="/terms" className="hover:text-white transition-colors">Үйлчилгээний нөхцөл</Link>
+              <Link href="/privacy" className="hover:text-white transition-colors">Нууцлалын бодлого</Link>
             </div>
           </div>
         </div>

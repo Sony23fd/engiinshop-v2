@@ -3,6 +3,7 @@ import { db } from "@/lib/db"
 import { notFound } from "next/navigation"
 import { Clock, Copy } from "lucide-react"
 import { ManualPaymentClient } from "./ManualPaymentClient"
+import CopyTrackingLink from "../../../track/CopyTrackingLink"
 
 export const dynamic = "force-dynamic"
 
@@ -23,6 +24,8 @@ export default async function ManualCheckoutPage({ params }: { params: Promise<{
   return (
     <div className="max-w-xl mx-auto px-4 py-20 min-h-screen">
       <div className="bg-white rounded-2xl shadow-sm border p-8 space-y-8 relative overflow-hidden">
+        <CopyTrackingLink trackingRef={ref} />
+
         {/* Pending header */}
         <div className="text-center space-y-3 relative z-10">
           <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">

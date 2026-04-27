@@ -1,6 +1,6 @@
 import { getCategories } from "@/app/actions/category-actions"
 import Link from "next/link"
-import { FolderOpen, Archive } from "lucide-react"
+import { FolderOpen, Archive, Search } from "lucide-react"
 
 export const dynamic = "force-dynamic"
 import { DateRangeFilter } from "@/components/admin/DateRangeFilter"
@@ -18,6 +18,36 @@ export default async function AdminOrdersCategoriesPage({ searchParams }: { sear
 
   return (
     <div className="space-y-6">
+      <div className="bg-white p-6 rounded-lg shadow-sm w-full border relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-indigo-50/50 to-blue-50/50 pointer-events-none" />
+        <div className="relative z-10 max-w-3xl">
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Глобал Хайлт</h2>
+          <p className="text-sm text-slate-500 mb-4">
+            Бүх ангилал дундаас захиалгыг утас, данс, захиалгын дугаар болон барааны нэрээр хайх боломжтой.
+          </p>
+          <form action="/admin/orders/search" className="flex gap-2">
+            <div className="relative flex-1">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-5 w-5 text-slate-400" />
+              </div>
+              <input
+                type="text"
+                name="q"
+                placeholder="Захиалга хайх... (Ж: 99112233, ORD-123, Цамц)"
+                className="block w-full pl-10 pr-3 py-3 border border-slate-300 rounded-xl leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-all"
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-medium transition-colors shadow-sm"
+            >
+              Хайх
+            </button>
+          </form>
+        </div>
+      </div>
+
       <div className="bg-white p-6 rounded-lg shadow-sm w-full border">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
           <h1 className="text-2xl font-bold text-slate-900">Идэвхтэй Ангиллууд</h1>

@@ -24,7 +24,7 @@ export function TopHeader({ admin }: { admin?: AdminUser | null }) {
   }
 
   return (
-    <header className="h-16 border-b bg-white flex items-center justify-between px-4 sticky top-0 z-10">
+    <header className="h-16 border-b bg-white flex items-center justify-between px-4 sticky top-0 z-10 print:!hidden">
       <div className="flex items-center gap-4">
         <Sheet>
           <SheetTrigger className="md:hidden p-2 rounded-md hover:bg-slate-100 flex items-center justify-center text-slate-700 transition-colors">
