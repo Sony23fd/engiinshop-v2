@@ -12,7 +12,7 @@ export default async function PrintStickerPage({
   searchParams: Promise<{ ids?: string }>
 }) {
   const admin = await getCurrentAdmin()
-  if (!admin || !["ADMIN", "DELIVERY", "DATAADMIN"].includes(admin.role)) {
+  if (!admin || !["ADMIN", "CARGO_ADMIN", "DATAADMIN"].includes(admin.role)) {
     notFound()
   }
 

@@ -3,12 +3,12 @@ import type { NextRequest } from "next/server"
 import { getIronSession } from "iron-session"
 import type { AdminSessionData } from "@/lib/session"
 
-// CARGO_ADMIN allowed route prefixes (must match auth.ts)
 const CARGO_ADMIN_ALLOWED_ROUTES = [
   "/admin/home",
   "/admin/orders",
   "/admin/cargo-settings",
   "/admin/guide",
+  "/admin/print",
 ]
 
 const DATAADMIN_ALLOWED_ROUTES = [

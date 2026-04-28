@@ -54,6 +54,7 @@ export const CARGO_ADMIN_ALLOWED_ROUTES = [
   "/admin/orders",
   "/admin/cargo-settings",
   "/admin/guide",
+  "/admin/print",
 ]
 
 export const DATAADMIN_ALLOWED_ROUTES = [
