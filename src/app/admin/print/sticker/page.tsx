@@ -57,7 +57,7 @@ export default async function PrintStickerPage({
 
   return (
     <StickerPrintClient 
-      groups={Object.values(groupedByCustomer)} 
+      groups={JSON.parse(JSON.stringify(Object.values(groupedByCustomer)))} 
       shopName={shopName}
       shopPhone={shopPhone}
       appUrl={appUrl}
