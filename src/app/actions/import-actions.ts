@@ -124,8 +124,8 @@ export async function restoreFullDatabase(data: any) {
 
       // 2. Insert data from backup in proper dependency order (parent tables first)
       if (data.users && data.users.length > 0) {
-        // Filter out current admin from insert to prevent unique constraint violations
-        const usersToInsert = data.users.filter((u: any) => u.id !== admin.id);
+        // Filter out current admin by ID or Email to prevent unique constraint violations
+        const usersToInsert = data.users.filter((u: any) => u.id !== admin.id && u.email !== admin.email);
         if (usersToInsert.length > 0) await tx.user.createMany({ data: usersToInsert });
       }
 
