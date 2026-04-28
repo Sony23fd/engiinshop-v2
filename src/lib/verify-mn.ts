@@ -128,8 +128,14 @@ export async function getSessionStatus(sessionId: string): Promise<{
   error?: string
 }> {
   try {
+    const apiKey = process.env.VERIFY_MN_API_KEY
+    if (!apiKey) return { success: false, error: "API key is missing" }
+
     const response = await fetch(`${VERIFY_MN_BASE_URL}/sessions/${sessionId}`, {
       method: "GET",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+      },
       // No caching — always fresh
       cache: "no-store",
     })
