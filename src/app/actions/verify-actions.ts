@@ -20,8 +20,18 @@ export async function startPhoneVerification(phone: string): Promise<{
     return { success: false, error: "Утасны дугаар 8 оронтой байх ёстой" }
   }
 
-  // Check if already verified
+  // Check if already verified in memory
   if (isPhoneVerified(digits)) {
+    return { success: true, sessionId: "already-verified" }
+  }
+
+  // Check if verified in database
+  const { db } = await import("@/lib/db")
+  const dbVerified = await db.verifiedPhone.findUnique({ where: { phone: digits } })
+  if (dbVerified) {
+    // Also add to memory cache
+    const { markPhoneVerified } = await import("@/lib/verify-mn")
+    markPhoneVerified(digits)
     return { success: true, sessionId: "already-verified" }
   }
 
@@ -55,7 +65,11 @@ export async function checkPhoneVerified(phone: string): Promise<boolean> {
   if (!process.env.VERIFY_MN_API_KEY) return true
 
   const digits = phone.replace(/\D/g, "")
-  return isPhoneVerified(digits)
+  if (isPhoneVerified(digits)) return true
+
+  const { db } = await import("@/lib/db")
+  const dbVerified = await db.verifiedPhone.findUnique({ where: { phone: digits } })
+  return !!dbVerified
 }
 
 /**
@@ -69,6 +83,14 @@ export async function mockVerifyPhoneAction(sessionId: string): Promise<boolean>
   if (session) {
     session.status = "VERIFIED";
     markPhoneVerified(session.phone);
+    try {
+      const { db } = await import("@/lib/db")
+      await db.verifiedPhone.upsert({
+        where: { phone: session.phone },
+        update: { verifiedAt: new Date() },
+        create: { phone: session.phone }
+      })
+    } catch {}
     return true;
   }
   return false;

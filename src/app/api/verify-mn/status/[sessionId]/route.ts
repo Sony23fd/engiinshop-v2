@@ -51,6 +51,16 @@ export async function GET(
     // Mark in persistent cache when verified
     if (result.status === "VERIFIED" && stored.phone) {
       markPhoneVerified(stored.phone)
+      try {
+        const { db } = await import("@/lib/db")
+        await db.verifiedPhone.upsert({
+          where: { phone: stored.phone },
+          update: { verifiedAt: new Date() },
+          create: { phone: stored.phone }
+        })
+      } catch (e) {
+        console.error("Failed to save verified phone to DB:", e)
+      }
     }
 
     return NextResponse.json({

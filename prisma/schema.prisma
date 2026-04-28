@@ -188,3 +188,8 @@ enum BatchStatus {
   SHIPPED
   ARRIVED
 }
+
+model VerifiedPhone {
+  phone      String   @id
+  verifiedAt DateTime @default(now())
+}
