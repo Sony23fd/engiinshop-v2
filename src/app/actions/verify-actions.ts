@@ -12,6 +12,7 @@ export async function startPhoneVerification(phone: string): Promise<{
   smsUri?: string
   displayInstruction?: string
   expiresAt?: string
+  status?: "PENDING" | "VERIFIED" | "EXPIRED"
   error?: string
 }> {
   // Normalize phone
@@ -54,6 +55,7 @@ export async function startPhoneVerification(phone: string): Promise<{
     smsUri: result.session.smsUri,
     displayInstruction: result.session.displayInstruction,
     expiresAt: result.session.expiresAt,
+    status: result.session.status,
   }
 }
 

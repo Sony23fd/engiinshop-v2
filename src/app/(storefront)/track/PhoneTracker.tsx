@@ -65,7 +65,7 @@ export default function PhoneTracker({ phone }: { phone: string }) {
       return
     }
     
-    if (result.sessionId === "already-verified" || result.sessionId === "skipped" || result.session?.status === "VERIFIED") {
+    if (result.sessionId === "already-verified" || result.sessionId === "skipped" || result.status === "VERIFIED") {
       setSuccess(true)
       saveVerifiedPhone(phone)
       router.refresh()

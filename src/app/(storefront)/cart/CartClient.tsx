@@ -134,7 +134,7 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
     }
 
     // If already verified or skipped (no API key)
-    if (result.sessionId === "already-verified" || result.sessionId === "skipped" || result.session?.status === "VERIFIED") {
+    if (result.sessionId === "already-verified" || result.sessionId === "skipped" || result.status === "VERIFIED") {
       setPhoneVerified(true)
       saveVerifiedPhone(digits)
       setVerifyLoading(false)
