@@ -376,7 +376,7 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700">Утасны дугаар</label>
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2">
                 <input
                   name="phoneNumber"
                   type="tel"
@@ -385,11 +385,23 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
                   maxLength={8}
                   placeholder="Утасны дугаар"
                   onChange={e => validatePhone(e.target.value)}
-                  className={`flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${phoneVerified ? "bg-green-50 border-green-300 text-green-800" : phoneError ? "border-red-400 focus:ring-red-300" : "focus:ring-indigo-300"}`}
+                  className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${phoneVerified ? "bg-green-50 border-green-300 text-green-800" : phoneError ? "border-red-400 focus:ring-red-300" : "focus:ring-indigo-300"}`}
                 />
+                
+                {phoneError && (
+                  <p className="text-xs text-red-500 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" /> {phoneError}
+                  </p>
+                )}
+                {verifyError && (
+                  <p className="text-xs text-red-500 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" /> {verifyError}
+                  </p>
+                )}
+
                 {phoneVerified ? (
-                  <div className="flex items-center gap-1 text-green-600 text-xs font-semibold px-3 bg-green-50 border border-green-200 rounded-lg whitespace-nowrap">
-                    <CheckCircle2 className="w-4 h-4" /> Баталгаажсан
+                  <div className="flex items-center justify-center gap-1 text-green-600 text-sm font-semibold px-3 py-2.5 bg-green-50 border border-green-200 rounded-lg w-full">
+                    <CheckCircle2 className="w-4 h-4" /> Амжилттай баталгаажсан
                   </div>
                 ) : (
                   <button
@@ -399,23 +411,13 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
                       const phoneInput = document.querySelector('input[name="phoneNumber"]') as HTMLInputElement
                       if (phoneInput) handleVerifyPhone(phoneInput.value)
                     }}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                    className="flex items-center justify-center gap-1.5 px-3 py-2.5 w-full bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    {verifyLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageSquare className="w-3.5 h-3.5" />}
-                    {verifyLoading ? "Уншиж байна..." : "Баталгаажуулах"}
+                    {verifyLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageSquare className="w-4 h-4" />}
+                    {verifyLoading ? "Уншиж байна..." : "Утасны дугаар баталгаажуулах"}
                   </button>
                 )}
               </div>
-              {phoneError && (
-                <p className="text-xs text-red-500 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" /> {phoneError}
-                </p>
-              )}
-              {verifyError && (
-                <p className="text-xs text-red-500 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" /> {verifyError}
-                </p>
-              )}
 
               {/* SMS Verification Instructions */}
               {verifySessionId && !phoneVerified && (
