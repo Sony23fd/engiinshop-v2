@@ -46,9 +46,10 @@ export default async function PrintStickerPage({
   const shopName = settings["shop_name"] || "ANAR KOREA SHOP"
 
   // Group by customer to print one sticker per customer
+  const { getCanonicalCustomerId } = await import("@/lib/customer-utils")
   const groupedByCustomer: Record<string, any[]> = {}
   for (const order of orders) {
-    const key = order.customerPhone || order.id
+    const key = getCanonicalCustomerId(order)
     if (!groupedByCustomer[key]) groupedByCustomer[key] = []
     groupedByCustomer[key].push(order)
   }
