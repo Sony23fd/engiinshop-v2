@@ -78,7 +78,7 @@ export default async function DeliveryQueuePage({
       ) : (
         <div className="space-y-4">
           {groups.map((groupOrders) => {
-            return <DeliveryGroupCard key={groupOrders[0].customerPhone || groupOrders[0].id} groupOrders={groupOrders} />
+            return <DeliveryGroupCard key={groupOrders[0].id} groupOrders={groupOrders} />
           })}
 
           {totalPages > 1 && (
