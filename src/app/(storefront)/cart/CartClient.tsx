@@ -384,7 +384,6 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
                   required
                   maxLength={8}
                   placeholder="Утасны дугаар"
-                  readOnly={phoneVerified}
                   onChange={e => validatePhone(e.target.value)}
                   className={`flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${phoneVerified ? "bg-green-50 border-green-300 text-green-800" : phoneError ? "border-red-400 focus:ring-red-300" : "focus:ring-indigo-300"}`}
                 />
