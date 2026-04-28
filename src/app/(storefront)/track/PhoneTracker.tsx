@@ -65,7 +65,7 @@ export default function PhoneTracker({ phone }: { phone: string }) {
       return
     }
     
-    if (result.sessionId === "already-verified" || result.sessionId === "skipped") {
+    if (result.sessionId === "already-verified" || result.sessionId === "skipped" || result.session?.status === "VERIFIED") {
       setSuccess(true)
       saveVerifiedPhone(phone)
       router.refresh()
@@ -141,6 +141,29 @@ export default function PhoneTracker({ phone }: { phone: string }) {
                 <RefreshCcw className="w-5 h-5 animate-spin" /> Хүлээгдэж байна...
               </div>
             )}
+            
+            <button
+              onClick={async () => {
+                if(!sessionId) return;
+                setLoading(true);
+                try {
+                  const res = await fetch(`/api/verify-mn/status/${sessionId}`);
+                  const data = await res.json();
+                  if (data.status === "VERIFIED") {
+                    setSuccess(true);
+                    saveVerifiedPhone(phone);
+                    router.refresh();
+                  } else {
+                    setError("Баталгаажаагүй байна. Хэрэв та мессеж илгээсэн бол түр хүлээгээд дахин шалгана уу.");
+                  }
+                } catch {}
+                setLoading(false);
+              }}
+              disabled={loading}
+              className="mt-3 w-full bg-indigo-50 text-indigo-600 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-100 transition-all"
+            >
+              <RefreshCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Баталгаажсан эсэхийг шалгах
+            </button>
             
             <p className="text-xs text-slate-400 mt-4">
               Та мессежээ илгээсний дараа энэ хуудас автоматаар цааш үргэлжлэх болно.

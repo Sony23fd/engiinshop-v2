@@ -134,10 +134,11 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
     }
 
     // If already verified or skipped (no API key)
-    if (result.sessionId === "already-verified" || result.sessionId === "skipped") {
+    if (result.sessionId === "already-verified" || result.sessionId === "skipped" || result.session?.status === "VERIFIED") {
       setPhoneVerified(true)
       saveVerifiedPhone(digits)
       setVerifyLoading(false)
+      toast({ title: "✅ Утас баталгаажлаа!", description: "Та захиалгаа үргэлжлүүлж болно." })
       return
     }
 
@@ -443,9 +444,36 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
                     </a>
                   )}
 
-                  <div className="flex items-center gap-2 text-xs text-indigo-500">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    SMS хүлээж байна...
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-xs text-indigo-500">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      SMS хүлээж байна...
+                    </div>
+                    <button
+                      type="button"
+                      disabled={verifyLoading}
+                      onClick={async () => {
+                        if(!verifySessionId) return;
+                        setVerifyLoading(true);
+                        try {
+                          const res = await fetch(`/api/verify-mn/status/${verifySessionId}`);
+                          const data = await res.json();
+                          if (data.status === "VERIFIED") {
+                            setPhoneVerified(true);
+                            setVerifySessionId(null);
+                            const phoneInput = document.querySelector('input[name="phoneNumber"]') as HTMLInputElement;
+                            if (phoneInput) saveVerifiedPhone(phoneInput.value.replace(/\D/g, ""));
+                            toast({ title: "✅ Утас баталгаажлаа!", description: "Та захиалгаа үргэлжлүүлж болно." });
+                          } else {
+                            toast({ title: "Баталгаажаагүй байна", description: "Хэрэв та мессеж илгээсэн бол түр хүлээгээд дахин шалгана уу." });
+                          }
+                        } catch {}
+                        setVerifyLoading(false);
+                      }}
+                      className="text-xs bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg font-medium hover:bg-indigo-200 transition-colors"
+                    >
+                      Гараар шалгах
+                    </button>
                   </div>
                 </div>
               )}

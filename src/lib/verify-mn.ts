@@ -101,7 +101,7 @@ export async function createVerifySession(phone: string): Promise<{
     const session: VerifySession = {
       sessionId: data.sessionId,
       phone: data.phone,
-      status: "PENDING",
+      status: data.sessionStatus || "PENDING",
       expiresAt: data.expiresAt,
       smsUri: data.smsUri || `sms:144773?body=${encodeURIComponent(text)}`,
       displayInstruction: data.displayInstruction || `144773 дугаарт "${text}" гэж SMS илгээнэ үү.`,
