@@ -147,7 +147,7 @@ export default function PhoneTracker({ phone }: { phone: string }) {
                 if(!sessionId) return;
                 setLoading(true);
                 try {
-                  const res = await fetch(`/api/verify-mn/status/${sessionId}`);
+                  const res = await fetch(`/api/verify-mn/status/${sessionId}`, { cache: "no-store" });
                   const data = await res.json();
                   if (data.status === "VERIFIED") {
                     setSuccess(true);

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSessionStatus, getStoredSession, markPhoneVerified } from "@/lib/verify-mn"
 
+export const dynamic = "force-dynamic"
+
 /**
  * GET /api/verify-mn/status/[sessionId]
  * 

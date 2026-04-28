@@ -85,7 +85,7 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
       }
 
       try {
-        const res = await fetch(`/api/verify-mn/status/${sessionId}`)
+        const res = await fetch(`/api/verify-mn/status/${sessionId}`, { cache: "no-store" })
         const data = await res.json()
 
         if (data.status === "VERIFIED") {
@@ -457,7 +457,7 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
                         if(!verifySessionId) return;
                         setVerifyLoading(true);
                         try {
-                          const res = await fetch(`/api/verify-mn/status/${verifySessionId}`);
+                          const res = await fetch(`/api/verify-mn/status/${verifySessionId}`, { cache: "no-store" });
                           const data = await res.json();
                           if (data.status === "VERIFIED") {
                             setPhoneVerified(true);
