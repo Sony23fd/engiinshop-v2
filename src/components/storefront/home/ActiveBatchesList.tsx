@@ -39,15 +39,20 @@ export function ActiveBatchesList({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {batches.map((batch: any, index: number) => {
+            const isPreOrder = Boolean(batch.isPreOrder);
             const progress = batch.targetQuantity > 0 
-              ? Math.min(100, Math.max(0, ((batch.targetQuantity - batch.remainingQuantity) / batch.targetQuantity) * 100))
+              ? Number(Math.min(100, Math.max(0, ((batch.targetQuantity - batch.remainingQuantity) / batch.targetQuantity) * 100)).toFixed(2))
               : 0;
             
             // If it's a pre-order, you might want to hide the quantity text or just show a different message
             const showQty = !batch.isPreOrder || batch.remainingQuantity > 0;
 
             return (
-              <div key={batch.id} className="bg-white rounded-2xl p-4 flex flex-col group border border-slate-200/60 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+              <div 
+                key={batch.id} 
+                className="bg-white rounded-2xl p-4 flex flex-col group border border-slate-200/60 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+                suppressHydrationWarning
+              >
                 <Link href={`/product/${batch.id}`} className="block relative bg-slate-100 rounded-xl overflow-hidden aspect-square mb-4">
                   {batch.product?.videoUrl ? (
                     <video
@@ -71,13 +76,13 @@ export function ActiveBatchesList({
                     <div className="absolute inset-0 flex items-center justify-center text-slate-400 font-medium">Зураггүй</div>
                   )}
                   {/* Urgency Badge */}
-                  {batch.isPreOrder ? (
-                    <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-bold text-slate-800 flex items-center gap-1.5 shadow-sm border border-slate-200/50">
+                  {isPreOrder ? (
+                    <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-bold text-slate-800 flex items-center gap-1.5 shadow-sm border border-slate-200/50" suppressHydrationWarning>
                       <Clock className="w-3.5 h-3.5 text-amber-500" />
                       <span>Урьдчилсан захиалга</span>
                     </div>
                   ) : (
-                    <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-bold text-slate-800 flex items-center gap-1.5 shadow-sm border border-slate-200/50">
+                    <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-bold text-slate-800 flex items-center gap-1.5 shadow-sm border border-slate-200/50" suppressHydrationWarning>
                       <Clock className="w-3.5 h-3.5 text-orange-500" />
                       <span>Нээлттэй</span>
                     </div>
@@ -103,14 +108,14 @@ export function ActiveBatchesList({
                       </div>
                     </div>
 
-                    <div className="space-y-1.5 mb-4">
-                      {batch.isPreOrder ? (
+                    <div className="space-y-1.5 mb-4" suppressHydrationWarning>
+                      {isPreOrder ? (
                         <div className="space-y-2">
                            {batch.closingDate ? (
                              <PreOrderCountdown closingDate={batch.closingDate} />
                            ) : (
                              <div className="text-[11px] font-bold text-amber-600 uppercase tracking-wider text-center py-2 bg-amber-50 rounded-lg border border-amber-100">
-                               🎉 Захиалга нээлттэй хадгалагдсан
+                                🎉 Захиалга нээлттэй хадгалагдсан
                              </div>
                            )}
                            <p className="text-[10px] text-center text-slate-500 font-medium leading-relaxed bg-slate-50 border border-slate-100 p-1.5 rounded-lg">

@@ -4,7 +4,7 @@ import { useCart } from "@/context/CartContext"
 import { useState, useRef, useCallback, useEffect } from "react"
 import { Trash2, Minus, Plus, ShoppingCart, Truck, ShoppingBag, Package, AlertCircle, Info, CheckCircle2, Loader2, MessageSquare } from "lucide-react"
 import { createOrder, validateCartStock } from "@/app/actions/order-actions"
-import { startPhoneVerification } from "@/app/actions/verify-actions"
+import { startPhoneVerification, checkPhoneVerified } from "@/app/actions/verify-actions"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
@@ -77,10 +77,16 @@ export function CartClient({
       setPhoneVerified(true)
     }
 
+    // If there are no terms to agree to, set agreedToTerms to true by default
+    const hasTerms = Boolean(termsOfService || (wantsDelivery && deliveryTerms));
+    if (!hasTerms) {
+      setAgreedToTerms(true);
+    }
+
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
     }
-  }, [phoneVerificationEnabled])
+  }, [phoneVerificationEnabled, termsOfService, deliveryTerms, wantsDelivery])
 
   // Poll verify.mn status
   const startPolling = useCallback((sessionId: string, expiresAt: string) => {
@@ -167,22 +173,37 @@ export function CartClient({
     }
   }
 
-  function validatePhone(value: string) {
+  async function validatePhone(value: string) {
     const digits = value.replace(/\D/g, "")
     if (digits.length !== 8) {
       setPhoneError("Утасны дугаар заавал 8 оронтой байх ёстой")
-      setPhoneVerified(false)
+      if (phoneVerificationEnabled) setPhoneVerified(false)
     } else if (!isValidPhone(digits)) {
       setPhoneError("Зөв утасны дугаар оруулна уу (жишээ: 99112233)")
-      setPhoneVerified(false)
+      if (phoneVerificationEnabled) setPhoneVerified(false)
     } else {
       setPhoneError(null)
-      // Check if this phone is already verified in localStorage
+      if (!phoneVerificationEnabled) {
+        setPhoneVerified(true)
+        return
+      }
+
+      // 1. Check localStorage first
       const storedPhone = getStoredVerifiedPhone()
       if (storedPhone === digits) {
         setPhoneVerified(true)
-      } else if (phoneVerified) {
-        // Phone changed to a different number — reset
+        return
+      } 
+      
+      // 2. Check Database via server action
+      const verified = await checkPhoneVerified(digits)
+      if (verified) {
+        setPhoneVerified(true)
+        saveVerifiedPhone(digits)
+        return
+      }
+
+      if (phoneVerified) {
         setPhoneVerified(false)
       }
     }
