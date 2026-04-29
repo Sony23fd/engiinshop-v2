@@ -66,7 +66,7 @@ export default async function TrackOrderPage({
         </div>
       )}
 
-      {needsVerification && phone ? (
+      {needsVerification && phone && settings.phone_verification_enabled !== "false" ? (
         <PhoneTracker phone={phone} />
       ) : !q ? (
         <div className="py-20 text-center">

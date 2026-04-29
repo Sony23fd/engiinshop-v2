@@ -26,6 +26,7 @@ export function GeneralSettingsClient({ initialSettings, userRole }: Props) {
   const [showHeroText, setShowHeroText] = useState(initialSettings["hero_text_visible"] !== "false")
   
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(initialSettings["maintenance_mode"] === "true")
+  const [phoneVerificationEnabled, setPhoneVerificationEnabled] = useState(initialSettings["phone_verification_enabled"] !== "false")
   
   const [heroBgColor, setHeroBgColor] = useState(initialSettings["hero_bg_color"] || "#5442cc")
   
@@ -104,6 +105,14 @@ export function GeneralSettingsClient({ initialSettings, userRole }: Props) {
         body: JSON.stringify({ key: "maintenance_mode", value: isMaintenanceMode ? "true" : "false" }),
       })
       if (!resMaint.ok) throw new Error("Засварын горим хадгалахад алдаа гарлаа")
+      
+      // Save phone verification toggle
+      const resPhone = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "phone_verification_enabled", value: phoneVerificationEnabled ? "true" : "false" }),
+      })
+      if (!resPhone.ok) throw new Error("Утас баталгаажуулалтын тохиргоо хадгалахад алдаа гарлаа")
 
       // Save hero bg color
       const resColor = await fetch("/api/admin/settings", {
@@ -217,6 +226,19 @@ export function GeneralSettingsClient({ initialSettings, userRole }: Props) {
               <Switch 
                 checked={isMaintenanceMode} 
                 onCheckedChange={setIsMaintenanceMode} 
+              />
+            </div>
+
+            <div className="w-full pt-4 border-t border-slate-100 flex items-center justify-between">
+              <div className="space-y-0.5">
+                <label className="text-base font-semibold text-slate-800">📱 Утасны дугаар баталгаажуулах (Verify.mn)</label>
+                <p className="text-sm text-slate-500">
+                  Сагс болон захиалга хянах хэсэгт утасны дугаарыг SMS-ээр баталгаажуулах эсэх
+                </p>
+              </div>
+              <Switch 
+                checked={phoneVerificationEnabled} 
+                onCheckedChange={setPhoneVerificationEnabled} 
               />
             </div>
 

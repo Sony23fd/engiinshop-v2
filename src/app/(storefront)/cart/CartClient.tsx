@@ -11,12 +11,20 @@ import { useToast } from "@/components/ui/use-toast"
 import { getUpcomingDeliveryDates } from "@/lib/utils"
 import { isValidPhone } from "@/lib/customer-utils"
 
-export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalDeliveryFee = 0, deliveryScheduleDays = "3,6" }: { 
+export function CartClient({ 
+  termsOfService, 
+  deliveryTerms, 
+  qpayEnabled, 
+  globalDeliveryFee = 0, 
+  deliveryScheduleDays = "3,6",
+  phoneVerificationEnabled = true
+}: { 
   termsOfService?: string; 
   deliveryTerms?: string; 
   qpayEnabled?: boolean;
   globalDeliveryFee?: number;
   deliveryScheduleDays?: string;
+  phoneVerificationEnabled?: boolean;
 }) {
   const { items, removeItem, updateQty, clearCart, totalPrice } = useCart()
   const router = useRouter()
@@ -64,10 +72,15 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
 
   // Cleanup polling on unmount
   useEffect(() => {
+    // If phone verification is disabled globally, set it as verified immediately
+    if (!phoneVerificationEnabled) {
+      setPhoneVerified(true)
+    }
+
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
     }
-  }, [])
+  }, [phoneVerificationEnabled])
 
   // Poll verify.mn status
   const startPolling = useCallback((sessionId: string, expiresAt: string) => {
@@ -399,11 +412,7 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
                   </p>
                 )}
 
-                {phoneVerified ? (
-                  <div className="flex items-center justify-center gap-1 text-green-600 text-sm font-semibold px-3 py-2.5 bg-green-50 border border-green-200 rounded-lg w-full">
-                    <CheckCircle2 className="w-4 h-4" /> Амжилттай баталгаажсан
-                  </div>
-                ) : (
+                {!phoneVerified && phoneVerificationEnabled && (
                   <button
                     type="button"
                     disabled={!!phoneError || verifyLoading || !!verifySessionId}
@@ -416,6 +425,12 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
                     {verifyLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageSquare className="w-4 h-4" />}
                     {verifyLoading ? "Уншиж байна..." : "Утасны дугаар баталгаажуулах"}
                   </button>
+                )}
+
+                {phoneVerified && phoneVerificationEnabled && (
+                  <div className="flex items-center justify-center gap-1 text-green-600 text-sm font-semibold px-3 py-2.5 bg-green-50 border border-green-200 rounded-lg w-full">
+                    <CheckCircle2 className="w-4 h-4" /> Амжилттай баталгаажсан
+                  </div>
                 )}
               </div>
 
@@ -626,7 +641,7 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
               </div>
             )}
 
-            {!phoneVerified && !phoneError && (
+            {!phoneVerified && !phoneError && phoneVerificationEnabled && (
               <div className="bg-indigo-50 text-indigo-700 text-xs px-3 py-2 rounded-lg border border-indigo-100 flex items-center gap-2">
                 <MessageSquare className="w-3.5 h-3.5 shrink-0" /> Утасны дугаараа баталгаажуулсны дараа захиалга илгээх боломжтой.
               </div>

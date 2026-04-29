@@ -6,6 +6,7 @@ import { emitNewOrder } from "@/lib/orderEvents"
 import { getCurrentAdmin, logActivity } from "@/lib/auth"
 import { isValidPhone } from "@/lib/customer-utils"
 import { isPhoneVerified } from "@/lib/verify-mn"
+import { getShopSettings } from "./settings-actions"
 
 export async function validateCartStock(items: { batchId: string; qty: number }[]) {
   const batchIds = items.map(i => i.batchId)
@@ -358,7 +359,8 @@ export async function getOrdersByQuery(query: string) {
     let whereClause: any = {};
 
     if (isPhone) {
-      if (!isPhoneVerified(cleanQuery)) {
+      const settings = await getShopSettings();
+      if (settings.phone_verification_enabled !== "false" && !isPhoneVerified(cleanQuery)) {
         return { success: false, error: "Утасны дугаар баталгаажаагүй байна", needsVerification: true, phone: cleanQuery };
       }
       whereClause = { customerPhone: cleanQuery };
