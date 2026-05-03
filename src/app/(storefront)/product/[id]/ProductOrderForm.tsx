@@ -1,13 +1,12 @@
 "use client"
 
-import { useState, useMemo, useRef, useCallback, useEffect } from "react"
+import { useState, useMemo } from "react"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { Truck, ShoppingBag, AlertCircle, Info, CheckCircle2, Loader2, MessageSquare } from "lucide-react"
+import { Truck, ShoppingBag, AlertCircle, Info } from "lucide-react"
 import { useCart } from "@/context/CartContext"
 import { createOrder } from "@/app/actions/order-actions"
-import { startPhoneVerification } from "@/app/actions/verify-actions"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
 import { Package } from "lucide-react"
@@ -56,7 +55,7 @@ export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQua
   const [isRedirecting, setIsRedirecting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [phoneError, setPhoneError] = useState<string | null>(null)
-  const [agreedToTerms, setAgreedToTerms] = useState(false)
+  const [agreedToTerms, setAgreedToTerms] = useState(!termsOfService && !deliveryTerms)
   const [selectedDeliveryDate, setSelectedDeliveryDate] = useState<string | null>(null)
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>(() => {
     const defaultOpts: Record<string, string> = {}
@@ -68,73 +67,8 @@ export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQua
     return defaultOpts
   })
 
-  // ─── Phone Verification State ───
-  const [phoneVerified, setPhoneVerified] = useState(false)
-  const [verifySessionId, setVerifySessionId] = useState<string | null>(null)
-  const [verifySmsUri, setVerifySmsUri] = useState<string | null>(null)
-  const [verifyInstruction, setVerifyInstruction] = useState<string | null>(null)
-  const [verifyLoading, setVerifyLoading] = useState(false)
-  const [verifyError, setVerifyError] = useState<string | null>(null)
-  const pollRef = useRef<NodeJS.Timeout | null>(null)
 
-  const VERIFY_STORAGE_KEY = "anar_verified_phone"
-  const VERIFY_TTL_MS = 24 * 60 * 60 * 1000
 
-  function getStoredVerifiedPhone(): string | null {
-    try {
-      const raw = localStorage.getItem(VERIFY_STORAGE_KEY)
-      if (!raw) return null
-      const { phone, verifiedAt } = JSON.parse(raw)
-      if (Date.now() - verifiedAt > VERIFY_TTL_MS) { localStorage.removeItem(VERIFY_STORAGE_KEY); return null }
-      return phone
-    } catch { return null }
-  }
-
-  function saveVerifiedPhone(phone: string) {
-    try { localStorage.setItem(VERIFY_STORAGE_KEY, JSON.stringify({ phone, verifiedAt: Date.now() })) } catch {}
-  }
-
-  useEffect(() => { return () => { if (pollRef.current) clearInterval(pollRef.current) } }, [])
-
-  const startPolling = useCallback((sid: string, exp: string) => {
-    if (pollRef.current) clearInterval(pollRef.current)
-    pollRef.current = setInterval(async () => {
-      if (Date.now() > new Date(exp).getTime()) {
-        if (pollRef.current) clearInterval(pollRef.current)
-        setVerifyError("Хугацаа дууслаа. Дахин оролдоно уу."); setVerifySessionId(null); setVerifySmsUri(null); setVerifyInstruction(null); return
-      }
-      try {
-        const res = await fetch(`/api/verify-mn/status/${sid}`)
-        const data = await res.json()
-        if (data.status === "VERIFIED") {
-          if (pollRef.current) clearInterval(pollRef.current)
-          setPhoneVerified(true); setVerifySessionId(null); setVerifySmsUri(null); setVerifyInstruction(null)
-          const pi = document.querySelector('input[name="phoneNumber"]') as HTMLInputElement
-          if (pi) saveVerifiedPhone(pi.value.replace(/\D/g, ""))
-          toast({ title: "✅ Утас баталгаажлаа!", description: "Та захиалгаа үргэлжлүүлж болно." })
-        } else if (data.status === "EXPIRED") {
-          if (pollRef.current) clearInterval(pollRef.current)
-          setVerifyError("Хугацаа дууслаа. Дахин оролдоно уу."); setVerifySessionId(null); setVerifySmsUri(null); setVerifyInstruction(null)
-        }
-      } catch {}
-    }, 3000)
-  }, [toast])
-
-  async function handleVerifyPhone(phoneValue: string) {
-    const digits = phoneValue.replace(/\D/g, "")
-    if (!isValidPhone(digits)) return
-    const stored = getStoredVerifiedPhone()
-    if (stored === digits) { setPhoneVerified(true); return }
-    setVerifyLoading(true); setVerifyError(null)
-    const result = await startPhoneVerification(digits)
-    if (!result.success) { setVerifyError(result.error || "Алдаа гарлаа"); setVerifyLoading(false); return }
-    if (result.sessionId === "already-verified" || result.sessionId === "skipped") {
-      setPhoneVerified(true); saveVerifiedPhone(digits); setVerifyLoading(false); return
-    }
-    setVerifySessionId(result.sessionId!); setVerifySmsUri(result.smsUri || null)
-    setVerifyInstruction(result.displayInstruction || null); setVerifyLoading(false)
-    if (result.sessionId && result.expiresAt) startPolling(result.sessionId, result.expiresAt)
-  }
 
   // Compute variant key from selected options
   const currentVariantKey = useMemo(() => {
@@ -161,21 +95,14 @@ export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQua
 
   function validatePhone(value: string) {
     const digits = value.replace(/\D/g, "")
-    if (digits.length !== 8) { setPhoneError("Утасны дугаар заавал 8 оронтой байх ёстой"); setPhoneVerified(false) }
-    else if (!isValidPhone(digits)) { setPhoneError("Зөв утасны дугаар оруулна уу (жишээ: 99112233)"); setPhoneVerified(false) }
-    else {
-      setPhoneError(null)
-      const sp = getStoredVerifiedPhone()
-      if (sp === digits) setPhoneVerified(true)
-      else if (phoneVerified) setPhoneVerified(false)
-    }
-    if (pollRef.current) clearInterval(pollRef.current)
+    if (digits.length !== 8) { setPhoneError("Утасны дугаар заавал 8 оронтой байх ёстой") }
+    else if (!isValidPhone(digits)) { setPhoneError("Зөв утасны дугаар оруулна уу (жишээ: 99112233)") }
+    else { setPhoneError(null) }
   }
 
   const canSubmit =
     agreedToTerms &&
     !phoneError &&
-    phoneVerified &&
     (isPreOrder || currentStock > 0)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -255,55 +182,25 @@ export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQua
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-4">
         <div className="space-y-2">
           <label className="text-sm font-medium" htmlFor="customerName">Таны нэр</label>
           <Input id="customerName" name="customerName" required placeholder="Жишээ: Отгоо" />
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium" htmlFor="phoneNumber">Утасны дугаар</label>
-          <div className="flex gap-2">
-            <Input
-              id="phoneNumber"
-              name="phoneNumber"
-              type="tel"
-              inputMode="numeric"
-              required
-              maxLength={8}
-              disabled={phoneVerified}
-              placeholder="8 оронтой тоо"
-              onChange={e => validatePhone(e.target.value)}
-              className={phoneVerified ? "bg-green-50 border-green-300 text-green-800" : phoneError ? "border-red-400 focus-visible:ring-red-300" : ""}
-            />
-            {phoneVerified ? (
-              <div className="flex items-center gap-1 text-green-600 text-xs font-semibold px-3 bg-green-50 border border-green-200 rounded-lg whitespace-nowrap">
-                <CheckCircle2 className="w-4 h-4" /> Баталгаажсан
-              </div>
-            ) : (
-              <button type="button" disabled={!!phoneError || verifyLoading || !!verifySessionId}
-                onClick={() => { const pi = document.getElementById('phoneNumber') as HTMLInputElement; if (pi) handleVerifyPhone(pi.value) }}
-                className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap">
-                {verifyLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageSquare className="w-3.5 h-3.5" />}
-                {verifyLoading ? "Уншиж байна..." : "Баталгаажуулах"}
-              </button>
-            )}
-          </div>
+          <Input
+            id="phoneNumber"
+            name="phoneNumber"
+            type="tel"
+            inputMode="numeric"
+            required
+            maxLength={8}
+            placeholder="8 оронтой тоо"
+            onChange={e => validatePhone(e.target.value)}
+            className={phoneError ? "border-red-400 focus-visible:ring-red-300" : ""}
+          />
           {phoneError && (<p className="text-xs text-red-500 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {phoneError}</p>)}
-          {verifyError && (<p className="text-xs text-red-500 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {verifyError}</p>)}
-          {verifySessionId && !phoneVerified && (
-            <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 space-y-3 mt-2">
-              <div className="flex items-start gap-2">
-                <MessageSquare className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
-                <div className="space-y-1.5">
-                  <p className="text-sm font-semibold text-indigo-900">SMS баталгаажуулалт</p>
-                  {verifyInstruction && <p className="text-xs text-indigo-700 leading-relaxed">{verifyInstruction}</p>}
-                  <p className="text-xs text-indigo-600">Доорх товчийг дарж SMS мессежээ илгээнэ үү.</p>
-                </div>
-              </div>
-              {verifySmsUri && (<a href={verifySmsUri} className="flex items-center justify-center gap-2 w-full py-3 bg-indigo-600 text-white rounded-lg font-semibold text-sm hover:bg-indigo-700 transition-colors shadow-sm"><MessageSquare className="w-4 h-4" />📱 SMS илгээх (144773)</a>)}
-              <div className="flex items-center gap-2 text-xs text-indigo-500"><Loader2 className="w-3.5 h-3.5 animate-spin" />SMS хүлээж байна...</div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -505,7 +402,7 @@ export function ProductOrderForm({ batchId, unitPrice, deliveryFee, remainingQua
         {submitting ? "Илгээж байна..." : (isPreOrder || currentStock > 0) ? "✅ Захиалга баталгаажуулах" : "Дууссан"}
       </Button>
 
-      {!agreedToTerms && (
+      {!agreedToTerms && (termsOfService || deliveryTerms) && (
         <p className="text-center text-xs text-slate-400">Үйлчилгээний нөхцөлтэй зөвшөөрснөөр захиалгаа дуусгана уу</p>
       )}
     </form>

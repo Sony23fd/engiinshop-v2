@@ -175,3 +175,24 @@ export async function getArchivedCategories(days: number = 30) {
     return { success: false, error: "Failed to fetch archived categories", categories: [] }
   }
 }
+
+export async function toggleCategoryReadyStock(
+  categoryId: string, 
+  isReadyStock: boolean, 
+  readyStockStatusId?: string | null
+) {
+  try {
+    await (db.category as any).update({
+      where: { id: categoryId },
+      data: { 
+        isReadyStock,
+        readyStockStatusId: isReadyStock ? (readyStockStatusId || null) : null
+      }
+    })
+    revalidatePath("/admin/orders")
+    return { success: true }
+  } catch (error: any) {
+    console.error("Failed to toggle ready stock:", error)
+    return { success: false, error: error.message }
+  }
+}

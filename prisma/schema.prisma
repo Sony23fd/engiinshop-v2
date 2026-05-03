@@ -20,13 +20,16 @@ model User {
 }
 
 model Category {
-  id          String   @id @default(cuid())
-  name        String
-  deliveryFee Decimal? @default(0)
-  isArchived  Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  batches     Batch[]
+  id                 String           @id @default(cuid())
+  name               String
+  deliveryFee        Decimal?         @default(0)
+  isArchived         Boolean          @default(false)
+  isReadyStock       Boolean          @default(false)
+  readyStockStatusId String?
+  readyStockStatus   OrderStatusType? @relation(fields: [readyStockStatusId], references: [id])
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  batches            Batch[]
 }
 
 model Product {
@@ -78,16 +81,17 @@ model Batch {
 }
 
 model OrderStatusType {
-  id            String   @id @default(cuid())
-  name          String   @unique
-  color         String?  @default("slate")
-  isFinal       Boolean  @default(false)
-  isDefault     Boolean  @default(false)
-  isDeliverable Boolean  @default(false)
-  isCancelled   Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id            String     @id @default(cuid())
+  name          String     @unique
+  color         String?    @default("slate")
+  isFinal       Boolean    @default(false)
+  isDefault     Boolean    @default(false)
+  isDeliverable Boolean    @default(false)
+  isCancelled   Boolean    @default(false)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
   orders        Order[]
+  categories    Category[]
 }
 
 model Order {

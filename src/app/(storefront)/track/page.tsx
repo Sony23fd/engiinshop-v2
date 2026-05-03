@@ -66,9 +66,7 @@ export default async function TrackOrderPage({
         </div>
       )}
 
-      {needsVerification && phone && settings.phone_verification_enabled !== "false" ? (
-        <PhoneTracker phone={phone} />
-      ) : !q ? (
+      {!q ? (
         <div className="py-20 text-center">
           <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mx-auto mb-4">
             <Search className="w-8 h-8" />
@@ -169,7 +167,7 @@ function UnifiedDeliverySection({ groups, deliveryScheduleDays = "3,6" }: { grou
           <p className="text-sm text-slate-700 font-medium">
             🚚 <strong>{eligibleForDelivery.length}</strong> бараа хүргэлтэд бэлэн байна.
           </p>
-          <DeliveryRequestButton orderIds={eligibleForDelivery.map((o: any) => o.id)} deliveryScheduleDays={deliveryScheduleDays} customerPhone={eligibleForDelivery[0]?.customerPhone} />
+          <DeliveryRequestButton orderIds={eligibleForDelivery.map((o: any) => o.id)} deliveryScheduleDays={deliveryScheduleDays} />
           {hasMixedDeliverable && (
             <div className="mt-2 bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800 leading-relaxed font-medium">
               ⚠️ <strong className="text-amber-900">Анхаарах:</strong> Танд ирээгүй <strong>{notYetDeliverable.length}</strong> бараа байна. 

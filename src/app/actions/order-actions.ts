@@ -5,7 +5,6 @@ import { revalidatePath } from "next/cache"
 import { emitNewOrder } from "@/lib/orderEvents"
 import { getCurrentAdmin, logActivity } from "@/lib/auth"
 import { isValidPhone } from "@/lib/customer-utils"
-import { isPhoneVerified } from "@/lib/verify-mn"
 import { getShopSettings } from "./settings-actions"
 
 export async function validateCartStock(items: { batchId: string; qty: number }[]) {
@@ -359,10 +358,6 @@ export async function getOrdersByQuery(query: string) {
     let whereClause: any = {};
 
     if (isPhone) {
-      const settings = await getShopSettings();
-      if (settings.phone_verification_enabled !== "false" && !isPhoneVerified(cleanQuery)) {
-        return { success: false, error: "Утасны дугаар баталгаажаагүй байна", needsVerification: true, phone: cleanQuery };
-      }
       whereClause = { customerPhone: cleanQuery };
     } else if (cleanQuery.startsWith("ORD-") || cleanQuery.startsWith("ANR") || cleanQuery.length === 8) {
       whereClause = { 
@@ -424,9 +419,10 @@ export async function createOrder(data: {
     }
 
     const result = await db.$transaction(async (tx) => {
-      // 1. Get batch current state
+      // 1. Get batch current state (include category for ready stock check)
       const batch = await tx.batch.findUnique({
-        where: { id: data.batchId }
+        where: { id: data.batchId },
+        include: { category: true }
       });
 
       if (!batch) {
@@ -437,6 +433,13 @@ export async function createOrder(data: {
       const defaultStatus = await tx.orderStatusType.findFirst({ where: { isDefault: true } as any });
       const transactionRef = data.transactionRef
         ?? `ANR${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`
+
+      // Determine status: if category is ready stock with a configured status, use that
+      let orderStatusId = defaultStatus?.id;
+      const cat = batch.category as any;
+      if (cat?.isReadyStock && cat?.readyStockStatusId) {
+        orderStatusId = cat.readyStockStatusId;
+      }
 
       const order = await tx.order.create({
         data: {
@@ -453,7 +456,7 @@ export async function createOrder(data: {
           transactionRef,
           creationSource: "WEB",
           selectedOptions: data.selectedOptions,
-          ...(defaultStatus?.id && { statusId: defaultStatus.id })
+          ...(orderStatusId && { statusId: orderStatusId })
         } as any
       });
 
@@ -540,7 +543,8 @@ export async function addOrderToBatch(batchId: string, data: {
 
     const result = await db.$transaction(async (tx) => {
       const batch = await tx.batch.findUnique({
-        where: { id: batchId }
+        where: { id: batchId },
+        include: { category: true }
       });
       if (!batch) throw new Error("Batch not found");
 
@@ -548,7 +552,13 @@ export async function addOrderToBatch(batchId: string, data: {
       const adminName = admin ? (admin.name || "Сайтын админ") : "Админ";
 
       const defaultStatus = await tx.orderStatusType.findFirst({ where: { isDefault: true } });
-      const statusId = data.statusId || defaultStatus?.id;
+      
+      // Determine status: ready stock category auto-status, then explicit statusId, then default
+      let finalStatusId = data.statusId || defaultStatus?.id;
+      const cat = batch.category as any;
+      if (!data.statusId && cat?.isReadyStock && cat?.readyStockStatusId) {
+        finalStatusId = cat.readyStockStatusId;
+      }
 
       // @ts-ignore
       const order = await tx.order.create({
@@ -563,7 +573,7 @@ export async function addOrderToBatch(batchId: string, data: {
           paymentStatus: "CONFIRMED", // Admin-added orders are automatically confirmed
           creationSource: "ADMIN",
           createdByAdmin: adminName,
-          ...(statusId && { statusId: statusId }),
+          ...(finalStatusId && { statusId: finalStatusId }),
           ...(data.cargoFee !== undefined && { cargoFee: data.cargoFee }),
           ...(data.arrivalDate && { arrivalDate: new Date(data.arrivalDate) }),
           ...(data.deliveryDate && { deliveryDate: new Date(data.deliveryDate) }),

@@ -662,15 +662,9 @@ export function CartClient({
               </div>
             )}
 
-            {!phoneVerified && !phoneError && phoneVerificationEnabled && (
-              <div className="bg-indigo-50 text-indigo-700 text-xs px-3 py-2 rounded-lg border border-indigo-100 flex items-center gap-2">
-                <MessageSquare className="w-3.5 h-3.5 shrink-0" /> Утасны дугаараа баталгаажуулсны дараа захиалга илгээх боломжтой.
-              </div>
-            )}
-
             <button
               type="submit"
-              disabled={submitting || !agreedToTerms || !!phoneError || !phoneVerified}
+              disabled={submitting || !agreedToTerms || !!phoneError}
               className="w-full bg-[#4F46E5] hover:bg-[#4338ca] text-white py-3 rounded-xl font-bold text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {submitting ? "Илгээж байна..." : "📦 Захиалга илгээх"}

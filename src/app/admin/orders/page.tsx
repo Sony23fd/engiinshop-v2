@@ -1,6 +1,8 @@
 import { getCategories } from "@/app/actions/category-actions"
+import { getOrderStatuses } from "@/app/actions/order-actions"
 import Link from "next/link"
 import { FolderOpen, Archive, Search } from "lucide-react"
+import { ReadyStockToggle } from "./ReadyStockToggle"
 
 export const dynamic = "force-dynamic"
 import { DateRangeFilter } from "@/components/admin/DateRangeFilter"
@@ -10,7 +12,11 @@ export default async function AdminOrdersCategoriesPage({ searchParams }: { sear
   const days = p.days ? parseInt(p.days, 10) : 30;
   const page = p.page ? parseInt(p.page, 10) : 1;
   const itemsPerPage = 50;
-  const { categories, success } = await getCategories(days)
+  const [{ categories, success }, statusResult] = await Promise.all([
+    getCategories(days),
+    getOrderStatuses()
+  ])
+  const orderStatuses = (statusResult.success && statusResult.statuses) ? statusResult.statuses : []
   
   const allCategories = categories || [];
   const totalPages = Math.ceil(allCategories.length / itemsPerPage);
@@ -79,39 +85,51 @@ export default async function AdminOrdersCategoriesPage({ searchParams }: { sear
               const hasOrders = totalOrders > 0
 
               return (
-              <Link 
+              <div 
                 key={category.id} 
-                href={`/admin/orders/category/${category.id}`}
-                className="group p-6 rounded-xl border border-slate-200 bg-white hover:border-[#4F46E5] hover:shadow-md transition-all flex items-center space-x-4 cursor-pointer"
+                className="group rounded-xl border border-slate-200 bg-white hover:border-[#4F46E5] hover:shadow-md transition-all cursor-pointer"
               >
-                <div className={`p-4 rounded-full transition-colors ${isCompleted ? 'bg-green-100 text-green-600 group-hover:bg-green-600 group-hover:text-white' : 'bg-indigo-50 text-[#4F46E5] group-hover:bg-[#4F46E5] group-hover:text-white'}`}>
-                  <FolderOpen className="w-8 h-8" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-lg font-bold text-slate-800">{category.name}</h3>
-                    {isCompleted ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700">
-                        <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                        Completed
-                      </span>
-                    ) : hasOrders ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                        Идэвхтэй
-                      </span>
-                    ) : null}
+                <Link 
+                  href={`/admin/orders/category/${category.id}`}
+                  className="p-6 pb-2 flex items-center space-x-4"
+                >
+                  <div className={`p-4 rounded-full transition-colors ${isCompleted ? 'bg-green-100 text-green-600 group-hover:bg-green-600 group-hover:text-white' : 'bg-indigo-50 text-[#4F46E5] group-hover:bg-[#4F46E5] group-hover:text-white'}`}>
+                    <FolderOpen className="w-8 h-8" />
                   </div>
-                  <p className="text-xs text-slate-400 mt-1">Үүсгэсэн: {new Date(category.createdAt).toLocaleDateString()}</p>
-                  {hasOrders && (
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      {isCompleted 
-                        ? `Бүх ${totalOrders} захиалга дууссан` 
-                        : `Идэвхтэй: ${activeOrders} · Дууссан: ${completedOrders}`}
-                    </p>
-                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-lg font-bold text-slate-800">{category.name}</h3>
+                      {isCompleted ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                          Completed
+                        </span>
+                      ) : hasOrders ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700">
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                          Идэвхтэй
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">Үүсгэсэн: {new Date(category.createdAt).toLocaleDateString()}</p>
+                    {hasOrders && (
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {isCompleted 
+                          ? `Бүх ${totalOrders} захиалга дууссан` 
+                          : `Идэвхтэй: ${activeOrders} · Дууссан: ${completedOrders}`}
+                      </p>
+                    )}
+                  </div>
+                </Link>
+                <div className="px-6 pb-4 pt-0">
+                  <ReadyStockToggle
+                    categoryId={category.id}
+                    initialReadyStock={!!category.isReadyStock}
+                    initialStatusId={category.readyStockStatusId || null}
+                    statuses={orderStatuses.map((s: any) => ({ id: s.id, name: s.name, color: s.color }))}
+                  />
                 </div>
-              </Link>
+              </div>
               )
             })
           ) : (
