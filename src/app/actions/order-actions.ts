@@ -615,7 +615,7 @@ export async function searchOrders(query?: string) {
       { batch: { product: { name: { contains: query, mode: 'insensitive' } } } },
     ]
 
-    if (isNumericQuery && numericQuery <= 2147483647) {
+    if (isNumericQuery && numericQuery !== undefined && numericQuery <= 2147483647) {
       searchConditions.push({ orderNumber: numericQuery })
     }
 
