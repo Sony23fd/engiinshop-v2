@@ -236,7 +236,7 @@ export async function confirmDeliveryGroup(orderIds: string[]) {
       userRole: adminMode.role,
       action: "Хүргэлт баталгаажуулав",
       target: "Захиалгууд",
-      detail: `${orderIds.length} ширхэг захиалгыг хүргэгдсэн гэж хүлээн авлаа`,
+      detail: `${orderIds.length} ширхэг захиалгыг "Хүргэлтээр авсан" төлөвт шилжүүллээ.`,
     })
 
     revalidatePath("/admin/orders/delivery")
@@ -274,7 +274,7 @@ export async function markDeliveryAsPickedUp(orderIds: string[]) {
       userRole: admin.role,
       action: "Хүргэлтээс → Өөрөө авсан руу шилжүүлэв",
       target: "Захиалгууд",
-      detail: `${orderIds.length} ширхэг захиалга хүргэлтийн жагсаалтаас хасагдав (хэрэглэгч өөрөө ирж авсан)`,
+      detail: `${orderIds.length} ширхэг захиалгыг "Өөрөө ирж авсан" төлөвт шилжүүллээ (хүргэлтийн жагсаалтаас хаслаа).`,
     })
 
     revalidatePath("/admin/orders/delivery")
@@ -573,6 +573,8 @@ export async function addOrderToBatch(batchId: string, data: {
           paymentStatus: "CONFIRMED", // Admin-added orders are automatically confirmed
           creationSource: "ADMIN",
           createdByAdmin: adminName,
+          confirmedAt: new Date(),
+          confirmationMethod: "MANUAL",
           ...(finalStatusId && { statusId: finalStatusId }),
           ...(data.cargoFee !== undefined && { cargoFee: data.cargoFee }),
           ...(data.arrivalDate && { arrivalDate: new Date(data.arrivalDate) }),
@@ -586,6 +588,23 @@ export async function addOrderToBatch(batchId: string, data: {
     revalidatePath(`/admin/orders/batch/${batchId}`)
     revalidatePath(`/admin/orders/category/${result.categoryId}`)
     revalidatePath("/admin/orders")
+
+    const admin = await getCurrentAdmin();
+    if (admin) {
+      const batchInfo = await db.batch.findUnique({
+        where: { id: batchId },
+        include: { product: true, category: true }
+      });
+      await logActivity({
+        userId: admin.id,
+        userName: admin.name || "Админ",
+        userRole: admin.role,
+        action: "Захиалга нэмэв",
+        target: "Захиалга",
+        detail: `Шинэ захиалга #${result.order.orderNumber} нэмэгдлээ. Харилцагч: ${data.customerName} (${data.customerPhone}), Тоо: ${data.quantity}, Бараа: ${batchInfo?.product?.name || "?"} (${batchInfo?.category?.name || "?"})`,
+      });
+    }
+
     return { success: true, order: JSON.parse(JSON.stringify(result.order)) }
   } catch (error: any) {
     console.error("Failed to add order to batch:", error)
@@ -788,8 +807,20 @@ export async function updateOrderDetails(orderId: string, data: any) {
     const admin = await getCurrentAdmin()
     if (!admin) return { success: false, error: "Хандах эрхгүй" }
 
-    const oldOrder = await db.order.findUnique({ where: { id: orderId } })
+    const oldOrder = await db.order.findUnique({
+      where: { id: orderId },
+      include: { batch: { include: { product: true, category: true } } }
+    })
     if (!oldOrder) return { success: false, error: "Захиалга олдсонгүй" }
+
+    const changedFields: string[] = []
+    if (data.customerName !== undefined && data.customerName !== oldOrder.customerName) changedFields.push(`нэр: "${oldOrder.customerName}" → "${data.customerName}"`)
+    if (data.customerPhone !== undefined && data.customerPhone !== oldOrder.customerPhone) changedFields.push(`утас: "${oldOrder.customerPhone}" → "${data.customerPhone}"`)
+    if (data.quantity !== undefined && data.quantity !== oldOrder.quantity) changedFields.push(`тоо ширхэг: ${oldOrder.quantity} → ${data.quantity}`)
+    if (data.accountNumber !== undefined && data.accountNumber !== oldOrder.accountNumber) changedFields.push(`дансны дугаар: "${oldOrder.accountNumber || ""}" → "${data.accountNumber || ""}"`)
+    if (data.deliveryAddress !== undefined && data.deliveryAddress !== oldOrder.deliveryAddress) changedFields.push(`хаяг: "${oldOrder.deliveryAddress || ""}" → "${data.deliveryAddress || ""}"`)
+    if (data.totalAmount !== undefined && data.totalAmount !== oldOrder.totalAmount) changedFields.push(`нийт дүн: ${oldOrder.totalAmount} → ${data.totalAmount}`)
+    if (data.cargoFee !== undefined && data.cargoFee !== oldOrder.cargoFee) changedFields.push(`карго үнэ: ${oldOrder.cargoFee} → ${data.cargoFee}`)
 
     const result = await db.$transaction(async (tx) => {
       // If quantity changed, adjust batch inventory
@@ -821,7 +852,7 @@ export async function updateOrderDetails(orderId: string, data: any) {
       userRole: admin.role,
       action: "Захиалга засварлав",
       target: "Захиалга",
-      detail: `#${result.orderNumber} дугаартай захиалгын мэдээллийг шинэчлэв`,
+      detail: `#${result.orderNumber} захиалгын мэдээллийг шинэчлэв. ${changedFields.length > 0 ? `Өөрчлөгдсөн талбарууд: ${changedFields.join(", ")}` : "Өөрчлөлт байхгүй (ижил утгатай)"}. Бараа: ${oldOrder.batch?.product?.name || "?"}, Категор: ${oldOrder.batch?.category?.name || "?"}`,
     })
 
     revalidatePath("/admin/orders")
@@ -836,7 +867,10 @@ export async function deleteOrder(orderId: string) {
     const admin = await getCurrentAdmin()
     if (!admin) return { success: false, error: "Хандах эрхгүй" }
 
-    const order = await db.order.findUnique({ where: { id: orderId } })
+    const order = await db.order.findUnique({
+      where: { id: orderId },
+      include: { batch: { include: { product: true } } }
+    })
     if (!order) return { success: false, error: "Захиалга олдсонгүй" }
 
     await db.$transaction(async (tx) => {
@@ -856,7 +890,7 @@ export async function deleteOrder(orderId: string) {
       userRole: admin.role,
       action: "Захиалга устгав",
       target: "Захиалга",
-      detail: `#${order.orderNumber} захиалгыг устгалаа`,
+      detail: `#${order.orderNumber} захиалгыг устгалаа. Харилцагч: ${order.customerName} (${order.customerPhone}), Тоо ширхэг: ${order.quantity}, Бараа: ${order.batch?.product?.name || "?"}`,
     })
 
     revalidatePath("/admin/orders")
@@ -875,10 +909,18 @@ export async function restoreGroupOrder(orderIds: string[]) {
       where: { isDefault: true } as any
     })
 
+    // Fetch order summaries for logging before the transaction
+    const orderSummaries = await db.order.findMany({
+      where: { id: { in: orderIds } },
+      select: { orderNumber: true, customerName: true, customerPhone: true }
+    })
+    const orderNums = orderSummaries.map(o => `#${o.orderNumber}`).join(", ")
+    const totalQty = orderSummaries.length
+
     const result = await db.$transaction(async (tx) => {
       const orders = await (tx.order as any).findMany({
         where: { id: { in: orderIds } },
-        include: { batch: true }
+        include: { batch: { include: { product: true } } }
       })
 
       // Check stock for ALL orders in the group before proceeding
@@ -915,6 +957,7 @@ export async function restoreGroupOrder(orderIds: string[]) {
       userRole: admin.role,
       action: "Захиалга сэргээв",
       target: "Захиалгууд",
+      detail: `${totalQty} ширхэг захиалгыг сэргээлээ (дугаар: ${orderNums}). Төлөв: Шинэ, Төлбөрийн төлөв: PENDING`,
     })
 
     revalidatePath("/admin/orders")
@@ -934,11 +977,23 @@ export async function moveOrdersToBatch(orderIds: string[], targetBatchId: strin
     const admin = await getCurrentAdmin()
     if (!admin) return { success: false, error: "Хандах эрхгүй" }
 
-    await db.$transaction(async (tx) => {
-      // 1. Get the target batch
-      const targetBatch = await (tx.batch as any).findUnique({ where: { id: targetBatchId } })
-      if (!targetBatch) throw new Error("Target batch not found")
+    // Fetch summaries for logging before transaction
+    const orderSummaries = await db.order.findMany({
+      where: { id: { in: orderIds } },
+      select: { orderNumber: true, customerName: true, customerPhone: true, quantity: true }
+    })
+    const orderNums = orderSummaries.map(o => `#${o.orderNumber}`).join(", ")
+    const totalQty = orderSummaries.reduce((sum, o) => sum + (o.quantity || 1), 0)
 
+    const targetBatch = await db.batch.findUnique({
+      where: { id: targetBatchId },
+      include: { product: true, category: true }
+    })
+    const targetInfo = targetBatch
+      ? `${targetBatch.product?.name || "?"} (Багц #${targetBatch.batchNumber}, ${targetBatch.category?.name || "?"})`
+      : `#${targetBatchId}`
+
+    await db.$transaction(async (tx) => {
       // 2. Get the orders to move
       const orders = await (tx.order as any).findMany({
         where: { id: { in: orderIds } }
@@ -973,7 +1028,7 @@ export async function moveOrdersToBatch(orderIds: string[], targetBatchId: strin
       userRole: admin.role,
       action: "Захиалга шилжүүлэв",
       target: "Багц",
-      detail: `${orderIds.length} ширхэг захиалгыг #${targetBatchId} багц руу шилжүүллээ`,
+      detail: `${orderIds.length} ширхэг захиалга (${orderNums}) шилжүүллээ → ${targetInfo}. Нийт тоо ширхэг: ${totalQty}`,
     })
 
     revalidatePath("/admin/orders")
@@ -998,6 +1053,14 @@ export async function updateBatchOrderStatusesByIds(orderIds: string[], statusId
     if (!targetStatus) return { success: false, error: "Статус олдсонгүй" }
 
     const isToCancelled = targetStatus.name === "Цуцлагдсан"
+
+    // Fetch summaries for logging before the transaction
+    const orderSummaries = await db.order.findMany({
+      where: { id: { in: orderIds } },
+      select: { orderNumber: true, customerName: true, customerPhone: true, quantity: true, status: { select: { name: true } } }
+    })
+    const orderNums = orderSummaries.map(o => `#${o.orderNumber}`).join(", ")
+    const fromStatus = orderSummaries[0]?.status?.name || "?"
 
     await db.$transaction(async (tx) => {
       // 1. Get orders to check their previous statuses and batches
@@ -1050,7 +1113,7 @@ export async function updateBatchOrderStatusesByIds(orderIds: string[], statusId
       userRole: adminMode.role,
       action: "Багц статус баталгаажуулав",
       target: "Захиалгууд",
-      detail: `${orderIds.length} ширхэг захиалгыг '${targetStatus?.name || statusId}' төлөвт шилжүүллээ. ${isToCancelled ? `Шалтгаан: ${reason || "Тайлбаргүй"}` : ""}`,
+      detail: `${orderIds.length} ширхэг захиалга (${orderNums}) статусыг "${fromStatus}" → "${targetStatus.name}" болгон өөрчлөв. ${isToCancelled ? `Шалтгаан: ${reason || "Тайлбаргүй"}` : ""}`,
     })
 
     // Revalidate widespread paths due to mass update
@@ -1301,6 +1364,13 @@ export async function forceAddDeliveryAddress(orderIds: string[], address: strin
     const adminMode = await getCurrentAdmin()
     if (!adminMode) return { success: false, error: "Хандах эрхгүй" }
 
+    // Fetch summaries for logging
+    const orderSummaries = await db.order.findMany({
+      where: { id: { in: orderIds } },
+      select: { orderNumber: true, customerName: true, customerPhone: true }
+    })
+    const orderNums = orderSummaries.map(o => `#${o.orderNumber}`).join(", ")
+
     await (db.order as any).updateMany({
       where: { id: { in: orderIds } },
       data: {
@@ -1317,7 +1387,7 @@ export async function forceAddDeliveryAddress(orderIds: string[], address: strin
       userRole: adminMode.role,
       action: "Хүргэлт нэмэв",
       target: "Захиалга багц",
-      detail: `${orderIds.length} ширхэг захиалга дээр хаяг бүртгэж хүргэлтэнд гаргав.`,
+      detail: `${orderIds.length} ширхэг захиалга (${orderNums}) дээр "${address.trim()}" хаягийг бүртгэж хүргэлтэнд гаргав.`,
     })
 
     revalidatePath("/admin/orders/search")
@@ -1475,7 +1545,10 @@ export async function toggleOrderRefund(orderId: string, isRefunded?: boolean) {
     const admin = await getCurrentAdmin()
     if (!admin) return { success: false, error: "Хандах эрхгүй" }
 
-    const order = await db.order.findUnique({ where: { id: orderId } })
+    const order = await db.order.findUnique({
+      where: { id: orderId },
+      include: { batch: { include: { product: true } } }
+    })
     if (!order) return { success: false, error: "Захиалга олдсонгүй" }
 
     const targetState = isRefunded !== undefined ? isRefunded : !order.isRefunded
@@ -1491,7 +1564,7 @@ export async function toggleOrderRefund(orderId: string, isRefunded?: boolean) {
       userRole: admin.role,
       action: "Буцаалт төлөв өөрчлөв",
       target: "Захиалга",
-      detail: `#${order.orderNumber} захиалгын буцаалтын төлөвийг өөрчиллөө`,
+      detail: `#${order.orderNumber} захиалгын буцаалтын төлөвийг "${order.isRefunded ? "Буцаагдсан" : "Буцаагдаагүй"}" → "${targetState ? "Буцаагдсан" : "Буцаагдаагүй"}" болгон өөрчлөв. Бараа: ${order.batch?.product?.name || "?"}, Харилцагч: ${order.customerName}`,
     })
 
     revalidatePath("/admin/orders/refunds")
@@ -1560,11 +1633,25 @@ export async function autoCancelExpiredOrders() {
           // Цуцлахын өмнө захиалга PENDING хэвээр байгаа эсэхийг дахин шалгах (race condition-аас хамгаалах)
           const freshOrder = await (tx.order as any).findUnique({
             where: { id: order.id },
-            select: { paymentStatus: true, confirmedAt: true }
+            select: { paymentStatus: true, confirmedAt: true, creationSource: true }
           })
 
-          if (!freshOrder || freshOrder.paymentStatus !== "PENDING" || freshOrder.confirmedAt !== null) {
-            console.log(`[CRON] Order ${order.id} is no longer PENDING — skipping.`)
+          if (!freshOrder) {
+            console.log(`[CRON] Order ${order.id} no longer exists — skipping.`)
+            results.push({ id: order.id, success: true, skipped: true })
+            return
+          }
+
+          // Double-check: админ импортлосон захиалгыг хэзээ ч цуцлахгүй
+          const isAdminOrder = freshOrder.creationSource === "ADMIN"
+          if (isAdminOrder) {
+            console.log(`[CRON] Order ${order.id} is admin-imported — skipping.`)
+            results.push({ id: order.id, success: true, skipped: true })
+            return
+          }
+
+          if (freshOrder.paymentStatus !== "PENDING" || freshOrder.confirmedAt !== null) {
+            console.log(`[CRON] Order ${order.id} is no longer PENDING or was confirmed — skipping.`)
             results.push({ id: order.id, success: true, skipped: true })
             return
           }

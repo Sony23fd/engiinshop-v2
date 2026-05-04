@@ -112,7 +112,9 @@ export async function GET() {
           paymentStatus: "CONFIRMED",
           creationSource: "ADMIN",
           createdByAdmin: "Хуучин Бааз",
-          createdAt: new Date(item.createdAt || new Date())
+          createdAt: new Date(item.createdAt || new Date()),
+          confirmedAt: new Date(),
+          confirmationMethod: "MANUAL",
         });
       }
 

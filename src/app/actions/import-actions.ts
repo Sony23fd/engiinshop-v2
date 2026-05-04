@@ -80,7 +80,10 @@ export async function runImportTransaction(payload: any) {
             statusId: o.mappedStatusId || null,
             paymentStatus: "CONFIRMED", // Imported orders are usually already paid
             totalAmount: o.totalAmount || (o.quantity * (b.price || 0)),
-            transactionRef: Math.random().toString(36).substring(2, 10).toUpperCase() // temp ref
+            transactionRef: Math.random().toString(36).substring(2, 10).toUpperCase(), // temp ref
+            creationSource: "ADMIN",
+            confirmedAt: new Date(),
+            confirmationMethod: "MANUAL",
           }));
 
           if (ordersToCreate.length > 0) {

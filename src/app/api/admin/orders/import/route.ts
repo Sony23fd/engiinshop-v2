@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
         userRole: admin.role,
         action: "Захиалга импортлов",
         target: `Багц: ${batch.batchNumber} (${batch.product?.name})`,
-        detail: `${created} ширхэг захиалга амжилттай импортлогдлоо. Үйлдлийг гүйцэтгэсэн: ${admin.name}`,
+        detail: `${created} ширхэг захиалга Excel файлаар импортлогдлоо. Багц #${batch.batchNumber} — ${batch.product?.name}. Эх файл: ${file.name}`,
       })
     }
 

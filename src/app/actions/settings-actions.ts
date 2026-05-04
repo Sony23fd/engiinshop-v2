@@ -120,9 +120,15 @@ export async function confirmOrderPayment(orderId: string) {
       || await db.orderStatusType.findFirst({ where: { name: "Баталгаажсан" } }) 
       || await db.orderStatusType.findFirst({ where: { isDefault: false, isFinal: false } });
 
+    const order = await (db.order as any).findUnique({
+      where: { id: orderId },
+      include: { batch: { include: { product: true } } }
+    })
+    if (!order) return { success: false, error: "Захиалга олдсонгүй" }
+
     await (db.order as any).update({
       where: { id: orderId },
-      data: { 
+      data: {
         paymentStatus: "CONFIRMED",
         confirmedById: admin.id,
         confirmationMethod: "MANUAL",
@@ -130,6 +136,16 @@ export async function confirmOrderPayment(orderId: string) {
         ...(confirmedStatus?.id && { statusId: confirmedStatus.id })
       }
     })
+
+    await logActivity({
+      userId: admin.id,
+      userName: admin.name || "Админ",
+      userRole: admin.role,
+      action: "Төлбөр баталгаажуулав",
+      target: "Захиалга",
+      detail: `#${order.orderNumber} захиалгын төлбөрийг баталгаажууллаа. Бараа: ${order.batch?.product?.name || "?"}, Харилцагч: ${order.customerName} (${order.customerPhone}), Дүн: ${order.totalAmount}₮`,
+    })
+
     revalidatePath("/admin/orders/pending")
     revalidatePath("/admin/orders")
     return { success: true }
@@ -143,15 +159,17 @@ export async function rejectOrderPayment(orderId: string, reason?: string) {
     const admin = await getCurrentAdmin()
     if (!admin) return { success: false, error: "Нэвтрэнэ үү" }
 
+    let orderInfo: any = null;
     await db.$transaction(async (tx) => {
       const order = await (tx.order as any).findUnique({ where: { id: orderId } })
       if (!order) return
+      orderInfo = order;
 
       const rejectedStatus = await tx.orderStatusType.findFirst({ where: { name: "Цуцлагдсан" } });
 
       await (tx.order as any).update({
         where: { id: orderId },
-        data: { 
+        data: {
           paymentStatus: "REJECTED",
           cancellationReason: reason || null,
           ...(rejectedStatus?.id && { statusId: rejectedStatus.id })
@@ -163,6 +181,17 @@ export async function rejectOrderPayment(orderId: string, reason?: string) {
         data: { remainingQuantity: { increment: order.quantity } }
       })
     })
+
+    if (orderInfo && admin) {
+      await logActivity({
+        userId: admin.id,
+        userName: admin.name || "Админ",
+        userRole: admin.role,
+        action: "Төлбөр цуцлав",
+        target: "Захиалга",
+        detail: `#${orderInfo.orderNumber} захиалгын төлбөрийг цуцаллаа. Шалтгаан: ${reason || "Тайлбаргүй"}. Бараа: ${orderInfo.batch?.product?.name || "?"}, Харилцагч: ${orderInfo.customerName} (${orderInfo.customerPhone})`,
+      });
+    }
 
     revalidatePath("/admin/orders/pending")
     revalidatePath("/admin/orders")
@@ -178,13 +207,20 @@ export async function confirmGroupPayment(orderIds: string[]) {
     const admin = await getCurrentAdmin()
     if (!admin) return { success: false, error: "Нэвтрэнэ үү" }
 
-    const confirmedStatus = await db.orderStatusType.findFirst({ where: { name: "Захиалга баталгаажсан" } }) 
-      || await db.orderStatusType.findFirst({ where: { name: "Баталгаажсан" } }) 
+    const confirmedStatus = await db.orderStatusType.findFirst({ where: { name: "Захиалга баталгаажсан" } })
+      || await db.orderStatusType.findFirst({ where: { name: "Баталгаажсан" } })
       || await db.orderStatusType.findFirst({ where: { isDefault: false, isFinal: false } });
+
+    const orderSummaries = await db.order.findMany({
+      where: { id: { in: orderIds } },
+      select: { orderNumber: true, customerName: true, customerPhone: true, totalAmount: true }
+    });
+    const orderNums = orderSummaries.map(o => `#${o.orderNumber}`).join(", ");
+    const totalAmount = orderSummaries.reduce((sum, o) => sum + Number(o.totalAmount || 0), 0);
 
     await (db.order as any).updateMany({
       where: { id: { in: orderIds } },
-      data: { 
+      data: {
         paymentStatus: "CONFIRMED",
         confirmedById: admin.id,
         confirmationMethod: "MANUAL",
@@ -199,7 +235,7 @@ export async function confirmGroupPayment(orderIds: string[]) {
       userRole: admin.role || "ADMIN",
       action: "Төлбөр баталгаажуулав",
       target: "Захиалга(ууд)",
-      detail: `${orderIds.length} ширхэг захиалгын төлбөрийг бөөнөөр баталлаа`,
+      detail: `${orderIds.length} ширхэг захиалга (${orderNums}) төлбөрийг баталгаажууллаа. Нийт дүн: ${totalAmount.toLocaleString()}₮`,
     });
 
     revalidatePath("/admin/orders/pending")
@@ -214,6 +250,12 @@ export async function rejectGroupPayment(orderIds: string[], reason?: string) {
   try {
     const admin = await getCurrentAdmin()
     if (!admin) return { success: false, error: "Нэвтрэнэ үү" }
+
+    const orderSummaries = await db.order.findMany({
+      where: { id: { in: orderIds } },
+      select: { orderNumber: true, customerName: true, customerPhone: true }
+    });
+    const orderNums = orderSummaries.map(o => `#${o.orderNumber}`).join(", ");
 
     await db.$transaction(async (tx) => {
       const orders = await (tx.order as any).findMany({
@@ -245,7 +287,7 @@ export async function rejectGroupPayment(orderIds: string[], reason?: string) {
       userRole: admin.role || "ADMIN",
       action: "Төлбөр цуцлав",
       target: "Захиалга(ууд)",
-      detail: `${orderIds.length} ширхэг захиалга (төлбөр хийгээгүй) цуцлагдлаа`,
+      detail: `${orderIds.length} ширхэг захиалга (${orderNums}) цуцаллаа. Шалтгаан: ${reason || "Тайлбаргүй"}`,
     });
 
     revalidatePath("/admin/orders/pending")
