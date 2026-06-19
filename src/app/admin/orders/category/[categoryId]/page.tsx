@@ -28,6 +28,7 @@ import { CategoryDeliveryFeeEditor } from "./CategoryDeliveryFeeEditor"
 import { ArchiveCategoryButton } from "./ArchiveCategoryButton"
 import { CreateBatchSheet } from "./CreateBatchSheet"
 import { CategorySearch } from "./CategorySearch"
+import { CategoryExportButton } from "@/components/admin/CategoryExportButton"
 
 import { CategoryBatchesTable } from "./CategoryBatchesTable"
 
@@ -36,12 +37,14 @@ export default async function CategoryBatchesPage({
   searchParams
 }: { 
   params: Promise<{ categoryId: string }> 
-  searchParams?: Promise<{ q?: string; filter?: string }>
+  searchParams?: Promise<{ q?: string; filter?: string; page?: string }>
 }) {
   const { categoryId } = await params;
-  const sp = searchParams ? await searchParams : ({} as { q?: string; filter?: string });
+  const sp = searchParams ? await searchParams : ({} as { q?: string; filter?: string; page?: string });
   const query = sp.q?.toLowerCase() || "";
   const filterPreOrder = sp.filter === 'preorder';
+  const page = sp.page ? parseInt(sp.page, 10) : 1;
+  const itemsPerPage = 50;
 
   const admin = await getCurrentAdmin()
   const role = admin?.role || "ADMIN"
@@ -81,6 +84,7 @@ export default async function CategoryBatchesPage({
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
           <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
             <CategorySearch />
+            <CategoryExportButton categoryId={categoryId} categoryName={category.name} />
             <Link href={filterPreOrder ? `/admin/orders/category/${categoryId}` : `/admin/orders/category/${categoryId}?filter=preorder`}
               className={`px-3 py-2 rounded-md border text-sm font-medium transition-colors ${filterPreOrder ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-white hover:bg-slate-50 text-slate-600'}`}>
               ✈️ Карго хүлээж буй харах
@@ -101,6 +105,8 @@ export default async function CategoryBatchesPage({
           categoryId={categoryId}
           role={role}
           categories={categories || []}
+          page={page}
+          itemsPerPage={itemsPerPage}
         />
       </div>
     </div>

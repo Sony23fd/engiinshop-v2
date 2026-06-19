@@ -15,6 +15,7 @@ export async function getOrders() {
           { status: { isFinal: false } }
         ]
       },
+      take: 1000,
       select: {
         id: true,
         orderNumber: true,
@@ -91,12 +92,12 @@ export async function getPickedUpOrders(days: number = 30) {
   }
 }
 
-export async function getDeliveredOrders(days: number = 30) {
+export async function getDeliveredOrders(days: number = 30, page: number = 1, limit: number = 50) {
   try {
     const whereClause: any = {
-      status: { 
-        isFinal: true, 
-        name: { notIn: ["Цуцлагдсан", "Rejected", "Canceled"] } 
+      status: {
+        isFinal: true,
+        name: { notIn: ["Цуцлагдсан", "Rejected", "Canceled"] }
       },
       paymentStatus: { not: "REJECTED" }
     };
@@ -120,6 +121,9 @@ export async function getDeliveredOrders(days: number = 30) {
         transactionRef: true,
         paymentStatus: true,
         updatedAt: true,
+        deliveryAddress: true,
+        wantsDelivery: true,
+        deliveryDate: true,
         status: { select: { id: true, name: true, color: true } },
         batch: {
           select: {
@@ -132,7 +136,11 @@ export async function getDeliveredOrders(days: number = 30) {
       },
       orderBy: { updatedAt: "desc" },
     })
-    return { success: true, orders: JSON.parse(JSON.stringify(orders)) }
+
+    return { 
+      success: true, 
+      orders: JSON.parse(JSON.stringify(orders))
+    }
   } catch (error) {
     console.error("Failed to fetch delivered orders:", error)
     return { success: false, error: "Failed to fetch delivered orders" }
@@ -234,7 +242,7 @@ export async function markDeliveryAsPickedUp(orderIds: string[]) {
 
     await db.order.updateMany({
       where: { id: { in: orderIds } },
-      data: { 
+      data: {
         statusId: pickedUpStatus.id,
         wantsDelivery: false
       } as any
@@ -381,7 +389,7 @@ export async function createOrder(data: {
         const variantStock = { ...((batch as any).variantStock as Record<string, number>) }
         const optionValues = Object.values(data.selectedOptions as Record<string, string>)
         const variantKey = optionValues.join('-')
-        
+
         if (variantKey && variantStock[variantKey] !== undefined) {
           const newVariantQty = Math.max(0, variantStock[variantKey] - data.quantity)
           variantStock[variantKey] = newVariantQty
@@ -588,7 +596,7 @@ export async function updateOrderStatus(orderId: string, statusId: string, reaso
         updateData.cancellationReason = reason || null
         // Increment batch remaining quantity + variant stock
         const batchUpdateData: any = { remainingQuantity: { increment: order.quantity } }
-        
+
         if (order.batch.variantStock && order.selectedOptions && typeof order.selectedOptions === 'object') {
           const variantStock = { ...(order.batch.variantStock as Record<string, number>) }
           const variantKey = Object.values(order.selectedOptions as Record<string, string>).join('-')
@@ -597,12 +605,12 @@ export async function updateOrderStatus(orderId: string, statusId: string, reaso
             batchUpdateData.variantStock = variantStock
           }
         }
-        
+
         await (tx.batch as any).update({
           where: { id: order.batchId },
           data: batchUpdateData
         })
-      } 
+      }
       // 2. Transition FROM Cancelled (Restore)
       else if (!isToCancelled && isFromCancelled) {
         // Must check if enough stock exists to restore
@@ -614,7 +622,7 @@ export async function updateOrderStatus(orderId: string, statusId: string, reaso
         updateData.cancellationReason = null // Clear reason on restore
         // Decrement batch remaining quantity + variant stock
         const batchUpdateData: any = { remainingQuantity: { decrement: order.quantity } }
-        
+
         if (order.batch.variantStock && order.selectedOptions && typeof order.selectedOptions === 'object') {
           const variantStock = { ...(order.batch.variantStock as Record<string, number>) }
           const variantKey = Object.values(order.selectedOptions as Record<string, string>).join('-')
@@ -623,7 +631,7 @@ export async function updateOrderStatus(orderId: string, statusId: string, reaso
             batchUpdateData.variantStock = variantStock
           }
         }
-        
+
         await (tx.batch as any).update({
           where: { id: order.batchId },
           data: batchUpdateData
@@ -762,7 +770,7 @@ export async function restoreGroupOrder(orderIds: string[]) {
       // Update orders
       await (tx.order as any).updateMany({
         where: { id: { in: orderIds } },
-        data: { 
+        data: {
           statusId: defaultStatus?.id || null,
           paymentStatus: "PENDING",
           cancellationReason: null // Clear reason on restore
@@ -885,7 +893,7 @@ export async function updateBatchOrderStatusesByIds(orderIds: string[], statusId
         if (isToCancelled && !isFromCancelled) {
           updateData.paymentStatus = "REJECTED"
           updateData.cancellationReason = reason || null
-          
+
           await (tx.batch as any).update({
             where: { id: order.batchId },
             data: { remainingQuantity: { increment: order.quantity } }
@@ -901,7 +909,7 @@ export async function updateBatchOrderStatusesByIds(orderIds: string[], statusId
 
           updateData.paymentStatus = "PENDING"
           updateData.cancellationReason = null
-          
+
           await (tx.batch as any).update({
             where: { id: order.batchId },
             data: { remainingQuantity: { decrement: order.quantity } }
@@ -1380,7 +1388,7 @@ export async function autoCancelExpiredOrders() {
   try {
     // 1. "Цуцлагдсан" статусын ID-г олж авах (Уян хатан хайлт)
     const cancelledStatus = await db.orderStatusType.findFirst({
-      where: { 
+      where: {
         OR: [
           { name: "Цуцлагдсан" },
           { name: "Rejected" },
@@ -1389,7 +1397,7 @@ export async function autoCancelExpiredOrders() {
         ]
       }
     })
-    
+
     if (!cancelledStatus) {
       // Хэрэв олдохгүй бол системийн бүх статусыг консол дээр хэвлэж харуулна (Оношилгоонд зориулж)
       const allStatuses = await db.orderStatusType.findMany({ select: { name: true } });
@@ -1423,7 +1431,7 @@ export async function autoCancelExpiredOrders() {
     console.log(`[CRON] ${expiredOrders.length} expired orders found. Starting auto-cancellation...`)
 
     const results = []
-    
+
     // 4. Захиалга бүрийг тус бүрд нь Transaction-оор цуцлах (нөөц буцаах)
     for (const order of expiredOrders) {
       try {
@@ -1440,7 +1448,7 @@ export async function autoCancelExpiredOrders() {
 
           // Барааны үлдэгдлийг буцаан нэмэх + variant stock
           const batchUpdateData: any = { remainingQuantity: { increment: order.quantity } }
-          
+
           if (order.selectedOptions && typeof order.selectedOptions === 'object') {
             const batch = await (tx.batch as any).findUnique({ where: { id: order.batchId } })
             if (batch?.variantStock) {
@@ -1474,10 +1482,10 @@ export async function autoCancelExpiredOrders() {
     const successCount = results.filter(r => r.success).length
     console.log(`[CRON] Successfully cancelled ${successCount}/${expiredOrders.length} orders.`)
 
-    return { 
-      success: true, 
-      count: successCount, 
-      total: expiredOrders.length 
+    return {
+      success: true,
+      count: successCount,
+      total: expiredOrders.length
     }
   } catch (error: any) {
     console.error("[CRON] Fatal error in autoCancelExpiredOrders:", error)

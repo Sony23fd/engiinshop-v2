@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, Package, ShoppingBag, Search, Activity, ListFilter, CheckCircle, XCircle, Clock, CreditCard, FileText, Truck, Users, Settings, Handshake, PackageCheck, Archive, BookOpen, Database, RefreshCcw } from "lucide-react"
+import { LayoutDashboard, Package, ShoppingBag, Search, Activity, ListFilter, CheckCircle, XCircle, Clock, CreditCard, FileText, Truck, Users, Settings, Handshake, PackageCheck, Archive, BookOpen, Database, RefreshCcw, Bot } from "lucide-react"
 
 type AdminRole = "ADMIN" | "CARGO_ADMIN" | "DATAADMIN"
 
@@ -60,6 +60,7 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
       { name: "Карго төлбөр", url: "/admin/cargo-settings", icon: CreditCard, highlight: true, roles: ["CARGO_ADMIN"] },
       { name: "Нөхцөлийн тохиргоо", url: "/admin/settings/terms", icon: FileText, roles: ["ADMIN"] },
       { name: "Үйлдлийн лог", url: "/admin/activity", icon: FileText, roles: ["ADMIN", "DATAADMIN"] },
+      { name: "Чатбот Заавар", url: "/admin/faqs", icon: Bot, roles: ["ADMIN"] },
       { name: "Гарын авлага", url: "/admin/guide", icon: BookOpen, roles: ["ADMIN", "CARGO_ADMIN"] },
     ]
   }

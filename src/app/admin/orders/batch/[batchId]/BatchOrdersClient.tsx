@@ -4,12 +4,21 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { StatusBadge } from "@/components/admin/StatusBadge"
-import { updateBatchOrderStatusesByIds, updateOrderDetails, deleteOrder } from "@/app/actions/order-actions"
+import { updateBatchOrderStatusesByIds, updateOrderDetails, deleteOrder, updateOrderStatus } from "@/app/actions/order-actions"
 import { useToast } from "@/components/ui/use-toast"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { GroupAdminDeliveryButton } from "../../search/GroupAdminDeliveryButton"
 import { Loader2, Pencil, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { CustomerProfileModal } from "@/components/admin/CustomerProfileModal"
+import { PrintLabelsButton } from "@/components/admin/PrintLabelsButton"
 
 export function BatchOrdersClient({ activeOrders, batch, statuses, role }: { activeOrders: any[], batch: any, statuses: any[], role: string }) {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -17,6 +26,7 @@ export function BatchOrdersClient({ activeOrders, batch, statuses, role }: { act
   const [selectedStatus, setSelectedStatus] = useState("")
   const [editingOrder, setEditingOrder] = useState<any>(null)
   const [searchQuery, setSearchQuery] = useState("")
+  const [profilePhone, setProfilePhone] = useState<string | null>(null)
   const { toast } = useToast()
   const router = useRouter()
 
@@ -109,6 +119,19 @@ export function BatchOrdersClient({ activeOrders, batch, statuses, role }: { act
     }
   }
 
+  async function handleSingleStatusChange(orderId: string, newStatusId: string) {
+    if (!newStatusId || newStatusId === "none") return;
+    setLoading(true)
+    const res = await updateOrderStatus(orderId, newStatusId)
+    setLoading(false)
+    if (res.success) {
+      toast({ title: "Амжилттай", description: "Төлөв өөрчлөгдлөө." })
+      router.refresh()
+    } else {
+      toast({ variant: "destructive", title: "Алдаа", description: res.error || "Алдаа гарлаа" })
+    }
+  }
+
   return (
     <div className="bg-white p-6 rounded-xl shadow-sm border space-y-6">
       {/* Filters and Bulk Actions */}
@@ -128,6 +151,7 @@ export function BatchOrdersClient({ activeOrders, batch, statuses, role }: { act
                  window.location.reload()
               }} 
             />
+            <PrintLabelsButton orders={filteredOrders.filter(o => selectedIds.includes(o.id))} />
             <form onSubmit={handleBulkUpdate} className="flex gap-2 items-center px-4 py-1.5 border border-indigo-100 rounded-md bg-indigo-50/30">
               <span className="text-sm font-semibold text-indigo-700 whitespace-nowrap">Сонгосон {selectedIds.length}ш:</span>
               <select 
@@ -199,7 +223,12 @@ export function BatchOrdersClient({ activeOrders, batch, statuses, role }: { act
                   <td className="px-4 py-6 min-w-[200px] cursor-pointer" onClick={() => toggleOne(order.id)}>
                     <div className="text-slate-500 text-xs font-medium space-y-1">
                       <p className="text-slate-800 text-sm uppercase">{order.customerName},</p>
-                      <p>{order.customerPhone},</p>
+                      <p 
+                        className="text-indigo-600 font-bold hover:underline cursor-pointer inline-flex" 
+                        onClick={(e) => { e.stopPropagation(); setProfilePhone(order.customerPhone); }}
+                      >
+                        {order.customerPhone}
+                      </p>
                       <p>{batch.product?.name}</p>
                       <p className="text-slate-800">Карго: {finalCargoFee.toLocaleString()} ₮</p>
                       <p className="uppercase text-[10px] tracking-wider text-slate-400 pt-1 flex items-center gap-1">
@@ -218,8 +247,27 @@ export function BatchOrdersClient({ activeOrders, batch, statuses, role }: { act
                   <td className="px-4 py-6 font-semibold text-center text-slate-600">{order.quantity}</td>
 
                   <td className="px-4 py-6 min-w-[150px] text-center">
-                    <div className="flex items-center gap-2 justify-center">
-                      <StatusBadge status={order.status?.name || "Шинэ"} color={order.status?.color} />
+                    <div className="flex justify-center">
+                      <Select 
+                        defaultValue={order.statusId || "none"} 
+                        onValueChange={(val) => handleSingleStatusChange(order.id, val)}
+                        disabled={loading}
+                      >
+                        <SelectTrigger className="w-full sm:w-[150px] bg-slate-50 border-slate-200 h-9">
+                          <SelectValue placeholder="Төлөв">
+                            {order.statusId ? (
+                              <StatusBadge status={statuses.find((s: any) => s.id === order.statusId)?.name || ""} color={statuses.find((s: any) => s.id === order.statusId)?.color} />
+                            ) : "Сонгох..."}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {statuses.map((s: any) => (
+                            <SelectItem key={s.id} value={String(s.id)}>
+                              <StatusBadge status={s.name} color={s.color} />
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </td>
                   <td className="px-4 py-6 text-center">
@@ -250,6 +298,8 @@ export function BatchOrdersClient({ activeOrders, batch, statuses, role }: { act
           </tbody>
         </table>
       </div>
+
+      <CustomerProfileModal phone={profilePhone} isOpen={!!profilePhone} onClose={() => setProfilePhone(null)} />
 
       <Sheet open={!!editingOrder} onOpenChange={(open) => !open && !loading && setEditingOrder(null)}>
         <SheetContent className="overflow-y-auto sm:max-w-md">

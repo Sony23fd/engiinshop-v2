@@ -27,6 +27,8 @@ import { StatusBadge } from "@/components/admin/StatusBadge"
 import { GroupStatusUpdater } from "./GroupStatusUpdater"
 import { GroupAdminDeliveryButton } from "./GroupAdminDeliveryButton"
 import { RejectionDialog } from "@/components/admin/RejectionDialog"
+import { CustomerProfileModal } from "@/components/admin/CustomerProfileModal"
+import { PrintLabelsButton } from "@/components/admin/PrintLabelsButton"
 
 export default function SearchClient({ statuses }: { statuses: any[] }) {
   const [query, setQuery] = useState("")
@@ -35,6 +37,7 @@ export default function SearchClient({ statuses }: { statuses: any[] }) {
   const [hasSearched, setHasSearched] = useState(false)
   const [confirmChange, setConfirmChange] = useState<{orderId: string, newStatusId: string, oldStatusId: string | null} | null>(null)
   const [pendingRejection, setPendingRejection] = useState<{orderId: string, newStatusId: string} | null>(null)
+  const [profilePhone, setProfilePhone] = useState<string | null>(null)
   const { toast } = useToast()
 
   async function handleSearch(e?: React.FormEvent) {
@@ -226,7 +229,10 @@ export default function SearchClient({ statuses }: { statuses: any[] }) {
                     <div>
                       <div className="flex items-center gap-3">
                         <span className="font-bold text-slate-900 text-lg">{first.customerName}</span>
-                        <span className="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded font-mono font-bold tracking-wider">
+                        <span 
+                          className="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded font-mono font-bold tracking-wider cursor-pointer hover:bg-indigo-200 transition-colors"
+                          onClick={(e) => { e.stopPropagation(); setProfilePhone(first.customerPhone); }}
+                        >
                           {first.customerPhone}
                         </span>
                       </div>
@@ -252,6 +258,7 @@ export default function SearchClient({ statuses }: { statuses: any[] }) {
                   </div>
                   
                   <div className="flex flex-wrap items-center gap-3">
+                     <PrintLabelsButton orders={group.filter(o => selectedInGroup.includes(o.id))} />
                      <GroupAdminDeliveryButton 
                        selectedOrderIds={selectedInGroup}
                        onUpdated={refreshSearchData}
@@ -366,6 +373,8 @@ export default function SearchClient({ statuses }: { statuses: any[] }) {
         onConfirm={handleRejectionConfirm}
         isLoading={loading}
       />
+
+      <CustomerProfileModal phone={profilePhone} isOpen={!!profilePhone} onClose={() => setProfilePhone(null)} />
     </div>
   )
 }

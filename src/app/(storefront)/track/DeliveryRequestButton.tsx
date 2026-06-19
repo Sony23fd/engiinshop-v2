@@ -96,36 +96,54 @@ export default function DeliveryRequestButton({ orderIds, deliveryScheduleDays =
     return (
       <div className="space-y-4 bg-white rounded-xl border p-5 shadow-sm animate-in fade-in">
         <div className="text-center mb-4">
-          <p className="font-bold text-slate-800 text-[15px]">Хүргэлтийн хураамж төлөх</p>
-          <p className="text-xs text-slate-500 mt-1">{manualData.bank_note || "Доорх данс руу шилжүүлгэ хийж баталгаажуулна уу"}</p>
+          <p className="font-bold text-slate-800 text-[15px] flex justify-center items-center gap-2">
+            💳 Хүргэлтийн хураамж төлөх
+          </p>
         </div>
 
-        <div className="bg-yellow-50 text-yellow-800 p-4 rounded-xl border border-yellow-200 text-sm space-y-3">
-          <div className="flex justify-between items-center">
-            <span className="text-yellow-700 font-medium">Төлөх дүн:</span>
-            <span className="font-bold text-lg">{Number(manualData.fee).toLocaleString()} ₮</span>
+        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-sm space-y-3">
+          <div className="flex justify-between items-center pb-2 border-b border-slate-200">
+            <span className="text-slate-500 font-medium">Төлөх дүн:</span>
+            <span className="font-bold text-lg text-indigo-600">{Number(manualData.fee).toLocaleString()} ₮</span>
           </div>
-          <div className="flex justify-between items-center pt-2 border-t border-yellow-200">
-            <span className="text-yellow-700 font-medium">Банк:</span>
-            <span className="font-bold">{manualData.bank_name}</span>
+          <div className="flex justify-between items-center pt-1">
+            <span className="text-slate-500 font-medium">Банк:</span>
+            <span className="font-bold text-slate-800">{manualData.bank_name}</span>
           </div>
-          <div className="flex justify-between items-center pt-2 border-t border-yellow-200">
-            <span className="text-yellow-700 font-medium">Данс:</span>
+          <div className="flex justify-between items-center pt-2">
+            <span className="text-slate-500 font-medium">Данс:</span>
             <div className="flex items-center gap-2">
-              <span className="font-bold">{manualData.bank_account}</span>
+              <span className="font-bold text-slate-800 text-base">{manualData.bank_account}</span>
               <button
                 onClick={() => copyToClipboard(manualData.bank_account)}
-                className="flex items-center gap-1 bg-yellow-200 hover:bg-yellow-300 text-yellow-800 px-2 py-1 rounded text-[10px] uppercase font-bold transition-colors"
+                className="flex items-center gap-1 bg-slate-200 hover:bg-slate-300 text-slate-700 px-2 py-1 rounded text-[10px] uppercase font-bold transition-colors"
               >
-                {copiedData === manualData.bank_account ? <CheckCircle2 className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                {copiedData === manualData.bank_account ? <CheckCircle2 className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
                 {copiedData === manualData.bank_account ? "Хуулсан" : "Хуулах"}
               </button>
             </div>
           </div>
-          <div className="flex justify-between items-center pt-2 border-t border-yellow-200">
-            <span className="text-yellow-700 font-medium">Дансны нэр:</span>
-            <span className="font-bold">{manualData.bank_holder}</span>
+          <div className="flex justify-between items-center pt-2 pb-1">
+            <span className="text-slate-500 font-medium">Дансны нэр:</span>
+            <span className="font-bold text-slate-800">{manualData.bank_holder}</span>
           </div>
+        </div>
+        
+        <div className="bg-red-50 border-2 border-red-200 p-4 rounded-xl">
+          <p className="text-xs text-red-600 font-bold uppercase tracking-wider mb-2">Гүйлгээний утга (Маш чухал)</p>
+          <div className="bg-white border border-red-100 rounded-lg p-3 flex justify-between items-center">
+            <span className="font-semibold text-sm text-red-900 leading-tight">
+              {manualData.bank_note || "Утасны дугаараа бичнэ үү"}
+            </span>
+            <button
+              onClick={() => copyToClipboard(manualData.bank_note || "Утасны дугаараа бичнэ үү")}
+              className="flex items-center gap-1 bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1.5 rounded text-[10px] uppercase font-bold transition-colors shrink-0 ml-2"
+            >
+              {copiedData === (manualData.bank_note || "Утасны дугаараа бичнэ үү") ? <CheckCircle2 className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+              {copiedData === (manualData.bank_note || "Утасны дугаараа бичнэ үү") ? "Хуулсан" : "Хуулах"}
+            </button>
+          </div>
+          <p className="text-[11px] text-red-700 mt-2 font-medium">Шилжүүлэг хийхдээ гүйлгээний утгыг зөв бичсэнээр таны хүргэлт баталгаажна.</p>
         </div>
 
         {error && (
@@ -135,9 +153,9 @@ export default function DeliveryRequestButton({ orderIds, deliveryScheduleDays =
         <button
           onClick={handleManualConfirm}
           disabled={loading}
-          className="w-full py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 mt-4"
+          className="w-full py-3 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 mt-4"
         >
-          {loading ? "Түр хүлээнэ үү..." : "Би шилжүүлсэн"}
+          {loading ? "Түр хүлээнэ үү..." : "Би төлбөрөө шилжүүлсэн"}
         </button>
       </div>
     )

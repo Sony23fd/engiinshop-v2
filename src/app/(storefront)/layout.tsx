@@ -1,5 +1,5 @@
 import { ReactNode } from "react"
-import { MapPin, Clock, Truck, ShieldCheck, Mail, Phone, Instagram, Facebook } from "lucide-react"
+import { MapPin, Clock, Truck, ShieldCheck, Mail, Phone, Instagram, Facebook, Search } from "lucide-react"
 import { CartProvider } from "@/context/CartContext"
 import { CartIcon } from "@/components/storefront/CartIcon"
 import Link from "next/link"
@@ -8,21 +8,29 @@ import { db } from "@/lib/db"
 
 import { AnimatedHeroBackground } from "@/components/storefront/home/AnimatedHeroBackground"
 import { VisitorTracker } from "@/components/storefront/VisitorTracker"
+import { MobileBottomNav } from "@/components/storefront/layout/MobileBottomNav"
+import { ScrollHeaderManager } from "@/components/storefront/layout/ScrollHeaderManager"
 import { SocialProofToast } from "@/components/storefront/SocialProofToast"
+import { ChatbotWidget } from "@/components/storefront/ChatbotWidget"
 
 export const dynamic = "force-dynamic"
 
 export default async function StorefrontLayout({ children }: { children: ReactNode }) {
   let siteLogo = null;
   let isMaintenanceMode = false;
+  let faqs = [];
 
   try {
     const settings = await db.shopSettings.findMany({
-      where: { key: { in: ["site_logo", "maintenance_mode"] } }
+      where: { key: { in: ["site_logo", "maintenance_mode", "faq_data"] } }
     });
 
     siteLogo = settings.find(s => s.key === "site_logo")?.value;
     isMaintenanceMode = settings.find(s => s.key === "maintenance_mode")?.value === "true";
+    const faqDataStr = settings.find(s => s.key === "faq_data")?.value;
+    if (faqDataStr) {
+      faqs = JSON.parse(faqDataStr);
+    }
   } catch (error) {
     console.error("Failed to load settings in layout:", error)
   }
@@ -59,7 +67,8 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
   return (
     <CartProvider>
       {/* Navigation / Top Header */}
-      <header className="sticky top-0 z-40 border-b border-indigo-800/50 shadow-md relative overflow-hidden">
+      <ScrollHeaderManager />
+      <header id="storefront-header" className="sticky top-0 z-40 border-b border-indigo-800/50 shadow-md relative overflow-hidden transition-transform duration-300">
 
         {/* Animated Background */}
         <AnimatedHeroBackground bgColor="#3c27c4" />
@@ -86,19 +95,14 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
             )}
           </Link>
 
-          <div className="flex items-center gap-4 w-full md:w-auto mt-2 md:mt-0">
-            <form action="/track" className="flex relative group w-full md:w-auto shadow-lg hover:shadow-xl transition-shadow rounded-full font-sans">
-              <input
-                type="text"
-                name="account"
-                required
-                placeholder="Захиалгаа шалгах (данс: 500..)"
-                className="w-full md:w-80 lg:w-96 bg-white border-2 border-transparent text-slate-800 px-6 py-3.5 rounded-full focus:outline-none focus:border-indigo-300 focus:ring-4 focus:ring-indigo-300/30 transition-all placeholder:text-slate-400 font-medium"
-              />
-              <button type="submit" className="absolute right-1.5 top-1.5 bottom-1.5 bg-gradient-to-r from-indigo-600 to-[#3c27c4] text-white px-7 rounded-full text-sm font-bold hover:shadow-md hover:scale-[1.02] active:scale-95 transition-all">
-                Шалгах
-              </button>
-            </form>
+          <div className="flex items-center gap-4 mt-2 md:mt-0">
+            <Link 
+              href="/track" 
+              className="bg-white/10 hover:bg-white/20 border border-white/20 text-white px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm backdrop-blur-sm flex items-center gap-2 group-hover:bg-white/10"
+            >
+              <Search className="w-4 h-4" />
+              Захиалга шалгах
+            </Link>
           </div>
         </div>
       </header>
@@ -109,14 +113,19 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
       </main>
 
       {/* Global FAB Cart Icon */}
-      <CartIcon />
+      <div className="hidden md:block">
+        <CartIcon />
+      </div>
+
+      <MobileBottomNav />
 
       {/* Global Analytics & Social Proof */}
       <VisitorTracker />
       <SocialProofToast />
+      <ChatbotWidget faqs={faqs} />
 
       {/* Modern Premium Footer */}
-      <footer className="bg-[#1c1642] text-slate-300 pt-16 pb-8 px-4 md:px-8 lg:px-16 mt-auto">
+      <footer className="bg-[#1c1642] text-slate-300 pt-16 pb-24 md:pb-8 px-4 md:px-8 lg:px-16 mt-auto">
         <div className="max-w-6xl mx-auto">
           {/* Top border decor */}
           <div className="h-1 w-20 bg-gradient-to-r from-[#4e3dc7] to-indigo-400 rounded-full mb-12"></div>

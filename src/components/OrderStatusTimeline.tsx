@@ -41,17 +41,29 @@ export function OrderStatusTimeline({ status, isFinal, deliveryScheduleDays = "3
 
   // Check if current step is "Улаанбаатарт ирсэн" (index 3) and not final
   const showDeliveryNotice = !isRejected && currentStepIndex === 3 && !isFinal;
+  const showInTransitNotice = !isRejected && currentStepIndex === 2 && !isFinal;
 
   return (
-    <div className="w-full py-6">
-      <div className="relative flex justify-between max-w-4xl mx-auto">
-        {/* Progress Line */}
-        <div className="absolute top-5 left-0 w-full h-[2px] -translate-y-1/2 z-0 rounded-full bg-slate-100" />
+    <div className="w-full py-2 sm:py-6 pl-2 sm:pl-0">
+      <div className="relative flex flex-col sm:flex-row justify-between max-w-4xl mx-auto gap-8 sm:gap-0">
+        {/* Progress Line (Mobile) */}
+        <div className="absolute left-5 top-0 w-[2px] h-full -translate-x-1/2 z-0 rounded-full bg-slate-100 sm:hidden" />
+        {/* Progress Line (Desktop) */}
+        <div className="absolute top-5 left-0 w-full h-[2px] -translate-y-1/2 z-0 rounded-full bg-slate-100 hidden sm:block" />
+        
         {!isRejected && (
-          <div 
-            className="absolute top-5 left-0 h-[2px] bg-indigo-600 -translate-y-1/2 z-0 transition-all duration-700 ease-in-out rounded-full shadow-[0_0_8px_rgba(79,70,229,0.2)]" 
-            style={{ width: `${progressWidth}%` }}
-          />
+          <>
+            {/* Active Line (Mobile) */}
+            <div 
+              className="absolute left-5 top-0 w-[2px] bg-indigo-600 -translate-x-1/2 z-0 transition-all duration-700 ease-in-out rounded-full shadow-[0_0_8px_rgba(79,70,229,0.2)] sm:hidden" 
+              style={{ height: `${progressWidth}%` }}
+            />
+            {/* Active Line (Desktop) */}
+            <div 
+              className="absolute top-5 left-0 h-[2px] bg-indigo-600 -translate-y-1/2 z-0 transition-all duration-700 ease-in-out rounded-full shadow-[0_0_8px_rgba(79,70,229,0.2)] hidden sm:block" 
+              style={{ width: `${progressWidth}%` }}
+            />
+          </>
         )}
 
         {steps.map((step, index) => {
@@ -63,7 +75,7 @@ export function OrderStatusTimeline({ status, isFinal, deliveryScheduleDays = "3
 
           return (
             <div key={`${step.name}-${index}`} className={cn(
-              "relative z-10 flex flex-col items-center group transition-all duration-500",
+              "relative z-10 flex flex-row sm:flex-col items-center group transition-all duration-500",
               isRejected && index > 0 && "opacity-30"
             )}>
               <div 
@@ -79,7 +91,7 @@ export function OrderStatusTimeline({ status, isFinal, deliveryScheduleDays = "3
               </div>
               <span 
                 className={cn(
-                  "absolute -bottom-8 whitespace-nowrap text-[10px] font-bold transition-all duration-500 tracking-wider uppercase",
+                  "ml-4 sm:ml-0 sm:absolute sm:-bottom-8 sm:whitespace-nowrap text-[11px] sm:text-[10px] font-bold transition-all duration-500 tracking-wider uppercase",
                   showRejectedAtThisStep ? "text-red-600" :
                   isCurrent ? "text-indigo-700 font-extrabold" : 
                   isCompleted ? (isFinal && index === currentStepIndex ? "text-indigo-600" : "text-slate-500") : 
@@ -103,6 +115,19 @@ export function OrderStatusTimeline({ status, isFinal, deliveryScheduleDays = "3
             <p className="text-[11px] text-emerald-700 leading-relaxed">
               <strong>Хүргэлт захиалах боломжтой.</strong>{" "}
               Хүргэлт <strong>{deliveryScheduleDays.split(",").map(Number).map(d => DAY_NAMES[d]).filter(Boolean).join(", ")}</strong> гарагуудад гарна. Товлосон өдрөөс <strong>24–72 цаг</strong>ийн дотор хүргэгдэнэ.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {showInTransitNotice && (
+        <div className="mt-12 mx-auto max-w-md">
+          <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5 flex items-center gap-2.5 shadow-sm animate-in fade-in zoom-in duration-500">
+            <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+              <Truck className="w-3.5 h-3.5 text-blue-600" />
+            </div>
+            <p className="text-[11px] text-blue-800 leading-relaxed">
+              <strong>Ойролцоох хугацаа:</strong> Бараа Солонгосоос хөдөлсөн бөгөөд хэвийн нөхцөлд <strong>7-10 хоногийн</strong> дараа Улаанбаатарт ирдэг.
             </p>
           </div>
         </div>

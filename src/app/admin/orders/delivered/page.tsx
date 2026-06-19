@@ -6,10 +6,13 @@ import { PackageCheck, Package, Truck, User } from "lucide-react"
 
 export const dynamic = "force-dynamic"
 
-export default async function DeliveredOrdersPage({ searchParams }: { searchParams: Promise<{ days?: string, q?: string }> }) {
+export default async function DeliveredOrdersPage({ searchParams }: { searchParams: Promise<{ days?: string, q?: string, page?: string }> }) {
   const p = await searchParams;
   const days = p.days ? parseInt(p.days, 10) : 30;
   const q = p.q?.toLowerCase() || "";
+  const page = p.page ? parseInt(p.page, 10) : 1;
+  const itemsPerPage = 50;
+
   const { orders } = await getDeliveredOrders(days)
 
   let filteredOrders = orders || []
@@ -32,7 +35,25 @@ export default async function DeliveredOrdersPage({ searchParams }: { searchPara
     if (!grouped[key]) grouped[key] = []
     grouped[key].push(order)
   }
-  const groups = Object.values(grouped)
+  // Filter groups: only keep those that are REALLY delivered (not picked up)
+  // We check if at least one order in the group wants delivery or has a valid delivery address
+  const rawGroups = Object.values(grouped)
+  const allGroups = rawGroups.filter((groupOrders: any[]) => {
+    const wantsDelivery = groupOrders.some((o: any) => o.wantsDelivery)
+    const hasValidAddress = groupOrders.some((o: any) => {
+      const addr = o.deliveryAddress?.trim() || "";
+      return addr && addr !== "Өөрөө ирж авна" && addr !== "Өөрөө авна" && addr !== "Дэлгүүрээс авна";
+    });
+    // Also, if the status is explicitly "Өөрөө ирж авсан" for ALL items and no address, it's picked up.
+    const isAllPickedUpStatus = groupOrders.every((o: any) => o.status?.name === "Өөрөө ирж авсан");
+    
+    if (isAllPickedUpStatus && !wantsDelivery && !hasValidAddress) return false;
+    
+    return wantsDelivery || hasValidAddress || !isAllPickedUpStatus;
+  });
+
+  const totalPages = Math.ceil(allGroups.length / itemsPerPage);
+  const groups = allGroups.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto mt-4">
@@ -43,7 +64,7 @@ export default async function DeliveredOrdersPage({ searchParams }: { searchPara
             Хүргэлтээр авсан захиалга
           </h1>
           <p className="text-slate-500 text-sm mt-1">
-            Нийт <strong>{filteredOrders.length}</strong> ширхэг бараа — <strong>{groups.length}</strong> багц
+            Нийт <strong>{filteredOrders.length}</strong> ширхэг бараа — <strong>{allGroups.length}</strong> багц
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -52,7 +73,7 @@ export default async function DeliveredOrdersPage({ searchParams }: { searchPara
         </div>
       </div>
 
-      {groups.length === 0 ? (
+      {allGroups.length === 0 ? (
         <div className="bg-white rounded-xl border p-12 text-center shadow-sm">
           <Package className="w-10 h-10 text-slate-300 mx-auto mb-3" />
           <p className="text-slate-500 font-medium">Одоогоор хүргэлтээр олгосон захиалга байхгүй.</p>
@@ -63,7 +84,11 @@ export default async function DeliveredOrdersPage({ searchParams }: { searchPara
             const first = groupOrders[0]
             const totalAmount = groupOrders.reduce((s: number, o: any) => s + Number(o.totalAmount || 0), 0)
             const wantsDelivery = groupOrders.some((o: any) => o.wantsDelivery)
-            const deliveryAddress = groupOrders.find((o: any) => o.deliveryAddress)?.deliveryAddress
+            const deliveryAddressObj = groupOrders.find((o: any) => {
+              const addr = o.deliveryAddress?.trim() || "";
+              return addr && addr !== "Өөрөө ирж авна" && addr !== "Өөрөө авна" && addr !== "Дэлгүүрээс авна";
+            });
+            const deliveryAddress = deliveryAddressObj?.deliveryAddress;
 
             return (
               <div key={first.transactionRef || first.id}
@@ -154,6 +179,22 @@ export default async function DeliveredOrdersPage({ searchParams }: { searchPara
               </div>
             )
           })}
+
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center gap-2 mt-8">
+              <a href={`?days=${days}&q=${q}&page=${page > 1 ? page - 1 : 1}`}
+                className={`px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${page <= 1 ? "opacity-50 pointer-events-none bg-slate-50" : "hover:bg-slate-50 bg-white"}`}>
+                Өмнөх
+              </a>
+              <span className="text-sm font-medium text-slate-600 px-4">
+                Хуудас {page} / {totalPages}
+              </span>
+              <a href={`?days=${days}&q=${q}&page=${page < totalPages ? page + 1 : totalPages}`}
+                className={`px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${page >= totalPages ? "opacity-50 pointer-events-none bg-slate-50" : "hover:bg-slate-50 bg-white"}`}>
+                Дараах
+              </a>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -2,6 +2,7 @@ import { getActiveProducts } from "@/app/actions/product-actions"
 import { HeroSection } from "@/components/storefront/home/HeroSection"
 import { HowItWorks } from "@/components/storefront/home/HowItWorks"
 import { ActiveBatchesList } from "@/components/storefront/home/ActiveBatchesList"
+import { ScrollRestorationClient } from "@/components/storefront/layout/ScrollRestorationClient"
 import { LiveTicker } from "@/components/storefront/home/LiveTicker"
 
 export const dynamic = "force-dynamic"
@@ -11,6 +12,7 @@ export default async function StorefrontHomePage() {
 
   return (
     <div className="bg-white min-h-screen">
+      <ScrollRestorationClient scrollKey="home" />
       <HeroSection />
       {/* Active Ready Stock */}
       <ActiveBatchesList 

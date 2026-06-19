@@ -135,6 +135,9 @@ model Order {
   @@index([updatedAt])
   @@index([customerPhone])
   @@index([transactionRef])
+  @@index([createdAt])
+  @@index([accountNumber])
+  @@index([statusId])
 }
 
 model ShopSettings {

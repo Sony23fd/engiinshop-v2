@@ -9,7 +9,7 @@ export function CartIcon() {
   return (
     <Link 
       href="/cart" 
-      className={`fixed bottom-6 right-6 md:bottom-8 md:right-10 z-50 flex items-center justify-center p-4 rounded-full shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 border-2 ${
+      className={`fixed bottom-6 right-6 md:bottom-24 md:right-6 z-50 flex items-center justify-center p-4 rounded-full shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 border-2 ${
         totalCount > 0 
           ? "bg-[#4e3dc7] border-indigo-400 text-white shadow-[#4e3dc7]/40 ring-4 ring-[#4e3dc7]/20" 
           : "bg-white border-slate-200 text-slate-700 hover:border-[#4e3dc7]/50 hover:text-[#4e3dc7]"

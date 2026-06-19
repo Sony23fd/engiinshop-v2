@@ -1,6 +1,6 @@
 import { getOrdersByTransactionRef, getShopSettings } from "@/app/actions/settings-actions"
 import { getQPayInvoiceForOrder } from "@/app/actions/order-actions"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import { Clock, CreditCard, CheckCircle2, AlertCircle } from "lucide-react"
 import { CopyButton } from "../../[orderId]/CopyButton"
 import { QRCodeSVG } from "qrcode.react"
@@ -17,6 +17,10 @@ export default async function OrderPendingByRefPage({ params }: { params: Promis
   ])
 
   if (!success || !orders?.length) notFound()
+
+  if (settings.qpay_enabled !== "true") {
+    redirect(`/order-manual/ref/${transactionRef}`)
+  }
 
   const allConfirmed = orders.every((o: any) => o.paymentStatus === "CONFIRMED")
   const anyRejected = orders.some((o: any) => o.paymentStatus === "REJECTED")

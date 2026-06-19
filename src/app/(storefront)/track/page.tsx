@@ -1,5 +1,6 @@
 import { getOrdersByAccount } from "@/app/actions/order-actions"
 import { getShopSettings } from "@/app/actions/settings-actions"
+import Image from "next/image"
 import { 
   CheckCircle2, 
   Truck, 
@@ -9,10 +10,13 @@ import {
   XCircle, 
   Search, 
   History,
-  AlertTriangle
+  AlertTriangle,
+  Phone,
+  Home
 } from "lucide-react"
 import DeliveryRequestButton from "./DeliveryRequestButton"
 import { OrderStatusTimeline } from "@/components/OrderStatusTimeline"
+import { RefreshButton } from "@/components/storefront/track/RefreshButton"
 
 export const dynamic = "force-dynamic"
 
@@ -66,25 +70,85 @@ export default async function TrackOrderPage({
       )}
 
       {!account ? (
-        <div className="py-20 text-center">
-          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mx-auto mb-4">
-            <Search className="w-8 h-8" />
+        <div className="py-8 max-w-2xl mx-auto">
+          <div className="bg-white rounded-3xl p-8 md:p-12 shadow-xl border border-indigo-50 text-center">
+            <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-500 mx-auto mb-6 shadow-inner">
+              <Search className="w-10 h-10" />
+            </div>
+            <h2 className="text-3xl font-extrabold text-slate-900 mb-4 tracking-tight">Захиалгаа шалгах</h2>
+            <p className="text-slate-600 mb-8 text-lg leading-relaxed">
+              Та захиалга хийх үед бүртгүүлсэн <strong className="text-indigo-600">утасны дугаар</strong>, гүйлгээний утга дээр бичсэн <strong className="text-indigo-600">дансны дугаар</strong> эсвэл захиалгын <strong className="text-indigo-600">линкээ</strong> оруулан захиалгынхаа төлөвийг шалгах боломжтой.
+            </p>
+
+            <form action="/track" className="flex flex-col sm:flex-row relative group w-full gap-3 shadow-sm rounded-2xl">
+              <input
+                type="text"
+                name="account"
+                required
+                placeholder="Утасны дугаар, данс, линк..."
+                className="w-full bg-slate-50 border-2 border-slate-200 text-slate-800 px-6 py-4 rounded-xl focus:outline-none focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-400/20 transition-all placeholder:text-slate-400 font-medium text-lg"
+              />
+              <button type="submit" className="bg-gradient-to-r from-indigo-600 to-[#3c27c4] text-white px-8 py-4 rounded-xl text-lg font-bold hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2">
+                <Search className="w-5 h-5" />
+                Шалгах
+              </button>
+            </form>
+
+            <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-6 text-left">
+              <div className="flex flex-col gap-2">
+                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 mb-1">
+                  <Phone className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-slate-800">Утасны дугаар</h3>
+                <p className="text-sm text-slate-500 leading-relaxed">Захиалга өгөхдөө ашигласан утасны дугаараа оруулах</p>
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 mb-1">
+                  <History className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-slate-800">Дансны дугаар</h3>
+                <p className="text-sm text-slate-500 leading-relaxed">Төлбөр шилжүүлэх үедээ гүйлгээний утга дээр бичсэн дугаар</p>
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center text-purple-600 mb-1">
+                  <Package className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-slate-800">Захиалгын линк</h3>
+                <p className="text-sm text-slate-500 leading-relaxed">Танд очсон захиалгын баталгаажих линкийг хуулж тавих</p>
+              </div>
+            </div>
           </div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">Хайлт хийгдсэнгүй</h2>
-          <p className="text-slate-500">Та дээрх хайлтын хэсэгт дансны дугаараа оруулан хайна уу.</p>
         </div>
       ) : (
         <>
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold text-slate-900 leading-tight">
-              Хайлтын үр дүн: <span className="text-[#4F46E5]">{account}</span>
-            </h1>
-            <p className="text-slate-500 mt-1 font-medium italic">Нийт захиалга: {totalOrders}</p>
+          <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900 leading-tight">
+                Хайлтын үр дүн: <span className="text-[#4F46E5]">{account}</span>
+              </h1>
+              <p className="text-slate-500 mt-1 font-medium italic">Нийт захиалга: {totalOrders}</p>
+            </div>
+            <RefreshButton />
           </div>
 
           {!success || totalOrders === 0 ? (
-            <div className="bg-white rounded-xl border border-dashed p-12 text-center text-slate-500 font-medium">
-              Энэ дансны дугаар дээр бүртгэлтэй захиалга олдсонгүй.
+            <div className="bg-white rounded-2xl border border-slate-200 p-8 md:p-12 text-center max-w-2xl mx-auto shadow-sm">
+              <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 mx-auto mb-4">
+                <Search className="w-8 h-8" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 mb-2">Захиалга олдсонгүй</h3>
+              <p className="text-slate-500 mb-6">
+                <strong>{account}</strong> гэсэн утгаар хайхад ямар ч захиалга олдсонгүй. Та дараах шалтгаануудыг шалгаад дахин оролдоно уу:
+              </p>
+              <ul className="text-left bg-slate-50 border border-slate-100 rounded-xl p-5 space-y-3 text-sm text-slate-700 mx-auto max-w-md inline-block">
+                <li className="flex gap-2 items-start"><AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" /> Захиалга өгөхдөө өөр утасны дугаар ашигласан байх.</li>
+                <li className="flex gap-2 items-start"><AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" /> Төлбөр шилжүүлэхдээ гүйлгээний утгаа буруу бичсэн эсвэл мартсан байх.</li>
+                <li className="flex gap-2 items-start"><AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" /> Системд захиалга тань бүртгэгдэж амжаагүй байж болзошгүй (10-20 минут хүлээнэ үү).</li>
+              </ul>
+              <div className="mt-8 flex justify-center gap-3">
+                <a href="/track" className="bg-slate-100 text-slate-700 px-6 py-2.5 rounded-lg font-bold hover:bg-slate-200 transition-colors">Дахин хайх</a>
+                <a href={settings.facebook_link || "https://facebook.com"} target="_blank" className="bg-[#4F46E5] text-white px-6 py-2.5 rounded-lg font-bold hover:bg-[#4338ca] transition-colors">Админтай холбогдох</a>
+              </div>
             </div>
           ) : (
             <div className="space-y-12">
@@ -95,7 +159,7 @@ export default async function TrackOrderPage({
                 </h2>
                 {activeGroups.length > 0 ? (
                   <div className="space-y-6">
-                    <UnifiedDeliverySection groups={activeGroups} deliveryScheduleDays={settings.delivery_schedule_days || "3,6"} />
+                    <UnifiedDeliverySection groups={activeGroups} settings={settings} />
                     {activeGroups.map((groupOrders) => (
                       <OrderGroup key={groupOrders[0].transactionRef || groupOrders[0].id} orders={groupOrders} deliveryScheduleDays={settings.delivery_schedule_days || "3,6"} />
                     ))}
@@ -128,7 +192,8 @@ export default async function TrackOrderPage({
   )
 }
 
-function UnifiedDeliverySection({ groups, deliveryScheduleDays = "3,6" }: { groups: any[][], deliveryScheduleDays?: string }) {
+function UnifiedDeliverySection({ groups, settings }: { groups: any[][], settings: any }) {
+  const deliveryScheduleDays = settings.delivery_schedule_days || "3,6"
   const allOrders = groups.flat()
   const alreadyDelivered = allOrders.filter((o: any) => o.wantsDelivery)
   const deliveryAddress = alreadyDelivered.find((o: any) => o.deliveryAddress)?.deliveryAddress
@@ -167,10 +232,32 @@ function UnifiedDeliverySection({ groups, deliveryScheduleDays = "3,6" }: { grou
             🚚 <strong>{eligibleForDelivery.length}</strong> бараа хүргэлтэд бэлэн байна.
           </p>
           <DeliveryRequestButton orderIds={eligibleForDelivery.map((o: any) => o.id)} deliveryScheduleDays={deliveryScheduleDays} />
+          
+          <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
+            <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+              <Home className="w-4 h-4 text-indigo-500" /> Дэлгүүрээс өөрөө ирж авах бол
+            </h4>
+            <div className="text-xs text-slate-600 space-y-1.5 bg-slate-50 p-3 rounded-lg border border-slate-100">
+              <p><strong>Хаяг:</strong> {settings.store_address || "Дэлгүүрийн хаяг тохируулаагүй байна."}</p>
+              <p><strong>Цагийн хуваарь:</strong> {settings.store_hours || "Даваа - Баасан: 10:00 - 18:00"}</p>
+              <p><strong>Утас:</strong> {settings.store_phone || ""}</p>
+            </div>
+          </div>
+
           {hasMixedDeliverable && (
-            <div className="mt-2 bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800 leading-relaxed font-medium">
-              ⚠️ <strong className="text-amber-900">Анхаарах:</strong> Танд ирээгүй <strong>{notYetDeliverable.length}</strong> бараа байна. 
-              Та ирсэн барааг нь одоо салгаж хүргүүлэх бол, дараа нь үлдсэн барааг хүргэхэд <strong>ДАХИН хүргэлтийн төлбөр төлнө</strong> гэдгийг анхаарна уу!
+            <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm leading-relaxed">
+              <div className="flex gap-2 font-bold text-amber-900 mb-2">
+                <AlertTriangle className="w-5 h-5 shrink-0" />
+                <p>Танд ирээгүй {notYetDeliverable.length} бараа байна!</p>
+              </div>
+              <p className="text-amber-800 font-medium mb-3">Хэрэв та одоо ирсэн барааг салгаж хүргүүлэх бол:</p>
+              <ul className="space-y-2 text-amber-700 mb-4">
+                <li className="flex gap-2"><CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" /> Үлдсэн барааг ирэхэд <strong>дахин хүргэлтийн төлбөр гарна.</strong></li>
+                <li className="flex gap-2"><CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" /> Дээрх товч дээр дараад зөвхөн одоо ирсэн барааны хүргэлтийг баталгаажуулна.</li>
+              </ul>
+              <p className="text-amber-800 font-medium border-t border-amber-200/60 pt-3">
+                Хэрэв та үлдсэн бараагаа хүлээгээд <strong>бөөнөөр нь 1 удаагийн төлбөрөөр</strong> хүргүүлэх бол одоо хүргэлтээ баталгаажуулах шаардлагагүй (зүгээр л хүлээнэ үү).
+              </p>
             </div>
           )}
         </div>
@@ -259,14 +346,23 @@ function OrderGroup({ orders, completed = false, deliveryScheduleDays = "3,6" }:
         />
       </div>
 
-      <div className="divide-y divide-slate-50 text-left">
+      <div className="divide-y divide-slate-100 text-left">
         {orders.map((order: any) => {
           const isCancelled = order.status?.name === "Цуцлагдсан" || order.paymentStatus === "REJECTED";
           const isPending = !isCancelled && !order.status?.isDeliverable && !order.status?.isFinal;
           
           return (
-            <div key={order.id} className={`px-5 py-3.5 flex items-center justify-between gap-4 transition-colors ${order.wantsDelivery && !isCancelled && !completed ? "bg-emerald-50/20" : "hover:bg-slate-50/50"} ${isPending || isCancelled || completed ? "opacity-75" : ""}`}>
+            <div key={order.id} className={`px-5 py-4 flex items-center justify-between gap-4 transition-colors ${order.wantsDelivery && !isCancelled && !completed ? "bg-emerald-50/20" : "hover:bg-slate-50/50"} ${isPending || isCancelled || completed ? "opacity-75" : ""}`}>
               <div className="flex items-center gap-3 flex-1 min-w-0">
+                {order.batch?.product?.imageUrl ? (
+                  <div className="w-10 h-10 rounded-lg bg-slate-100 shrink-0 overflow-hidden relative border border-slate-200">
+                    <Image src={order.batch.product.imageUrl} alt={order.batch.product.name || "Бараа"} fill className="object-cover" sizes="40px" />
+                  </div>
+                ) : (
+                  <div className="w-10 h-10 rounded-lg bg-slate-100 shrink-0 flex items-center justify-center text-slate-400 border border-slate-200">
+                    <Package className="w-5 h-5" />
+                  </div>
+                )}
                 <div className="min-w-0">
                   <p className={`font-bold text-sm truncate ${isCancelled || completed ? "text-slate-400 font-bold" : isPending ? "text-slate-500" : "text-slate-800"}`}>
                     {order.batch?.product?.name}

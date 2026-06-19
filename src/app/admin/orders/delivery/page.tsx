@@ -9,11 +9,13 @@ export const dynamic = "force-dynamic"
 export default async function DeliveryQueuePage({
   searchParams,
 }: {
-  searchParams: Promise<{ date?: string, q?: string }>
+  searchParams: Promise<{ date?: string, q?: string, page?: string }>
 }) {
   const resolvedParams = await searchParams
   const dateFilter = resolvedParams.date
   const q = resolvedParams.q?.toLowerCase() || ""
+  const page = resolvedParams.page ? parseInt(resolvedParams.page, 10) : 1
+  const itemsPerPage = 50
 
   const { orders } = await getDeliveryOrders(dateFilter)
   
@@ -37,7 +39,9 @@ export default async function DeliveryQueuePage({
     if (!grouped[key]) grouped[key] = []
     grouped[key].push(order)
   }
-  const groups = Object.values(grouped)
+  const allGroups = Object.values(grouped)
+  const totalPages = Math.ceil(allGroups.length / itemsPerPage);
+  const groups = allGroups.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto mt-4">
@@ -48,7 +52,7 @@ export default async function DeliveryQueuePage({
             Хүргэлтийн захиалгууд
           </h1>
           <p className="text-slate-500 text-sm mt-1">
-            {dateFilter ? <strong>{dateFilter}</strong> : "Нийт"} өдөрт хүргэлт шаардлагатай <strong>{orders?.length || 0}</strong> ширхэг бараа — <strong>{groups.length}</strong> багц
+            {dateFilter ? <strong>{dateFilter}</strong> : "Нийт"} өдөрт хүргэлт шаардлагатай <strong>{orders?.length || 0}</strong> ширхэг бараа — <strong>{allGroups.length}</strong> багц
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -67,6 +71,22 @@ export default async function DeliveryQueuePage({
           {groups.map((groupOrders) => {
             return <DeliveryGroupCard key={groupOrders[0].customerPhone || groupOrders[0].id} groupOrders={groupOrders} />
           })}
+
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center gap-2 mt-8">
+              <a href={`?date=${dateFilter || ""}&q=${q}&page=${page > 1 ? page - 1 : 1}`}
+                className={`px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${page <= 1 ? "opacity-50 pointer-events-none bg-slate-50" : "hover:bg-slate-50 bg-white"}`}>
+                Өмнөх
+              </a>
+              <span className="text-sm font-medium text-slate-600 px-4">
+                Хуудас {page} / {totalPages}
+              </span>
+              <a href={`?date=${dateFilter || ""}&q=${q}&page=${page < totalPages ? page + 1 : totalPages}`}
+                className={`px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${page >= totalPages ? "opacity-50 pointer-events-none bg-slate-50" : "hover:bg-slate-50 bg-white"}`}>
+                Дараах
+              </a>
+            </div>
+          )}
         </div>
       )}
     </div>

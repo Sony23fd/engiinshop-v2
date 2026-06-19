@@ -26,10 +26,16 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
   const [phoneError, setPhoneError] = useState<string | null>(null)
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [selectedDeliveryDate, setSelectedDeliveryDate] = useState<string | null>(null)
+  const [formattedPhone, setFormattedPhone] = useState("")
 
-  function validatePhone(value: string) {
-    const digits = value.replace(/\D/g, "")
-    setPhoneError(digits.length !== 8 ? "Утасны дугаар заавал 8 оронтой байх ёстой" : null)
+  function handlePhoneChange(value: string) {
+    const digits = value.replace(/\D/g, "").slice(0, 8)
+    let formatted = digits
+    if (digits.length > 4) {
+      formatted = `${digits.slice(0, 4)}-${digits.slice(4)}`
+    }
+    setFormattedPhone(formatted)
+    setPhoneError(digits.length > 0 && digits.length !== 8 ? "Утасны дугаар 8 оронтой байх ёстой" : null)
   }
 
   const hasPreOrder = items.some(i => i.isPreOrder)
@@ -77,7 +83,7 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
     setError(null)
     try {
       const customerName = formData.get("customerName") as string
-      const phoneNumber = formData.get("phoneNumber") as string
+      const phoneNumber = formattedPhone.replace(/\D/g, "")
       const accountNumber = formData.get("accountNumber") as string
       const deliveryAddress = formData.get("deliveryAddress") as string
 
@@ -224,10 +230,11 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
                 type="tel"
                 inputMode="numeric"
                 required
-                maxLength={8}
-                placeholder="Утасны дугаар"
-                onChange={e => validatePhone(e.target.value)}
-                className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${phoneError ? "border-red-400 focus:ring-red-300" : "focus:ring-indigo-300"}`}
+                maxLength={9} // 8 digits + 1 dash
+                placeholder="9999-9999"
+                value={formattedPhone}
+                onChange={e => handlePhoneChange(e.target.value)}
+                className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${phoneError ? "border-red-400 focus:ring-red-300 bg-red-50/50" : "focus:ring-indigo-300"}`}
               />
               {phoneError && (
                 <p className="text-xs text-red-500 flex items-center gap-1">
@@ -296,11 +303,11 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
                     <div className="flex gap-2 items-start text-amber-800">
                       <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
                       <p className="text-xs font-semibold leading-relaxed">
-                        Сагсанд урьдчилсан захиалгын бараа орсон тул хүргэлтийн товч хаагдлаа.
+                        Сагсанд урьдчилсан захиалгын бараа орсон тул шууд хүргэлт тохируулах боломжгүй.
                       </p>
                     </div>
                     <p className="text-xs text-amber-700 ml-7 leading-relaxed">
-                      Урьдчилан захиалсан барааг Монголд ирсний дараа хүргэлтийг шийдэх бөгөөд бэлэн бараагаа яг одоо хүргүүлэх бол <b>урьдчилсан захиалгаа сагснаасаа устгаж тусад нь захиална уу!</b>
+                      Урьдчилан захиалсан бараа Монголд ирсний дараа хүргэлтийг шийдэх бөгөөд бэлэн бараагаа <b>яг одоо хүргүүлэх бол урьдчилсан захиалгаа сагснаасаа устгаж тусад нь салгаж захиална уу!</b>
                     </p>
                   </div>
                 ) : (
@@ -346,19 +353,26 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
             )}
 
             {/* Price Summary */}
-            <div className="border-t pt-4 space-y-1.5">
-              <div className="flex justify-between text-sm text-slate-500">
-                <span>Барааны нийт</span>
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-4 space-y-2.5">
+              <h3 className="font-bold text-slate-800 text-sm border-b border-slate-200/60 pb-2 mb-2">Төлбөрийн мэдээлэл</h3>
+              <div className="flex justify-between text-sm text-slate-600 font-medium">
+                <span>Барааны нийт үнэ ({items.length}ш)</span>
                 <span>₮{totalPrice.toLocaleString()}</span>
               </div>
               {wantsDelivery && !hasPreOrder && singleDeliveryFee > 0 && (
-                <div className="flex justify-between text-sm text-slate-500">
-                  <span>Хүргэлт <span className="text-xs text-slate-400">(1 удаа)</span></span>
+                <div className="flex justify-between text-sm text-slate-600 font-medium">
+                  <span>Хүргэлтийн төлбөр</span>
                   <span>+₮{singleDeliveryFee.toLocaleString()}</span>
                 </div>
               )}
-              <div className="flex justify-between font-bold text-slate-900 text-base pt-1">
-                <span>Нийт төлөх</span>
+              {wantsDelivery && !hasPreOrder && singleDeliveryFee === 0 && (
+                <div className="flex justify-between text-sm text-slate-600 font-medium">
+                  <span>Хүргэлтийн төлбөр</span>
+                  <span className="text-green-600">Үнэгүй</span>
+                </div>
+              )}
+              <div className="flex justify-between font-black text-slate-900 text-lg pt-3 border-t border-slate-200/60 mt-2">
+                <span>Нийт төлөх:</span>
                 <span className="text-indigo-600">₮{grandTotal.toLocaleString()}</span>
               </div>
             </div>
@@ -368,6 +382,15 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
                 <AlertCircle className="w-4 h-4 shrink-0" />{error}
               </div>
             )}
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2.5">
+              <p className="text-xs text-blue-800 font-bold uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                <Info className="w-4 h-4" /> Чухал анхааруулга
+              </p>
+              <p className="text-xs text-blue-700 leading-relaxed">
+                Та дараагийн хуудсанд гарах <strong>ГҮЙЛГЭЭНИЙ УТГЫГ</strong> банкныхаа шилжүүлэг хийхдээ заавал хуулж тавина уу. Энэ нь таны төлбөрийг автоматаар баталгаажуулах цор ганц арга юм!
+              </p>
+            </div>
 
             <button
               type="submit"

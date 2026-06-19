@@ -33,11 +33,11 @@ export function AddToCartButton({ batchId, name, imageUrl, unitPrice, deliveryFe
       }`}
     >
       {added ? (
-        <><Check className="w-4 h-4" /> Нэмэгдлээ!</>
+        <><Check className="w-4 h-4" /> <span className="hidden sm:inline">Нэмэгдлээ!</span><span className="sm:hidden">Боллоо!</span></>
       ) : inCart ? (
-        <><ShoppingCart className="w-4 h-4" /> Сагсанд байна</>
+        <><ShoppingCart className="w-4 h-4" /> <span className="hidden sm:inline">Сагсанд байна</span><span className="sm:hidden">Сагсанд</span></>
       ) : (
-        <><ShoppingCart className="w-4 h-4" /> Сагсанд нэмэх</>
+        <><ShoppingCart className="w-4 h-4" /> <span className="hidden sm:inline">Сагсанд нэмэх</span><span className="sm:hidden">Сагслах</span></>
       )}
     </button>
   )

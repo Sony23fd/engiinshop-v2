@@ -35,8 +35,8 @@ export function ActiveBatchesList({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {batches.map((batch: any) => {
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
+          {batches.map((batch: any, index: number) => {
             const progress = batch.targetQuantity > 0 
               ? Math.min(100, Math.max(0, ((batch.targetQuantity - batch.remainingQuantity) / batch.targetQuantity) * 100))
               : 0;
@@ -45,7 +45,7 @@ export function ActiveBatchesList({
             const showQty = !batch.isPreOrder || batch.remainingQuantity > 0;
 
             return (
-              <div key={batch.id} className="bg-white rounded-2xl p-4 flex flex-col group border border-slate-200/60 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+              <div key={batch.id} className="bg-white rounded-2xl p-3 sm:p-4 flex flex-col group border border-slate-200/60 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                 <Link href={`/product/${batch.id}`} className="block relative bg-slate-100 rounded-xl overflow-hidden aspect-square mb-4">
                   {batch.product?.videoUrl ? (
                     <video
@@ -61,6 +61,7 @@ export function ActiveBatchesList({
                       src={batch.product.imageUrl}
                       alt={batch.product.name || "Бараа"}
                       fill
+                      priority={theme === "ready" && index < 4}
                       className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                     />
@@ -69,12 +70,13 @@ export function ActiveBatchesList({
                   )}
                   {/* Urgency Badge */}
                   {batch.isPreOrder ? (
-                    <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-bold text-slate-800 flex items-center gap-1.5 shadow-sm border border-slate-200/50">
+                    <div className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-white/90 backdrop-blur-md px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold text-slate-800 flex items-center gap-1.5 shadow-sm border border-slate-200/50">
                       <Clock className="w-3.5 h-3.5 text-amber-500" />
-                      <span>Урьдчилсан захиалга</span>
+                      <span className="hidden sm:inline">Урьдчилсан захиалга</span>
+                      <span className="sm:hidden">Урьдчилсан</span>
                     </div>
                   ) : (
-                    <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-bold text-slate-800 flex items-center gap-1.5 shadow-sm border border-slate-200/50">
+                    <div className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-white/90 backdrop-blur-md px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold text-slate-800 flex items-center gap-1.5 shadow-sm border border-slate-200/50">
                       <Clock className="w-3.5 h-3.5 text-orange-500" />
                       <span>Нээлттэй</span>
                     </div>
@@ -83,7 +85,7 @@ export function ActiveBatchesList({
 
                 <div className="flex-1 flex flex-col gap-3">
                   <Link href={`/product/${batch.id}`}>
-                    <h3 className="font-semibold text-slate-900 leading-snug hover:text-[#4e3dc7] transition-colors line-clamp-2">
+                    <h3 className="font-semibold text-sm sm:text-base text-slate-900 leading-snug hover:text-[#4e3dc7] transition-colors line-clamp-2">
                       {batch.product?.name}
                     </h3>
                   </Link>
@@ -91,7 +93,7 @@ export function ActiveBatchesList({
                   <div className="mt-auto">
                     <div className="flex justify-between items-end mb-3">
                       <div>
-                        <p className="text-xl font-black text-slate-900 tracking-tight">
+                        <p className="text-base sm:text-xl font-black text-slate-900 tracking-tight">
                           ₮{(() => { const bp = parseFloat(String(batch.price ?? 0)); const pp = parseFloat(String(batch.product?.price ?? 0)); return (bp > 0 ? bp : pp).toLocaleString(); })()}
                         </p>
                         {Number(batch.deliveryFee) > 0 && (

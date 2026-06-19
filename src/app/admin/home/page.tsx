@@ -19,6 +19,8 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
   let completedOrdersCount = 0;
   let activeProductsCount = 0;
   let pendingRefundsCount = 0;
+  let pendingDeliveryCountVal = 0;
+  let unpickedCargoCountVal = 0;
   let revenueData: { date: string, amount: number }[] = [];
   let batchSales: { name: string, sales: number }[] = [];
   
@@ -50,6 +52,8 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       completedCount,
       activeCount,
       refundsCount,
+      pendingDeliveryCount,
+      unpickedCargoCount,
       analyticsResult
     ] = await Promise.all([
       db.order.aggregate({ where: validOrderFilter, _sum: { totalAmount: true } }),
@@ -62,6 +66,16 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       }),
       db.product.count({ where: { isActive: true } }),
       (db.order as any).count({ where: { status: { name: { contains: "Буцаагдсан" } }, isRefunded: false } }),
+      db.order.count({ 
+        where: { wantsDelivery: true, status: { isFinal: false }, paymentStatus: "CONFIRMED" } 
+      }),
+      db.order.count({
+        where: { 
+          wantsDelivery: false, 
+          status: { name: { in: ["Монголд ирсэн", "Карго ирсэн", "Ирсэн", "Бэлэн"] }, isFinal: false }, 
+          paymentStatus: "CONFIRMED" 
+        }
+      }),
       getAnalyticsSummary(days)
     ]);
 
@@ -70,6 +84,8 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     completedOrdersCount = completedCount;
     activeProductsCount = activeCount;
     pendingRefundsCount = refundsCount;
+    pendingDeliveryCountVal = pendingDeliveryCount;
+    unpickedCargoCountVal = unpickedCargoCount;
     analyticsStats = analyticsResult.success ? analyticsResult.stats : null;
 
     // Chart 1: Revenue last 7 days
@@ -152,6 +168,36 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           </div>
           <Link href="/admin/orders/refunds" className="text-xs font-bold bg-white text-rose-600 border border-rose-200 px-4 py-2 rounded-lg shadow-sm hover:shadow transition-all whitespace-nowrap">
             Яг одоо шалгах
+          </Link>
+        </div>
+      )}
+
+      {pendingDeliveryCountVal > 0 && (
+        <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex items-start sm:items-center justify-between gap-4 shadow-sm animate-in fade-in slide-in-from-top-4">
+          <div className="flex items-start gap-3">
+            <Package className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+            <div>
+              <h3 className="font-bold text-amber-800 text-sm">Сануулга: Хүргэлтийн хураамж шалгах</h3>
+              <p className="text-amber-700 text-sm mt-0.5">Хүргэлтийн хураамжаа төлсөн байж болзошгүй, хүргэлт хүссэн <strong>{pendingDeliveryCountVal}</strong> ширхэг захиалга байна. Төлбөр нь орсон эсэхийг шалгаж баталгаажуулаарай.</p>
+            </div>
+          </div>
+          <Link href="/admin/orders/delivery" className="text-xs font-bold bg-white text-amber-700 border border-amber-200 px-4 py-2 rounded-lg shadow-sm hover:shadow transition-all whitespace-nowrap">
+            Шалгах
+          </Link>
+        </div>
+      )}
+
+      {unpickedCargoCountVal > 0 && (
+        <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl flex items-start sm:items-center justify-between gap-4 shadow-sm animate-in fade-in slide-in-from-top-4">
+          <div className="flex items-start gap-3">
+            <ShoppingCart className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
+            <div>
+              <h3 className="font-bold text-blue-800 text-sm">Мэдэгдэл: Карго нь ирсэн ч аваагүй хүмүүс</h3>
+              <p className="text-blue-700 text-sm mt-0.5">Монголд ирсэн боловч очиж аваагүй эсвэл карго төлбөрөө төлөөгүй <strong>{unpickedCargoCountVal}</strong> ширхэг бараа байна.</p>
+            </div>
+          </div>
+          <Link href="/admin/orders/search" className="text-xs font-bold bg-white text-blue-700 border border-blue-200 px-4 py-2 rounded-lg shadow-sm hover:shadow transition-all whitespace-nowrap">
+            Хайх
           </Link>
         </div>
       )}

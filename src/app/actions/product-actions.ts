@@ -3,6 +3,7 @@
 import { db } from "@/lib/db"
 import { revalidatePath } from "next/cache"
 import { BatchStatus } from "@prisma/client"
+import { cache } from "react"
 
 export async function getProducts({ search, page = 1, limit = 20 }: { search?: string, page?: number, limit?: number } = {}) {
   try {
@@ -66,7 +67,7 @@ export async function getProducts({ search, page = 1, limit = 20 }: { search?: s
   }
 }
 
-export async function getActiveProducts() {
+export const getActiveProducts = cache(async () => {
   try {
     const batches = await db.batch.findMany({
       where: { 
@@ -84,7 +85,7 @@ export async function getActiveProducts() {
     console.error("Failed to fetch active batches:", error)
     return { success: false, error: "Failed to fetch active batches" }
   }
-}
+})
 
 export async function toggleBatchForSale(batchId: string, isAvailableForSale: boolean) {
   try {

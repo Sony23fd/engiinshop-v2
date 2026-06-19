@@ -3,6 +3,7 @@
 import { db } from "@/lib/db"
 import { revalidatePath } from "next/cache"
 import { getCurrentAdmin, logActivity } from "@/lib/auth"
+import { cache } from "react"
 
 const DEFAULT_SETTINGS: Record<string, string> = {
   bank_name: "Хаан Банк",
@@ -22,7 +23,7 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   delivery_schedule_days: "3,6"
 }
 
-export async function getShopSettings(): Promise<Record<string, string>> {
+export const getShopSettings = cache(async (): Promise<Record<string, string>> => {
   try {
     const rows = await (db as any).shopSettings.findMany()
     const map: Record<string, string> = { ...DEFAULT_SETTINGS }
@@ -31,7 +32,7 @@ export async function getShopSettings(): Promise<Record<string, string>> {
   } catch {
     return DEFAULT_SETTINGS
   }
-}
+})
 
 export async function saveShopSetting(key: string, value: string) {
   try {

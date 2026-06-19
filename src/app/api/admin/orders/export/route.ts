@@ -6,27 +6,42 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const batchId = searchParams.get("batchId")
+    const categoryId = searchParams.get("categoryId")
 
-    if (!batchId) {
-      return NextResponse.json({ error: "batchId шаардлагатай" }, { status: 400 })
+    if (!batchId && !categoryId) {
+      return NextResponse.json({ error: "batchId эсвэл categoryId шаардлагатай" }, { status: 400 })
+    }
+
+    const whereClause: any = {
+      paymentStatus: "CONFIRMED",
+      status: {
+        isFinal: false,
+        name: { not: "Цуцлагдсан" },
+      },
+    }
+
+    if (batchId) {
+      whereClause.batchId = batchId
+    } else if (categoryId) {
+      whereClause.batch = { categoryId }
     }
 
     const orders = await db.order.findMany({
-      where: {
-        batchId,
-        paymentStatus: "CONFIRMED",
-        status: {
-          isFinal: false,
-          name: { not: "Цуцлагдсан" },
-        },
+      where: whereClause,
+      include: { 
+        status: true,
+        batch: {
+          include: { product: true }
+        }
       },
-      include: { status: true },
       orderBy: { orderNumber: "asc" },
     })
 
     const rows = orders.map((o) => ({
+      "Барааны нэр": o.batch?.product?.name ?? "",
       "Захиалгын дугаар": o.orderNumber,
       "Нэр": o.customerName,
+      "Утасны дугаар": o.customerPhone ?? "",
       "Дансны дугаар": o.accountNumber ?? "",
       "Тоо": o.quantity,
       "Ирэх өдөр": o.arrivalDate ? new Date(o.arrivalDate).toISOString().split("T")[0] : "",
@@ -40,8 +55,10 @@ export async function GET(req: NextRequest) {
     const ws = XLSX.utils.json_to_sheet(rows)
 
     ws["!cols"] = [
+      { wch: 20 }, // Барааны нэр
       { wch: 16 }, // Захиалгын дугаар
       { wch: 18 }, // Нэр
+      { wch: 14 }, // Утас
       { wch: 16 }, // Дансны дугаар
       { wch: 6  }, // Тоо
       { wch: 12 }, // Ирэх өдөр
@@ -53,7 +70,7 @@ export async function GET(req: NextRequest) {
 
     XLSX.utils.book_append_sheet(wb, ws, "Захиалгууд")
     const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" })
-    const filename = `orders-${batchId.slice(-6)}-${new Date().toISOString().split("T")[0]}.xlsx`
+    const filename = `orders-${categoryId || batchId}-${new Date().toISOString().split("T")[0]}.xlsx`
 
     return new NextResponse(buf, {
       headers: {

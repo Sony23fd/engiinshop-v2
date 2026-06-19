@@ -1,8 +1,9 @@
 import { getShopSettings } from "@/app/actions/settings-actions"
 import { db } from "@/lib/db"
 import { notFound } from "next/navigation"
-import { Clock, Copy } from "lucide-react"
+import { Clock, AlertCircle } from "lucide-react"
 import { ManualPaymentClient } from "./ManualPaymentClient"
+import { PaymentConfirmationClient } from "./PaymentConfirmationClient"
 
 export const dynamic = "force-dynamic"
 
@@ -42,39 +43,53 @@ export default async function ManualCheckoutPage({ params }: { params: Promise<{
           </div>
         </div>
 
-        {/* Bank details */}
-        <div className="space-y-4">
-          <h3 className="font-semibold text-slate-800 border-b pb-2">Дансны мэдээлэл</h3>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs text-slate-400 mb-1">Хүлээн авагч банк</p>
-              <p className="font-medium text-slate-800">{settings.bank_name || "Хаан банк"}</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-400 mb-1">Дансны нэр</p>
-              <p className="font-medium text-slate-800">{settings.bank_holder || "Байгууллага"}</p>
+        {/* Step-by-step instructions */}
+        <div className="space-y-6">
+          <div className="flex gap-4">
+            <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 font-bold flex items-center justify-center shrink-0 border border-slate-200 mt-1">1</div>
+            <div className="flex-1 space-y-3">
+              <h3 className="font-bold text-slate-800 text-lg">Дансны мэдээлэл</h3>
+              <p className="text-sm text-slate-500">Доорх данс руу шилжүүлэг хийнэ үү.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <div>
+                  <p className="text-xs text-slate-400 mb-1">Хүлээн авагч банк</p>
+                  <p className="font-medium text-slate-800">{settings.bank_name || "Хаан банк"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400 mb-1">Дансны нэр</p>
+                  <p className="font-medium text-slate-800">{settings.bank_holder || "Байгууллага"}</p>
+                </div>
+                <div className="sm:col-span-2 pt-2">
+                  <ManualPaymentClient label="Дансны дугаар" value={settings.bank_account || "Данс оруулаагүй байна"} />
+                </div>
+              </div>
             </div>
           </div>
 
-          <ManualPaymentClient label="Дансны дугаар" value={settings.bank_account || "Данс оруулаагүй байна"} />
-          
-          <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg">
-            <p className="text-xs text-amber-800 font-medium mb-2 uppercase tracking-wide">Гүйлгээний утга (Заавал бичих)</p>
-            <ManualPaymentClient value={ref} large />
-            <p className="text-[11px] text-amber-700 mt-2">
-              Гүйлгээний утга дээр дээрх кодыг заавал бичнэ үү. Өөр зүйл бичсэн тохиолдолд захиалга баталгаажихгүйг анхаарна уу!
-            </p>
+          <div className="flex gap-4">
+            <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 font-bold flex items-center justify-center shrink-0 border border-slate-200 mt-1">2</div>
+            <div className="flex-1 space-y-3">
+              <h3 className="font-bold text-slate-800 text-lg">Гүйлгээний утга (Маш чухал!)</h3>
+              <p className="text-sm text-slate-500">Гүйлгээний утга дээр <strong>ЗӨВХӨН</strong> доорх кодыг хуулж тавина уу.</p>
+              <div className="bg-red-50 border-2 border-red-200 p-5 rounded-xl shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg uppercase tracking-wider">Маш чухал</div>
+                <div className="mb-3 mt-2">
+                  <ManualPaymentClient value={ref} large />
+                </div>
+                <p className="text-xs text-red-700 leading-relaxed font-medium">
+                  ⚠️ Хэрэв та өөр зүйл бичвэл таны захиалга системд танигдахгүй бөгөөд баталгаажихгүй болохыг хатуу анхаарна уу!
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div className="pt-4 text-center">
-          <p className="text-sm text-slate-500 mb-4">
-            Төлбөр төлсний дараа бид систем дээр шалгаж баталгаажуулах болно.
-          </p>
-          <a href="/" className="text-indigo-600 font-medium text-sm hover:underline">
-            Нүүр хуудас руу буцах
-          </a>
+          <div className="flex gap-4">
+            <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 font-bold flex items-center justify-center shrink-0 border border-slate-200 mt-1">3</div>
+            <div className="flex-1 space-y-3 pt-1">
+              <h3 className="font-bold text-slate-800 text-lg">Баталгаажуулах</h3>
+              <PaymentConfirmationClient />
+            </div>
+          </div>
         </div>
       </div>
     </div>
