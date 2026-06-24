@@ -1,24 +1,13 @@
 import { getShopSettings } from "@/app/actions/settings-actions"
 import { FaqAdminClient } from "./FaqAdminClient"
-import { db } from "@/lib/db"
+import { getSession } from "@/lib/session"
 import { redirect } from "next/navigation"
-import { cookies } from "next/headers"
 
 export const dynamic = "force-dynamic"
 
 export default async function FaqAdminPage() {
-  const cookieStore = await cookies()
-  const token = cookieStore.get("admin_token")?.value
-  if (!token) redirect("/admin/login")
-  
-  const user = await db.user.findFirst({
-    where: { 
-      id: token, 
-      role: "ADMIN" 
-    }
-  })
-
-  if (!user) {
+  const session = await getSession()
+  if (!session.isLoggedIn || session.role !== "ADMIN") {
     redirect("/admin/login")
   }
 

@@ -44,8 +44,10 @@ export async function saveShopSetting(key: string, value: string) {
     revalidatePath("/admin/settings/payment")
     revalidatePath("/admin/settings/terms")
     revalidatePath("/admin/cargo-settings")
+    revalidatePath("/admin/faqs")
     revalidatePath("/cart")
     revalidatePath("/track")
+    revalidatePath("/", "layout")
     return { success: true }
   } catch (error: any) {
     return { success: false, error: error.message }
