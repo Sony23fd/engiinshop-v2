@@ -12,17 +12,43 @@ export async function getCategories(days: number = 30) {
     // If we want to filter, we should filter at the batch/order level instead,
     // but for now, we will return all unarchived categories regardless of days.
 
-    const categories = await db.category.findMany({
+    const categoriesData = await db.category.findMany({
       where: whereClause,
       orderBy: { createdAt: "desc" },
       include: {
         batches: {
-          include: {
-            orders: { include: { status: true } }
-          }
+          select: { id: true }
         }
       }
     })
+    
+    const categoryIds = categoriesData.map(c => c.id);
+    const batches = await db.batch.findMany({
+      where: { categoryId: { in: categoryIds } },
+      select: {
+        id: true,
+        categoryId: true,
+        _count: {
+          select: { orders: true }
+        },
+        orders: {
+          where: { status: { isFinal: true } },
+          select: { id: true }
+        }
+      }
+    });
+
+    const categories = categoriesData.map(c => {
+      const catBatches = batches.filter(b => b.categoryId === c.id);
+      const totalOrders = catBatches.reduce((sum, b) => sum + b._count.orders, 0);
+      const completedOrders = catBatches.reduce((sum, b) => sum + b.orders.length, 0);
+      
+      return {
+        ...c,
+        batches: [{ orders: Array(totalOrders).fill({}).map((_, i) => i < completedOrders ? { status: { isFinal: true } } : {}) }] // Mock the structure to avoid breaking UI without changing it yet
+      }
+    });
+    
     return { success: true, categories: JSON.parse(JSON.stringify(categories)) }
   } catch (error) {
     console.error("Failed to fetch categories:", error)
@@ -159,17 +185,43 @@ export async function getArchivedCategories(days: number = 30) {
       whereClause.updatedAt = { gte: cutoffDate };
     }
 
-    const categories = await (db.category as any).findMany({
+    const categoriesData = await (db.category as any).findMany({
       where: whereClause,
       orderBy: { updatedAt: "desc" },
       include: {
         batches: {
-          include: {
-            orders: { include: { status: true } }
-          }
+          select: { id: true }
         }
       }
     })
+    
+    const categoryIds = categoriesData.map((c: any) => c.id);
+    const batches = await db.batch.findMany({
+      where: { categoryId: { in: categoryIds } },
+      select: {
+        id: true,
+        categoryId: true,
+        _count: {
+          select: { orders: true }
+        },
+        orders: {
+          where: { status: { isFinal: true } },
+          select: { id: true }
+        }
+      }
+    });
+
+    const categories = categoriesData.map((c: any) => {
+      const catBatches = batches.filter(b => b.categoryId === c.id);
+      const totalOrders = catBatches.reduce((sum, b) => sum + b._count.orders, 0);
+      const completedOrders = catBatches.reduce((sum, b) => sum + b.orders.length, 0);
+      
+      return {
+        ...c,
+        batches: [{ orders: Array(totalOrders).fill({}).map((_, i) => i < completedOrders ? { status: { isFinal: true } } : {}) }]
+      }
+    });
+    
     return { success: true, categories: JSON.parse(JSON.stringify(categories)) }
   } catch (error: any) {
     return { success: false, error: "Failed to fetch archived categories", categories: [] }

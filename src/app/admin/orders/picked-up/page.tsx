@@ -13,31 +13,9 @@ export default async function PickedUpOrdersPage({ searchParams }: { searchParam
   const page = p.page ? parseInt(p.page, 10) : 1;
   const itemsPerPage = 50;
 
-  const { orders } = await getPickedUpOrders(days)
+  const { groups, totalItems, totalGroups, totalPages = 1 } = await getPickedUpOrders(days, page, itemsPerPage, q)
 
-  let filteredOrders = orders || []
-  if (q) {
-    filteredOrders = filteredOrders.filter((o: any) => 
-      o.customerName?.toLowerCase().includes(q) ||
-      o.customerPhone?.includes(q) ||
-      o.accountNumber?.toLowerCase().includes(q) ||
-      o.batch?.product?.name?.toLowerCase().includes(q) ||
-      o.deliveryAddress?.toLowerCase().includes(q) ||
-      o.orderNumber?.toString().includes(q) ||
-      o.transactionRef?.toLowerCase().includes(q)
-    )
-  }
-
-  // Group by transactionRef (same cart = same ref) then by customerPhone
-  const grouped: Record<string, any[]> = {}
-  for (const order of filteredOrders) {
-    const key = order.transactionRef || order.customerPhone || order.id
-    if (!grouped[key]) grouped[key] = []
-    grouped[key].push(order)
-  }
-  const allGroups = Object.values(grouped)
-  const totalPages = Math.ceil(allGroups.length / itemsPerPage);
-  const groups = allGroups.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+  const allGroups = groups || [];
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto mt-4">
@@ -48,7 +26,7 @@ export default async function PickedUpOrdersPage({ searchParams }: { searchParam
             Өөрөө ирж авсан захиалга
           </h1>
           <p className="text-slate-500 text-sm mt-1">
-            Нийт <strong>{filteredOrders.length}</strong> ширхэг бараа — <strong>{allGroups.length}</strong> багц
+            Нийт <strong>{totalItems || 0}</strong> ширхэг бараа — <strong>{totalGroups || 0}</strong> багц
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -64,7 +42,7 @@ export default async function PickedUpOrdersPage({ searchParams }: { searchParam
         </div>
       ) : (
         <div className="space-y-4">
-          {groups.map((groupOrders) => {
+          {allGroups.map((groupOrders: any) => {
             const first = groupOrders[0]
             const totalAmount = groupOrders.reduce((s: number, o: any) => s + Number(o.totalAmount || 0), 0)
             const wantsDelivery = groupOrders.some((o: any) => o.wantsDelivery)

@@ -47,10 +47,13 @@ export async function getOrders() {
   }
 }
 
-export async function getPickedUpOrders(days: number = 30) {
+export async function getPickedUpOrders(days: number = 30, page: number = 1, limit: number = 50, q: string = "") {
   try {
     const whereClause: any = {
-      status: { isFinal: true, name: "Өөрөө ирж авсан" },
+      status: {
+        isFinal: true,
+        name: { notIn: ["Цуцлагдсан", "Rejected", "Canceled"] }
+      },
       paymentStatus: { not: "REJECTED" }
     };
 
@@ -85,14 +88,45 @@ export async function getPickedUpOrders(days: number = 30) {
       },
       orderBy: { updatedAt: "desc" },
     })
-    return { success: true, orders: JSON.parse(JSON.stringify(orders)) }
+
+    let filteredOrders = orders || []
+    if (q) {
+      const ql = q.toLowerCase()
+      filteredOrders = filteredOrders.filter((o: any) => 
+        o.customerName?.toLowerCase().includes(ql) ||
+        o.customerPhone?.includes(ql) ||
+        o.accountNumber?.toLowerCase().includes(ql) ||
+        o.batch?.product?.name?.toLowerCase().includes(ql) ||
+        o.orderNumber?.toString().includes(ql) ||
+        o.transactionRef?.toLowerCase().includes(ql)
+      )
+    }
+
+    const grouped: Record<string, any[]> = {}
+    for (const order of filteredOrders) {
+      const key = order.transactionRef || order.customerPhone || order.id
+      if (!grouped[key]) grouped[key] = []
+      grouped[key].push(order)
+    }
+    
+    const allGroups = Object.values(grouped)
+    const totalPages = Math.ceil(allGroups.length / limit);
+    const paginatedGroups = allGroups.slice((page - 1) * limit, page * limit);
+
+    return { 
+      success: true, 
+      groups: JSON.parse(JSON.stringify(paginatedGroups)),
+      totalItems: filteredOrders.length,
+      totalGroups: allGroups.length,
+      totalPages
+    }
   } catch (error) {
     console.error("Failed to fetch picked up orders:", error)
     return { success: false, error: "Failed to fetch picked up orders" }
   }
 }
 
-export async function getDeliveredOrders(days: number = 30, page: number = 1, limit: number = 50) {
+export async function getDeliveredOrders(days: number = 30, page: number = 1, limit: number = 50, q: string = "") {
   try {
     const whereClause: any = {
       status: {
@@ -137,9 +171,49 @@ export async function getDeliveredOrders(days: number = 30, page: number = 1, li
       orderBy: { updatedAt: "desc" },
     })
 
+    let filteredOrders = orders || []
+    if (q) {
+      const ql = q.toLowerCase()
+      filteredOrders = filteredOrders.filter((o: any) => 
+        o.customerName?.toLowerCase().includes(ql) ||
+        o.customerPhone?.includes(ql) ||
+        o.accountNumber?.toLowerCase().includes(ql) ||
+        o.batch?.product?.name?.toLowerCase().includes(ql) ||
+        o.deliveryAddress?.toLowerCase().includes(ql) ||
+        o.orderNumber?.toString().includes(ql) ||
+        o.transactionRef?.toLowerCase().includes(ql)
+      )
+    }
+
+    const grouped: Record<string, any[]> = {}
+    for (const order of filteredOrders) {
+      const key = order.transactionRef || order.customerPhone || order.id
+      if (!grouped[key]) grouped[key] = []
+      grouped[key].push(order)
+    }
+    
+    const rawGroups = Object.values(grouped)
+    const allGroups = rawGroups.filter((groupOrders: any[]) => {
+      const wantsDelivery = groupOrders.some((o: any) => o.wantsDelivery)
+      const hasValidAddress = groupOrders.some((o: any) => {
+        const addr = o.deliveryAddress?.trim() || "";
+        return addr && addr !== "Өөрөө ирж авна" && addr !== "Өөрөө авна" && addr !== "Дэлгүүрээс авна";
+      });
+      const isAllPickedUpStatus = groupOrders.every((o: any) => o.status?.name === "Өөрөө ирж авсан");
+      
+      if (isAllPickedUpStatus && !wantsDelivery && !hasValidAddress) return false;
+      return wantsDelivery || hasValidAddress || !isAllPickedUpStatus;
+    });
+
+    const totalPages = Math.ceil(allGroups.length / limit);
+    const paginatedGroups = allGroups.slice((page - 1) * limit, page * limit);
+
     return { 
       success: true, 
-      orders: JSON.parse(JSON.stringify(orders))
+      groups: JSON.parse(JSON.stringify(paginatedGroups)),
+      totalItems: filteredOrders.length,
+      totalGroups: allGroups.length,
+      totalPages
     }
   } catch (error) {
     console.error("Failed to fetch delivered orders:", error)
@@ -269,7 +343,7 @@ export async function markDeliveryAsPickedUp(orderIds: string[]) {
   }
 }
 
-export async function getRejectedOrders(days: number = 30) {
+export async function getRejectedOrders(days: number = 30, page: number = 1, limit: number = 50, q: string = "") {
   try {
     const whereClause: any = {
       paymentStatus: "REJECTED"
@@ -291,7 +365,37 @@ export async function getRejectedOrders(days: number = 30) {
       },
       orderBy: { updatedAt: "desc" },
     })
-    return { success: true, orders: JSON.parse(JSON.stringify(orders)) }
+    let filteredOrders = orders || []
+    if (q) {
+      const ql = q.toLowerCase()
+      filteredOrders = filteredOrders.filter((o: any) => 
+        o.customerName?.toLowerCase().includes(ql) ||
+        o.customerPhone?.includes(ql) ||
+        o.accountNumber?.toLowerCase().includes(ql) ||
+        o.batch?.product?.name?.toLowerCase().includes(ql) ||
+        o.deliveryAddress?.toLowerCase().includes(ql) ||
+        o.orderNumber?.toString().includes(ql) ||
+        o.transactionRef?.toLowerCase().includes(ql)
+      )
+    }
+
+    const grouped: Record<string, any[]> = {}
+    for (const order of filteredOrders) {
+      const key = order.transactionRef || order.customerPhone || order.id
+      if (!grouped[key]) grouped[key] = []
+      grouped[key].push(order)
+    }
+    const allGroups = Object.values(grouped)
+    const totalPages = Math.ceil(allGroups.length / limit)
+    const paginatedGroups = allGroups.slice((page - 1) * limit, page * limit)
+
+    return { 
+      success: true, 
+      groups: JSON.parse(JSON.stringify(paginatedGroups)),
+      totalItems: filteredOrders.length,
+      totalGroups: allGroups.length,
+      totalPages
+    }
   } catch (error) {
     console.error("Failed to fetch rejected orders:", error)
     return { success: false, error: "Failed to fetch rejected orders" }
