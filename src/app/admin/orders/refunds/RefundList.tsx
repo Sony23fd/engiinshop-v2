@@ -73,7 +73,7 @@ export function RefundList({
                 <tr key={order.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
-                      <Link href={`/admin/orders/${order.id}`} className="font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+                      <Link href={`/admin/orders/batch/${order.batchId}`} className="font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
                         #{order.orderNumber}
                         <ExternalLink className="w-3 h-3" />
                       </Link>

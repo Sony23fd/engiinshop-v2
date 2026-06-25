@@ -118,7 +118,7 @@ export function OverdueStorageList({ orders }: { orders: any[] }) {
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <a href={`/admin/orders/${order.id}`} target="_blank" className="inline-flex items-center px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors">
+                    <a href={`/admin/orders/batch/${order.batchId}`} target="_blank" className="inline-flex items-center px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors">
                       Үзэх
                     </a>
                   </td>
