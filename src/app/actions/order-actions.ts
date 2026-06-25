@@ -1439,22 +1439,40 @@ export async function getArchivedConfirmedOrders(page: number = 1, limit: number
   }
 }
 
-export async function getRefundOrders() {
+export async function getRefundOrders({ tab = "pending", page = 1, limit = 50 }: { tab?: string, page?: number, limit?: number } = {}) {
   try {
-    const orders = await (db.order as any).findMany({
-      where: {
-        OR: [
-          { paymentStatus: "REJECTED" },
-          { isRefunded: true }
-        ]
-      },
-      include: {
-        batch: { include: { product: true, category: true } },
-        status: true
-      },
-      orderBy: { updatedAt: "desc" }
-    })
-    return { success: true, orders: JSON.parse(JSON.stringify(orders)) }
+    const isRefunded = tab === "completed";
+    const whereCondition = isRefunded 
+      ? { isRefunded: true }
+      : { paymentStatus: "REJECTED", isRefunded: false };
+
+    const [orders, totalCount, pendingCount, completedCount] = await Promise.all([
+      (db.order as any).findMany({
+        where: whereCondition,
+        include: {
+          batch: { include: { product: true, category: true } },
+          status: true
+        },
+        orderBy: { updatedAt: "desc" },
+        skip: (page - 1) * limit,
+        take: limit
+      }),
+      (db.order as any).count({ where: whereCondition }),
+      (db.order as any).count({ where: { paymentStatus: "REJECTED", isRefunded: false } }),
+      (db.order as any).count({ where: { isRefunded: true } })
+    ]);
+    
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return { 
+      success: true, 
+      orders: JSON.parse(JSON.stringify(orders)),
+      totalCount,
+      totalPages,
+      pendingCount,
+      completedCount,
+      page
+    }
   } catch (error: any) {
     return { success: false, error: error.message }
   }
@@ -1516,9 +1534,9 @@ export async function autoCancelExpiredOrders() {
       throw new Error(`Цуцлах статус олдсонгүй. Боломжит статусууд: ${statusNames}`);
     }
 
-    // 2. 24 цагийн өмнөх хугацааг тооцоолох
+    // 2. 48 цагийн өмнөх хугацааг тооцоолох
     const cutoffDate = new Date()
-    cutoffDate.setHours(cutoffDate.getHours() - 24)
+    cutoffDate.setHours(cutoffDate.getHours() - 48)
 
     // 3. Хугацаа нь хэтэрсэн захиалгуудыг шүүх
     const expiredOrders = await (db.order as any).findMany({

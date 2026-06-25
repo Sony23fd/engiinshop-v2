@@ -5,9 +5,21 @@ import { toggleOrderRefund } from "@/app/actions/order-actions"
 import { ExternalLink, CreditCard, Banknote, User, Phone, CheckCircle2, RotateCcw, Box } from "lucide-react"
 import Link from "next/link"
 
-export function RefundList({ pending, completed }: { pending: any[], completed: any[] }) {
-  const [tab, setTab] = useState<"pending" | "completed">("pending")
-  const data = tab === "pending" ? pending : completed
+export function RefundList({ 
+  data, 
+  currentTab, 
+  pendingCount, 
+  completedCount,
+  currentPage,
+  totalPages
+}: { 
+  data: any[], 
+  currentTab: string, 
+  pendingCount: number, 
+  completedCount: number,
+  currentPage: number,
+  totalPages: number
+}) {
   const [loadingId, setLoadingId] = useState<string | null>(null)
 
   const handleToggleRefund = async (orderId: string, isRefunded: boolean) => {
@@ -15,6 +27,8 @@ export function RefundList({ pending, completed }: { pending: any[], completed: 
     const res = await toggleOrderRefund(orderId, isRefunded)
     if (!res.success) {
       alert(res.error || "Алдаа гарлаа")
+    } else {
+      window.location.reload()
     }
     setLoadingId(null)
   }
@@ -22,18 +36,18 @@ export function RefundList({ pending, completed }: { pending: any[], completed: 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       <div className="flex border-b border-slate-100 p-2 gap-2 bg-slate-50/50">
-        <button
-          onClick={() => setTab("pending")}
-          className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${tab === "pending" ? "bg-white text-rose-600 shadow-sm border border-slate-200" : "text-slate-500 hover:bg-slate-100"}`}
+        <Link
+          href={`?tab=pending&page=1`}
+          className={`flex-1 text-center py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${currentTab === "pending" ? "bg-white text-rose-600 shadow-sm border border-slate-200" : "text-slate-500 hover:bg-slate-100"}`}
         >
-          Хүлээгдэж байна ({pending.length})
-        </button>
-        <button
-          onClick={() => setTab("completed")}
-          className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${tab === "completed" ? "bg-white text-emerald-600 shadow-sm border border-slate-200" : "text-slate-500 hover:bg-slate-100"}`}
+          Хүлээгдэж байна ({pendingCount})
+        </Link>
+        <Link
+          href={`?tab=completed&page=1`}
+          className={`flex-1 text-center py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${currentTab === "completed" ? "bg-white text-emerald-600 shadow-sm border border-slate-200" : "text-slate-500 hover:bg-slate-100"}`}
         >
-          Буцаагдсан ({completed.length})
-        </button>
+          Буцаагдсан ({completedCount})
+        </Link>
       </div>
 
       {data.length === 0 ? (
@@ -95,7 +109,7 @@ export function RefundList({ pending, completed }: { pending: any[], completed: 
                     </div>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    {tab === "pending" ? (
+                    {currentTab === "pending" ? (
                       <button
                         onClick={() => handleToggleRefund(order.id, true)}
                         disabled={loadingId === order.id}
@@ -123,6 +137,22 @@ export function RefundList({ pending, completed }: { pending: any[], completed: 
               ))}
             </tbody>
           </table>
+          
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center gap-2 p-6 border-t border-slate-100 bg-slate-50/30">
+              <Link href={`?tab=${currentTab}&page=${currentPage > 1 ? currentPage - 1 : 1}`}
+                className={`px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${currentPage <= 1 ? "opacity-50 pointer-events-none bg-slate-50" : "hover:bg-slate-50 bg-white"}`}>
+                Өмнөх
+              </Link>
+              <span className="text-sm font-medium text-slate-600 px-4">
+                Хуудас {currentPage} / {totalPages}
+              </span>
+              <Link href={`?tab=${currentTab}&page=${currentPage < totalPages ? currentPage + 1 : totalPages}`}
+                className={`px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${currentPage >= totalPages ? "opacity-50 pointer-events-none bg-slate-50" : "hover:bg-slate-50 bg-white"}`}>
+                Дараах
+              </Link>
+            </div>
+          )}
         </div>
       )}
     </div>

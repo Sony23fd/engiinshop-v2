@@ -4,21 +4,17 @@ import { AlertCircle } from "lucide-react"
 
 export const dynamic = "force-dynamic"
 
-export default async function AdminRefundsPage() {
-  const { orders, success } = await getRefundOrders()
+export default async function AdminRefundsPage({
+  searchParams
+}: {
+  searchParams?: Promise<{ tab?: string, page?: string }>
+}) {
+  const resolvedParams = searchParams ? await searchParams : {}
+  const tab = resolvedParams.tab || "pending"
+  const page = resolvedParams.page ? parseInt(resolvedParams.page, 10) : 1
+  const limit = 50
 
-  if (!success) {
-    return (
-      <div className="flex flex-col items-center justify-center p-12 text-slate-500">
-        <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
-        <h2 className="text-xl font-semibold">Алдаа гарлаа</h2>
-        <p className="text-sm">Буцаалт хүлээгдэж буй мэдээллийг татахад асуудал гарлаа.</p>
-      </div>
-    )
-  }
-
-  const pendingRefunds = orders?.filter((o: any) => !o.isRefunded) || []
-  const completedRefunds = orders?.filter((o: any) => o.isRefunded) || []
+  const { orders, pendingCount, completedCount, totalPages } = await getRefundOrders({ tab, page, limit })
 
   return (
     <div className="space-y-6">
@@ -32,7 +28,7 @@ export default async function AdminRefundsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-red-50 border border-red-100 p-4 rounded-xl shadow-sm flex items-start gap-4">
           <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center shrink-0">
-            <span className="text-xl font-bold">{pendingRefunds.length}</span>
+            <span className="text-xl font-bold">{pendingCount || 0}</span>
           </div>
           <div>
             <h3 className="font-semibold text-red-900 text-lg">Хүлээгдэж буй буцаалтууд</h3>
@@ -44,7 +40,7 @@ export default async function AdminRefundsPage() {
         
         <div className="bg-green-50 border border-green-100 p-4 rounded-xl shadow-sm flex items-start gap-4">
           <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center shrink-0">
-            <span className="text-xl font-bold">{completedRefunds.length}</span>
+            <span className="text-xl font-bold">{completedCount || 0}</span>
           </div>
           <div>
             <h3 className="font-semibold text-green-900 text-lg">Хийгдсэн буцаалт</h3>
@@ -55,7 +51,14 @@ export default async function AdminRefundsPage() {
         </div>
       </div>
 
-      <RefundList pending={pendingRefunds} completed={completedRefunds} />
+      <RefundList 
+        data={orders || []} 
+        currentTab={tab}
+        pendingCount={pendingCount || 0}
+        completedCount={completedCount || 0}
+        currentPage={page}
+        totalPages={totalPages || 1}
+      />
     </div>
   )
 }
