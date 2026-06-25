@@ -76,11 +76,11 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
         <div className="relative z-10 max-w-6xl mx-auto px-4 py-3 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-2 group">
             {siteLogo ? (
-              <div className="relative flex items-center h-10 md:h-12 bg-white/95 backdrop-blur-md rounded-xl md:rounded-2xl px-2.5 py-1.5 shadow-sm border border-white/20 transition-all group-hover:bg-white">
+              <div className="relative flex items-center h-12 md:h-14 transition-transform group-hover:scale-105">
                 <img
                   src={siteLogo}
                   alt="AnarKorea Logo"
-                  className="object-contain h-full w-auto drop-shadow-sm max-w-[140px] md:max-w-[180px]"
+                  className="object-contain h-full w-auto drop-shadow-md max-w-[160px] md:max-w-[200px] rounded-lg"
                 />
               </div>
             ) : (
