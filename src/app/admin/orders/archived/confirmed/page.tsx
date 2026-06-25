@@ -143,7 +143,7 @@ export default async function ConfirmedOrdersArchivePage({
                             </div>
                             <div>
                               <span className="text-slate-400 text-xs block">Батлагдсан огноо</span>
-                              <span className="text-xs text-slate-500">{new Date(order.confirmedAt || order.updatedAt || order.createdAt).toLocaleString("mn-MN")}</span>
+                              <span className="text-xs text-slate-500">{new Date(order.confirmedAt || order.updatedAt || order.createdAt).toLocaleString("mn-MN", { timeZone: "Asia/Ulaanbaatar" })}</span>
                             </div>
                             <div className="sm:col-span-1">
                               <span className="text-slate-400 text-xs block">Баталгаажуулсан</span>

@@ -140,7 +140,7 @@ export default async function PendingOrdersPage({
                             </div>
                             <div>
                               <span className="text-slate-400 text-xs block">Огноо</span>
-                              <span className="text-xs text-slate-500">{new Date(order.createdAt).toLocaleString("mn-MN")}</span>
+                              <span className="text-xs text-slate-500">{new Date(order.createdAt).toLocaleString("mn-MN", { timeZone: "Asia/Ulaanbaatar" })}</span>
                             </div>
                           </div>
                           {order.paymentProofUrl && (

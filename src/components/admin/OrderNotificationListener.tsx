@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react"
 import { Bell, CheckCircle2, Truck, User } from "lucide-react"
 import Link from "next/link"
+import { getRecentOrderNotifications } from "@/app/actions/order-actions"
 
 interface OrderItem {
   orderId: string
@@ -73,6 +74,17 @@ export function OrderNotificationListener() {
       setShowToast(n)
       setTimeout(() => setShowToast(null), 7000)
     }
+  }, [])
+
+  useEffect(() => {
+    let mounted = true
+    getRecentOrderNotifications().then(res => {
+      if (res?.success && mounted && res.data) {
+        setNotifications(res.data as OrderNotification[])
+        setSeenCount(res.data.length) // pre-mark as seen so it doesn't constantly bug them
+      }
+    }).catch(() => {})
+    return () => { mounted = false }
   }, [])
 
   useEffect(() => {

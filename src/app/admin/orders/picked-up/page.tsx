@@ -106,11 +106,11 @@ export default async function PickedUpOrdersPage({ searchParams }: { searchParam
                             </div>
                             <div>
                               <span className="text-slate-400 text-xs block">Үүсгэсэн</span>
-                              <span className="text-xs text-slate-500">{new Date(order.createdAt).toLocaleString("mn-MN")}</span>
+                              <span className="text-xs text-slate-500">{new Date(order.createdAt).toLocaleString("mn-MN", { timeZone: "Asia/Ulaanbaatar" })}</span>
                             </div>
                             <div>
                               <span className="text-slate-400 text-xs block">Олгосон</span>
-                              <span className="text-xs text-emerald-600 font-medium">{new Date(order.updatedAt).toLocaleString("mn-MN")}</span>
+                              <span className="text-xs text-emerald-600 font-medium">{new Date(order.updatedAt).toLocaleString("mn-MN", { timeZone: "Asia/Ulaanbaatar" })}</span>
                             </div>
                           </div>
                         </div>

@@ -42,7 +42,7 @@ export default async function ActivityLogPage({
 
   function formatDate(d: string) {
     const dt = new Date(d)
-    return dt.toLocaleString("mn-MN", { dateStyle: "medium", timeStyle: "short" })
+    return dt.toLocaleString("mn-MN", { timeZone: "Asia/Ulaanbaatar", dateStyle: "medium", timeStyle: "short" })
   }
 
   return (

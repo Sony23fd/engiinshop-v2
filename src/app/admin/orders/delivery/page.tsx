@@ -39,7 +39,11 @@ export default async function DeliveryQueuePage({
     if (!grouped[key]) grouped[key] = []
     grouped[key].push(order)
   }
-  const allGroups = Object.values(grouped)
+  const allGroups = Object.values(grouped).sort((a, b) => {
+    const latestA = Math.max(...a.map((o: any) => new Date(o.deliveryRequestedAt || o.updatedAt || o.createdAt).getTime()));
+    const latestB = Math.max(...b.map((o: any) => new Date(o.deliveryRequestedAt || o.updatedAt || o.createdAt).getTime()));
+    return latestB - latestA;
+  })
   const totalPages = Math.ceil(allGroups.length / itemsPerPage);
   const groups = allGroups.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 

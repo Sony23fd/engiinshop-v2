@@ -1663,3 +1663,53 @@ export async function updateOrderAdminNotes(orderId: string, notes: string) {
     return { success: false, error: error.message };
   }
 }
+
+
+export async function getRecentOrderNotifications() {
+  try {
+    const adminMode = await getCurrentAdmin()
+    if (!adminMode) return { success: false, data: [] }
+
+    const recentOrders = await (db.order as any).findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+      include: {
+        batch: { include: { product: true } }
+      }
+    })
+    
+    const grouped: any = {}
+    
+    for (const o of recentOrders) {
+      const ref = o.transactionRef || o.id
+      if (!grouped[ref]) {
+        grouped[ref] = {
+          type: "new-order",
+          transactionRef: o.transactionRef,
+          customerName: o.customerName,
+          customerPhone: o.customerPhone,
+          totalAmount: 0,
+          wantsDelivery: o.wantsDelivery,
+          createdAt: o.createdAt.toISOString(),
+          items: []
+        }
+      }
+      grouped[ref].totalAmount += Number(o.totalAmount || 0)
+      grouped[ref].items.push({
+        orderId: o.id,
+        productName: o.batch?.product?.name || "Бараа",
+        quantity: o.quantity,
+        totalAmount: Number(o.totalAmount || 0),
+        batchId: o.batchId
+      })
+    }
+    
+    const sortedNotifications = Object.values(grouped)
+      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 10)
+    
+    return { success: true, data: sortedNotifications }
+  } catch (error) {
+    return { success: false, data: [] }
+  }
+}
