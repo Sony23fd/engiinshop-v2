@@ -1621,3 +1621,45 @@ export async function autoCancelExpiredOrders() {
     return { success: false, error: error.message }
   }
 }
+
+export async function getOverdueStorageOrders() {
+  try {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const orders = await (db.order as any).findMany({
+      where: {
+        paymentStatus: "CONFIRMED",
+        status: {
+          isDeliverable: true,
+          isFinal: false
+        },
+        updatedAt: {
+          lt: thirtyDaysAgo
+        }
+      },
+      include: {
+        batch: { include: { product: true } },
+        status: true
+      },
+      orderBy: { updatedAt: "asc" }
+    });
+    
+    return { success: true, orders: JSON.parse(JSON.stringify(orders)) };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function updateOrderAdminNotes(orderId: string, notes: string) {
+  try {
+    await (db.order as any).update({
+      where: { id: orderId },
+      data: { adminNotes: notes }
+    });
+    revalidatePath("/admin/orders/overdue-storage");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}

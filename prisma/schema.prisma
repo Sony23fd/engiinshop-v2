@@ -127,6 +127,7 @@ model Order {
   confirmedAt           DateTime?
   confirmedById         String?
   cancellationReason    String?
+  adminNotes            String?
   batch                 Batch            @relation(fields: [batchId], references: [id])
   confirmedBy           User?            @relation("ConfirmedOrders", fields: [confirmedById], references: [id])
   status                OrderStatusType? @relation(fields: [statusId], references: [id])
