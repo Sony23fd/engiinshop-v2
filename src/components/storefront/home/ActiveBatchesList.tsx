@@ -1,7 +1,9 @@
+"use client"
+import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { AddToCartButton } from "@/components/storefront/AddToCartButton"
-import { Clock, TrendingUp } from "lucide-react"
+import { Clock, TrendingUp, ChevronDown } from "lucide-react"
 import { PreOrderCountdown } from "@/components/storefront/home/PreOrderCountdown"
 
 export function ActiveBatchesList({ 
@@ -17,12 +19,23 @@ export function ActiveBatchesList({
   badge?: string,
   theme?: "ready" | "preorder" | string
 }) {
+  const [activeCategory, setActiveCategory] = useState("Бүгд")
+  const [visibleCount, setVisibleCount] = useState(8)
+
   if (!batches || batches.length === 0) return null;
+
+  const categories = ["Бүгд", ...Array.from(new Set(batches.map(b => b.category?.name).filter(Boolean)))];
+
+  const filteredBatches = activeCategory === "Бүгд" 
+    ? batches 
+    : batches.filter(b => b.category?.name === activeCategory);
+
+  const displayedBatches = filteredBatches.slice(0, visibleCount);
 
   return (
     <div id="batches" className="pt-12 pb-16 border-b border-indigo-50/50">
       <div className="max-w-6xl mx-auto px-4">
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
           <div>
             {badge && (
               <div className={`inline-flex items-center gap-2 mb-3 px-3 py-1 rounded-full border ${theme === "preorder" ? "bg-amber-100/50 border-amber-200/50 text-amber-600" : "bg-indigo-100/50 border-indigo-200/50 text-[#4e3dc7]"}`}>
@@ -35,8 +48,29 @@ export function ActiveBatchesList({
           </div>
         </div>
 
+        {categories.length > 2 && (
+          <div className="flex gap-2 overflow-x-auto pb-4 mb-6 scrollbar-hide">
+            {categories.map((cat: any) => (
+              <button
+                key={cat}
+                onClick={() => {
+                  setActiveCategory(cat)
+                  setVisibleCount(8)
+                }}
+                className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold transition-all ${
+                  activeCategory === cat 
+                    ? "bg-[#4e3dc7] text-white shadow-md" 
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
-          {batches.map((batch: any, index: number) => {
+          {displayedBatches.map((batch: any, index: number) => {
             const progress = batch.targetQuantity > 0 
               ? Math.min(100, Math.max(0, ((batch.targetQuantity - batch.remainingQuantity) / batch.targetQuantity) * 100))
               : 0;
@@ -45,8 +79,8 @@ export function ActiveBatchesList({
             const showQty = !batch.isPreOrder || batch.remainingQuantity > 0;
 
             return (
-              <div key={batch.id} className="bg-white rounded-2xl p-3 sm:p-4 flex flex-col group border border-slate-200/60 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                <Link href={`/product/${batch.id}`} className="block relative bg-slate-100 rounded-xl overflow-hidden aspect-square mb-4">
+              <div key={batch.id} className="bg-white rounded-xl sm:rounded-2xl p-2 sm:p-3.5 flex flex-col group border border-slate-200/60 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                <Link href={`/product/${batch.id}`} className="block relative bg-slate-100 rounded-lg sm:rounded-xl overflow-hidden aspect-square mb-3">
                   {batch.product?.videoUrl ? (
                     <video
                       src={batch.product.videoUrl}
@@ -85,13 +119,13 @@ export function ActiveBatchesList({
 
                 <div className="flex-1 flex flex-col gap-3">
                   <Link href={`/product/${batch.id}`}>
-                    <h3 className="font-semibold text-sm sm:text-base text-slate-900 leading-snug hover:text-[#4e3dc7] transition-colors line-clamp-2">
+                    <h3 className="font-semibold text-sm sm:text-base text-slate-900 leading-snug hover:text-[#4e3dc7] hover:underline transition-colors line-clamp-2">
                       {batch.product?.name}
                     </h3>
                   </Link>
 
                   <div className="mt-auto">
-                    <div className="flex justify-between items-end mb-3">
+                    <div className="flex justify-between items-center mb-3">
                       <div>
                         <p className="text-base sm:text-xl font-black text-slate-900 tracking-tight">
                           ₮{(() => { const bp = parseFloat(String(batch.price ?? 0)); const pp = parseFloat(String(batch.product?.price ?? 0)); return (bp > 0 ? bp : pp).toLocaleString(); })()}
@@ -100,9 +134,18 @@ export function ActiveBatchesList({
                           <p className="text-[11px] text-slate-500 font-medium mt-0.5">+₮{Number(batch.deliveryFee).toLocaleString()} хүргэлт</p>
                         )}
                       </div>
+                      <AddToCartButton
+                        batchId={batch.id}
+                        name={batch.product?.name ?? ""}
+                        imageUrl={batch.product?.imageUrl}
+                        unitPrice={(() => { const bp = parseFloat(String(batch.price ?? 0)); const pp = parseFloat(String(batch.product?.price ?? 0)); return bp > 0 ? bp : pp; })()}
+                        deliveryFee={Number(batch.deliveryFee || 0)}
+                        isPreOrder={batch.isPreOrder}
+                        iconOnly
+                      />
                     </div>
 
-                    <div className="space-y-1.5 mb-4">
+                    <div className="space-y-1.5 mt-auto">
                       {batch.isPreOrder ? (
                         <div className="space-y-2">
                            {batch.closingDate ? (
@@ -131,21 +174,23 @@ export function ActiveBatchesList({
                         </>
                       )}
                     </div>
-
-                    <AddToCartButton
-                      batchId={batch.id}
-                      name={batch.product?.name ?? ""}
-                      imageUrl={batch.product?.imageUrl}
-                      unitPrice={(() => { const bp = parseFloat(String(batch.price ?? 0)); const pp = parseFloat(String(batch.product?.price ?? 0)); return bp > 0 ? bp : pp; })()}
-                      deliveryFee={Number(batch.deliveryFee || 0)}
-                      isPreOrder={batch.isPreOrder}
-                    />
                   </div>
                 </div>
               </div>
             )
           })}
         </div>
+
+        {filteredBatches.length > visibleCount && (
+          <div className="mt-10 flex justify-center">
+            <button
+              onClick={() => setVisibleCount(prev => prev + 8)}
+              className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-[#4e3dc7] bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 transition-colors"
+            >
+              Цааш үзэх <ChevronDown className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -53,7 +53,7 @@ export function ChatbotWidget({ faqs }: { faqs: FaqNode[] }) {
       {/* Floating Button (Desktop) */}
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-24 md:bottom-6 right-4 md:right-6 w-14 h-14 bg-[#4e3dc7] rounded-full shadow-[0_8px_30px_rgba(78,61,199,0.3)] flex items-center justify-center text-white hover:scale-110 transition-transform z-50 md:flex"
+        className="fixed bottom-24 md:bottom-6 right-4 md:right-6 w-14 h-14 bg-[#4e3dc7] rounded-full shadow-[0_8px_30px_rgba(78,61,199,0.3)] hidden md:flex items-center justify-center text-white hover:scale-110 transition-transform z-50"
       >
         {isOpen ? <X className="w-6 h-6" /> : <MessageSquare className="w-6 h-6" />}
       </button>

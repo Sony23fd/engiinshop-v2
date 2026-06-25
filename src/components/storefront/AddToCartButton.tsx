@@ -10,17 +10,35 @@ interface Props {
   unitPrice: number
   deliveryFee: number
   isPreOrder?: boolean
+  iconOnly?: boolean
 }
 
-export function AddToCartButton({ batchId, name, imageUrl, unitPrice, deliveryFee, isPreOrder }: Props) {
+export function AddToCartButton({ batchId, name, imageUrl, unitPrice, deliveryFee, isPreOrder, iconOnly }: Props) {
   const { addItem, items } = useCart()
   const [added, setAdded] = useState(false)
   const inCart = items.some(i => i.batchId === batchId)
 
-  function handleAdd() {
+  function handleAdd(e: React.MouseEvent) {
+    e.preventDefault() // prevent navigating to product detail if clicked inside a link area
     addItem({ batchId, name, imageUrl, unitPrice, deliveryFee, isPreOrder, qty: 1 })
     setAdded(true)
     setTimeout(() => setAdded(false), 1500)
+  }
+
+  if (iconOnly) {
+    return (
+      <button
+        onClick={handleAdd}
+        className={`flex items-center justify-center p-2.5 rounded-full transition-all duration-300 ${
+          inCart
+            ? "bg-green-50 text-green-600 ring-1 ring-green-200"
+            : "bg-slate-100 text-slate-400 group-hover:bg-[#4F46E5] group-hover:text-white group-hover:scale-110 group-hover:shadow-md"
+        }`}
+        title="Сагслах"
+      >
+        {added ? <Check className="w-5 h-5" /> : <ShoppingCart className="w-5 h-5" />}
+      </button>
+    )
   }
 
   return (

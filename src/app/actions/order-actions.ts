@@ -414,11 +414,18 @@ export async function getOrderStatuses() {
   }
 }
 
-export async function getOrdersByAccount(accountNumber: string) {
+export async function getOrdersByAccount(searchQuery: string) {
   try {
+    const cleanQuery = searchQuery?.trim();
+    if (!cleanQuery) return { success: true, orders: [] };
+
     const orders = await db.order.findMany({
       where: {
-        accountNumber
+        OR: [
+          { accountNumber: cleanQuery },
+          { customerPhone: cleanQuery },
+          { transactionRef: cleanQuery }
+        ]
       },
       include: {
         batch: {

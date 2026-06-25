@@ -76,11 +76,11 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
         <div className="relative z-10 max-w-6xl mx-auto px-4 py-3 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-2 group">
             {siteLogo ? (
-              <div className="relative flex items-center h-12">
+              <div className="relative flex items-center h-10 md:h-12 bg-white/95 backdrop-blur-md rounded-xl md:rounded-2xl px-2.5 py-1.5 shadow-sm border border-white/20 transition-all group-hover:bg-white">
                 <img
                   src={siteLogo}
                   alt="AnarKorea Logo"
-                  className="object-contain h-full w-auto drop-shadow-sm max-w-[200px]"
+                  className="object-contain h-full w-auto drop-shadow-sm max-w-[140px] md:max-w-[180px]"
                 />
               </div>
             ) : (
@@ -98,7 +98,7 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
           <div className="flex items-center gap-4 mt-2 md:mt-0">
             <Link 
               href="/track" 
-              className="bg-white/10 hover:bg-white/20 border border-white/20 text-white px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm backdrop-blur-sm flex items-center gap-2 group-hover:bg-white/10"
+              className="hidden md:flex bg-white/10 hover:bg-white/20 border border-white/20 text-white px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm backdrop-blur-sm items-center gap-2 group-hover:bg-white/10"
             >
               <Search className="w-4 h-4" />
               Захиалга шалгах
@@ -160,8 +160,8 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
                 <a href="https://www.facebook.com/profile.php?id=100086582256535" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full bg-gradient-to-b from-blue-500 to-blue-700 flex items-center justify-center text-white hover:scale-110 shadow-sm transition-transform" title="Facebook">
                   <Facebook className="w-5 h-5 fill-white drop-shadow-sm" />
                 </a>
-              </div>2м
-              аа            </div>
+              </div>
+            </div>
 
             <div className="space-y-4">
               <h3 className="text-white font-semibold text-sm uppercase tracking-wider mb-6">Холбоо барих</h3>
