@@ -12,7 +12,7 @@ export function useScrollRestoration(key: string) {
           top: parseInt(savedPosition, 10),
           behavior: 'instant'
         })
-      }, 50)
+      }, 150)
     }
 
     // 2. Save scroll position on scroll

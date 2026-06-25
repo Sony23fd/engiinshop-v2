@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { AddToCartButton } from "@/components/storefront/AddToCartButton"
@@ -20,6 +20,21 @@ export function ActiveBatchesList({
   theme?: "ready" | "preorder" | string
 }) {
   const [visibleCount, setVisibleCount] = useState(8)
+  const [isClient, setIsClient] = useState(false)
+
+  useEffect(() => {
+    setIsClient(true)
+    const saved = sessionStorage.getItem(`visibleCount-${theme}`)
+    if (saved) {
+      setVisibleCount(parseInt(saved, 10))
+    }
+  }, [theme])
+
+  useEffect(() => {
+    if (isClient) {
+      sessionStorage.setItem(`visibleCount-${theme}`, visibleCount.toString())
+    }
+  }, [visibleCount, theme, isClient])
 
   if (!batches || batches.length === 0) return null;
 
@@ -159,7 +174,8 @@ export function ActiveBatchesList({
               onClick={() => setVisibleCount(prev => prev + 8)}
               className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-[#4e3dc7] bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 transition-colors"
             >
-              Цааш үзэх <ChevronDown className="w-4 h-4" />
+              <ChevronDown className="w-5 h-5" />
+              Цааш үзэх (Үлдсэн {batches.length - visibleCount})
             </button>
           </div>
         )}
