@@ -19,18 +19,11 @@ export function ActiveBatchesList({
   badge?: string,
   theme?: "ready" | "preorder" | string
 }) {
-  const [activeCategory, setActiveCategory] = useState("Бүгд")
   const [visibleCount, setVisibleCount] = useState(8)
 
   if (!batches || batches.length === 0) return null;
 
-  const categories = ["Бүгд", ...Array.from(new Set(batches.map(b => b.category?.name).filter(Boolean)))];
-
-  const filteredBatches = activeCategory === "Бүгд" 
-    ? batches 
-    : batches.filter(b => b.category?.name === activeCategory);
-
-  const displayedBatches = filteredBatches.slice(0, visibleCount);
+  const displayedBatches = batches.slice(0, visibleCount);
 
   return (
     <div id="batches" className="pt-12 pb-16 border-b border-indigo-50/50">
@@ -47,27 +40,6 @@ export function ActiveBatchesList({
             {subtitle && <p className="text-slate-500 mt-2 text-lg">{subtitle}</p>}
           </div>
         </div>
-
-        {categories.length > 2 && (
-          <div className="flex gap-2 overflow-x-auto pb-4 mb-6 scrollbar-hide">
-            {categories.map((cat: any) => (
-              <button
-                key={cat}
-                onClick={() => {
-                  setActiveCategory(cat)
-                  setVisibleCount(8)
-                }}
-                className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold transition-all ${
-                  activeCategory === cat 
-                    ? "bg-[#4e3dc7] text-white shadow-md" 
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-        )}
 
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
           {displayedBatches.map((batch: any, index: number) => {
@@ -181,7 +153,7 @@ export function ActiveBatchesList({
           })}
         </div>
 
-        {filteredBatches.length > visibleCount && (
+        {batches.length > visibleCount && (
           <div className="mt-10 flex justify-center">
             <button
               onClick={() => setVisibleCount(prev => prev + 8)}
