@@ -1511,7 +1511,7 @@ export async function toggleOrderRefund(orderId: string, isRefunded?: boolean) {
 
 /**
  * АВТОМАТ ЦУЦЛАЛТЫН ЛОГИК (CRON)
- * 24 цагаас дээш хугацаанд баталгаажаагүй "PENDING" захиалгуудыг автоматаар цуцална.
+ * 48 цагаас дээш хугацаанд баталгаажаагүй "PENDING" захиалгуудыг автоматаар цуцална.
  */
 export async function autoCancelExpiredOrders() {
   try {
@@ -1571,7 +1571,7 @@ export async function autoCancelExpiredOrders() {
             data: {
               paymentStatus: "REJECTED",
               statusId: cancelledStatus.id,
-              cancellationReason: "Системээс автоматаар цуцлав (24ц)"
+              cancellationReason: "Системээс автоматаар цуцлав (48ц)"
             }
           })
 

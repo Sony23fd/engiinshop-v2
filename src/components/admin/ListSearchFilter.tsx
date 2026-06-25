@@ -11,11 +11,14 @@ export function ListSearchFilter({ placeholder = "Данс, утас, нэр, х
   const [query, setQuery] = useState(searchParams.get("q") || "")
 
   useEffect(() => {
+    const currentQ = searchParams.get("q") || ""
+    if (query === currentQ) return // Do nothing if it hasn't changed
+
     const timer = setTimeout(() => {
       const params = new URLSearchParams(searchParams.toString())
       if (query) {
         params.set("q", query)
-        params.delete("page") // Reset page on new search
+        params.delete("page") // Reset page on NEW search
       } else {
         params.delete("q")
         params.delete("page")
