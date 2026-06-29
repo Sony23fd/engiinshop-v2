@@ -614,20 +614,38 @@ export async function searchOrders(query?: string) {
         { status: { isFinal: false } }
       ]
     }
+    const trimmed = query ? query.trim() : ""
+    
+    // If empty or single char, return latest 100 active orders quickly without heavy ILIKE scan
+    if (!trimmed || trimmed.length < 2) {
+      const orders = await db.order.findMany({
+        where: activeFilter,
+        include: {
+          batch: {
+            include: { product: true, category: true }
+          },
+          status: true
+        },
+        orderBy: { createdAt: "desc" },
+        take: 100,
+      })
+      return { success: true, orders: JSON.parse(JSON.stringify(orders)) }
+    }
+
     const orders = await db.order.findMany({
-      where: query ? {
+      where: {
         AND: [
           activeFilter,
           {
             OR: [
-              { accountNumber: { contains: query, mode: 'insensitive' } },
-              { customerPhone: { contains: query, mode: 'insensitive' } },
-              { customerName: { contains: query, mode: 'insensitive' } },
-              { batch: { product: { name: { contains: query, mode: 'insensitive' } } } },
+              { accountNumber: { contains: trimmed, mode: 'insensitive' } },
+              { customerPhone: { contains: trimmed, mode: 'insensitive' } },
+              { customerName: { contains: trimmed, mode: 'insensitive' } },
+              { batch: { product: { name: { contains: trimmed, mode: 'insensitive' } } } },
             ]
           }
         ]
-      } : activeFilter,
+      },
       include: {
         batch: {
           include: { product: true, category: true }
@@ -635,6 +653,7 @@ export async function searchOrders(query?: string) {
         status: true
       },
       orderBy: { createdAt: "desc" },
+      take: 150,
     })
     return { success: true, orders: JSON.parse(JSON.stringify(orders)) }
   } catch (error) {

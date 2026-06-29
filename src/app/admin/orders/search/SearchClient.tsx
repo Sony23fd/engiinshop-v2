@@ -44,17 +44,27 @@ export default function SearchClient({ statuses }: { statuses: any[] }) {
     if (e) e.preventDefault()
     
     setLoading(true)
-    const result = await searchOrders(query)
-    setLoading(false)
-    setHasSearched(true)
-    
-    if (result.success && result.orders) {
-      setOrders(result.orders)
-    } else {
+    try {
+      const result = await searchOrders(query)
+      setLoading(false)
+      setHasSearched(true)
+      
+      if (result.success && result.orders) {
+        setOrders(result.orders)
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Алдаа",
+          description: result.error || "Жагсаалт унших үед алдаа гарлаа",
+        })
+      }
+    } catch (err: any) {
+      setLoading(false)
+      const isActionError = err?.message?.includes("Failed to find Server Action") || err?.message?.includes("fetch")
       toast({
         variant: "destructive",
-        title: "Алдаа",
-        description: "Жагсаалт унших үед алдаа гарлаа",
+        title: isActionError ? "Систем шинэчлэгдсэн байна" : "Алдаа гарлаа",
+        description: isActionError ? "Систем шинэчлэгдсэн тул хуудсыг (Refresh хийж) дахин ачаална уу." : "Сүлжээ эсвэл серверийн алдаа гарлаа.",
       })
     }
   }
@@ -184,6 +194,7 @@ export default function SearchClient({ statuses }: { statuses: any[] }) {
             Хайх
           </Button>
         </form>
+        <p className="text-xs text-slate-400 mt-2">💡 Хайлтын утга хоосон орхиход сүүлийн 100 захиалга харагдана. Илүү оновчтой хайхын тулд утас эсвэл дансны 4+ орон оруулна уу.</p>
       </div>
 
       {!hasSearched ? null : groups.length === 0 ? (
@@ -224,11 +235,11 @@ export default function SearchClient({ statuses }: { statuses: any[] }) {
                 <div className="bg-slate-50 border-b px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0 text-indigo-700 font-bold text-lg">
-                      {first.customerName.charAt(0).toUpperCase()}
+                      {(first.customerName || "Х").charAt(0).toUpperCase()}
                     </div>
                     <div>
                       <div className="flex items-center gap-3">
-                        <span className="font-bold text-slate-900 text-lg">{first.customerName}</span>
+                        <span className="font-bold text-slate-900 text-lg">{first.customerName || "Нэр тодорхойгүй"}</span>
                         <span 
                           className="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded font-mono font-bold tracking-wider cursor-pointer hover:bg-indigo-200 transition-colors"
                           onClick={(e) => { e.stopPropagation(); setProfilePhone(first.customerPhone); }}
