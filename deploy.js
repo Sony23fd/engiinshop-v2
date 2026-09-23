@@ -5,6 +5,7 @@ const conn = new Client();
 const commands = [
   'cd /var/www/engiinshop',
   'git config pull.rebase false',
+  'git checkout package-lock.json',
   'git pull origin main',
   'if ! grep -q "SESSION_SECRET" .env; then echo \'SESSION_SECRET="engiinshop-admin-session-secret-32-chars!"\' >> .env; fi',
   'npm install',
