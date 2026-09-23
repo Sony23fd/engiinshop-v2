@@ -11,7 +11,6 @@ const commands = [
   'npm install',
   'npx prisma db push',
   'npx prisma generate',
-  'rm -rf .next',
   'npm run build',
   'pm2 restart all'
 ];
