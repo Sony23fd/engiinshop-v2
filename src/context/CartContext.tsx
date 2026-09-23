@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react"
 
 export interface CartItem {
+  itemKey?: string
   batchId: string
   name: string
   imageUrl?: string | null
@@ -10,13 +11,22 @@ export interface CartItem {
   deliveryFee: number
   qty: number
   isPreOrder?: boolean
+  selectedOptions?: Record<string, string>
+}
+
+export function getCartItemKey(item: { batchId: string; selectedOptions?: Record<string, string> }): string {
+  if (!item.selectedOptions || Object.keys(item.selectedOptions).length === 0) {
+    return item.batchId
+  }
+  const sorted = Object.entries(item.selectedOptions).sort(([a], [b]) => a.localeCompare(b))
+  return `${item.batchId}__${JSON.stringify(sorted)}`
 }
 
 interface CartContextType {
   items: CartItem[]
   addItem: (item: Omit<CartItem, "qty"> & { qty?: number }) => void
-  removeItem: (batchId: string) => void
-  updateQty: (batchId: string, qty: number) => void
+  removeItem: (itemKeyOrBatchId: string) => void
+  updateQty: (itemKeyOrBatchId: string, qty: number) => void
   clearCart: () => void
   totalCount: number
   totalPrice: number
@@ -33,7 +43,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
-      if (stored) setItems(JSON.parse(stored))
+      if (stored) {
+        const parsed: CartItem[] = JSON.parse(stored)
+        // Ensure every item has an itemKey
+        const withKeys = parsed.map(i => ({
+          ...i,
+          itemKey: i.itemKey || getCartItemKey(i)
+        }))
+        setItems(withKeys)
+      }
     } catch {}
   }, [])
 
@@ -45,26 +63,40 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [items])
 
   function addItem(incoming: Omit<CartItem, "qty"> & { qty?: number }) {
+    const key = incoming.itemKey || getCartItemKey(incoming)
+    const incomingWithKey: CartItem = {
+      ...incoming,
+      itemKey: key,
+      qty: incoming.qty ?? 1
+    }
+
     setItems(prev => {
-      const existing = prev.find(i => i.batchId === incoming.batchId)
-      if (existing) {
-        return prev.map(i =>
-          i.batchId === incoming.batchId
-            ? { ...i, qty: i.qty + (incoming.qty ?? 1) }
-            : i
-        )
+      const existingIdx = prev.findIndex(i => (i.itemKey || getCartItemKey(i)) === key)
+      if (existingIdx >= 0) {
+        const next = [...prev]
+        next[existingIdx] = {
+          ...next[existingIdx],
+          qty: next[existingIdx].qty + (incoming.qty ?? 1)
+        }
+        return next
       }
-      return [...prev, { ...incoming, qty: incoming.qty ?? 1 }]
+      return [...prev, incomingWithKey]
     })
   }
 
-  function removeItem(batchId: string) {
-    setItems(prev => prev.filter(i => i.batchId !== batchId))
+  function removeItem(keyOrBatchId: string) {
+    setItems(prev => prev.filter(i => (i.itemKey || getCartItemKey(i)) !== keyOrBatchId && i.batchId !== keyOrBatchId))
   }
 
-  function updateQty(batchId: string, qty: number) {
-    if (qty < 1) return removeItem(batchId)
-    setItems(prev => prev.map(i => i.batchId === batchId ? { ...i, qty } : i))
+  function updateQty(keyOrBatchId: string, qty: number) {
+    if (qty < 1) return removeItem(keyOrBatchId)
+    setItems(prev => prev.map(i => {
+      const currentKey = i.itemKey || getCartItemKey(i)
+      if (currentKey === keyOrBatchId || i.batchId === keyOrBatchId) {
+        return { ...i, qty }
+      }
+      return i
+    }))
   }
 
   function clearCart() {

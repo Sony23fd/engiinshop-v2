@@ -8,6 +8,7 @@ const commands = [
   'git pull origin main',
   'if ! grep -q "SESSION_SECRET" .env; then echo \'SESSION_SECRET="engiinshop-admin-session-secret-32-chars!"\' >> .env; fi',
   'npm install',
+  'npx prisma db push',
   'npx prisma generate',
   'npm run build',
   'pm2 restart all'

@@ -3,6 +3,8 @@ import { useCart } from "@/context/CartContext"
 import { ShoppingCart, Check } from "lucide-react"
 import { useState } from "react"
 
+import { useRouter } from "next/navigation"
+
 interface Props {
   batchId: string
   name: string
@@ -11,15 +13,22 @@ interface Props {
   deliveryFee: number
   isPreOrder?: boolean
   iconOnly?: boolean
+  hasVariants?: boolean
 }
 
-export function AddToCartButton({ batchId, name, imageUrl, unitPrice, deliveryFee, isPreOrder, iconOnly }: Props) {
+export function AddToCartButton({ batchId, name, imageUrl, unitPrice, deliveryFee, isPreOrder, iconOnly, hasVariants }: Props) {
   const { addItem, items } = useCart()
   const [added, setAdded] = useState(false)
+  const router = useRouter()
   const inCart = items.some(i => i.batchId === batchId)
 
   function handleAdd(e: React.MouseEvent) {
     e.preventDefault() // prevent navigating to product detail if clicked inside a link area
+    e.stopPropagation()
+    if (hasVariants) {
+      router.push(`/product/${batchId}#order-form`)
+      return
+    }
     addItem({ batchId, name, imageUrl, unitPrice, deliveryFee, isPreOrder, qty: 1 })
     setAdded(true)
     setTimeout(() => setAdded(false), 1500)

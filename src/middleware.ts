@@ -34,26 +34,37 @@ export async function middleware(request: NextRequest) {
   const protocol = request.headers.get("x-forwarded-proto") || "https"
 
 
-  // Skip API routes and statics (for /admin protection)
+  // Allow public API routes and statics
   if (
     pathname.startsWith("/api/admin/login") ||
     pathname.startsWith("/api/admin/logout") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api/qpay") ||
     pathname.startsWith("/api/notifications") ||
-    pathname.startsWith("/api/upload")
+    pathname.startsWith("/api/cron")
   ) {
     return NextResponse.next()
   }
 
-  // Only protect /admin routes for session check
-  if (!pathname.startsWith("/admin")) {
+  const isAdminPage = pathname.startsWith("/admin")
+  const isAdminApi = pathname.startsWith("/api/admin")
+
+  // Only protect /admin and /api/admin routes
+  if (!isAdminPage && !isAdminApi) {
     return NextResponse.next()
   }
 
   // Check session
   const response = NextResponse.next()
   const session = await getIronSession<AdminSessionData>(request, response, SESSION_OPTIONS)
+
+  // Block unauthorized API requests with 401 JSON
+  if (isAdminApi) {
+    if (!session.isLoggedIn || !session.userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    return response
+  }
 
   if (pathname === "/admin/login") {
     if (session.isLoggedIn && session.userId) {

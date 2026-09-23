@@ -22,6 +22,9 @@ export async function POST(req: NextRequest) {
     }
 
     const admin = await getCurrentAdmin()
+    if (!admin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
 
     const arrayBuffer = await file.arrayBuffer()
     const wb = XLSX.read(arrayBuffer, { type: "buffer", cellDates: true })

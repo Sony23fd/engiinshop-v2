@@ -35,6 +35,37 @@ export async function GET(
     }
 
     if (!existsSync(absolutePath)) {
+      // If running locally or file not yet downloaded, proxy from production server
+      try {
+        const remoteUrl = `https://anarkoreashop.mn/uploads/${filePathArray.join("/")}`
+        const remoteRes = await fetch(remoteUrl)
+        if (remoteRes.ok) {
+          const arrayBuffer = await remoteRes.arrayBuffer()
+          const buffer = Buffer.from(arrayBuffer)
+
+          // Save locally so subsequent requests are served instantly from disk
+          try {
+            const { dirname } = await import("path")
+            const { mkdirSync, writeFileSync } = await import("fs")
+            mkdirSync(dirname(absolutePath), { recursive: true })
+            writeFileSync(absolutePath, buffer)
+          } catch {}
+
+          const ext = absolutePath.match(/\.[^.]+$/)?.[0]?.toLowerCase() || ""
+          const mimeType = MIME_TYPES[ext] || remoteRes.headers.get("content-type") || "application/octet-stream"
+
+          return new NextResponse(buffer, {
+            status: 200,
+            headers: {
+              "Content-Type": mimeType,
+              "Cache-Control": "public, max-age=31536000, immutable",
+            },
+          })
+        }
+      } catch (proxyErr) {
+        // Ignore and proceed to 404
+      }
+
       return new NextResponse("File not found", { status: 404 })
     }
 

@@ -1,9 +1,19 @@
 import { EventEmitter } from "events"
+import { sendTelegramNotification } from "./telegram"
 
 const globalForEmitter = global as unknown as { orderEmitter?: EventEmitter }
 if (!globalForEmitter.orderEmitter) {
   globalForEmitter.orderEmitter = new EventEmitter()
   globalForEmitter.orderEmitter.setMaxListeners(100)
+
+  // Attach automated Telegram notifications
+  globalForEmitter.orderEmitter.on("order-confirmed", (e: OrderConfirmedEvent) => {
+    const msg = `✅ <b>ТӨЛБӨР БАТАЛГААЖЛАА!</b>\n` +
+      `👤 Захиалагч: <b>${e.name}</b> (${e.phone})\n` +
+      `💰 Төлсөн дүн: <b>${Number(e.totalAmount || 0).toLocaleString()}₮</b>\n` +
+      `🔗 Код: <code>${e.transactionRef}</code>`
+    sendTelegramNotification(msg).catch(() => {})
+  })
 }
 export const orderEmitter = globalForEmitter.orderEmitter
 
@@ -80,10 +90,30 @@ export function emitNewOrder(event: Omit<NewOrderEvent, "items"> & {
   const entry = orderBuffer.get(ref)!
   entry.timer = setTimeout(() => {
     orderEmitter.emit("new-order", entry.event)
+
+    // Send Telegram alert
+    const itemsList = entry.event.items
+      .map(i => `• ${i.productName} (${i.quantity}ш) - ${Number(i.totalAmount).toLocaleString()}₮`)
+      .join("\n")
+    const msg = `🛍️ <b>ШИНЭ ЗАХИАЛГА ИРЛЭЭ!</b>\n` +
+      `👤 Захиалагч: <b>${entry.event.customerName}</b> (${entry.event.customerPhone || "Утасгүй"})\n` +
+      `💰 Нийт дүн: <b>${Number(entry.event.totalAmount).toLocaleString()}₮</b>\n` +
+      `📦 Бараанууд:\n${itemsList}\n` +
+      `🚚 Хүргэлт: ${entry.event.wantsDelivery ? "Тийм" : "Үгүй"}\n` +
+      `🔗 Код: <code>${entry.event.transactionRef}</code>`
+    sendTelegramNotification(msg).catch(() => {})
+
     orderBuffer.delete(ref)
   }, 800) // wait 800ms for any additional items from same checkout
 }
 
 export function emitDeliveryRequest(event: DeliveryRequestEvent) {
   orderEmitter.emit("delivery-request", event)
+
+  // Send Telegram alert
+  const msg = `🚚 <b>ХҮРГЭЛТИЙН ХҮСЭЛТ ИРЛЭЭ!</b>\n` +
+    `👤 Захиалагч: <b>${event.customerName}</b> (${event.customerPhone})\n` +
+    `📍 Хаяг: <b>${event.address}</b>\n` +
+    `📦 Захиалгын тоо: <b>${event.orderCount}ш</b>`
+  sendTelegramNotification(msg).catch(() => {})
 }

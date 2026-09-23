@@ -128,6 +128,10 @@ export function ActiveBatchesList({
                         unitPrice={(() => { const bp = parseFloat(String(batch.price ?? 0)); const pp = parseFloat(String(batch.product?.price ?? 0)); return bp > 0 ? bp : pp; })()}
                         deliveryFee={Number(batch.deliveryFee || 0)}
                         isPreOrder={batch.isPreOrder}
+                        hasVariants={Boolean(
+                          (batch.variantStock && typeof batch.variantStock === 'object' && Object.keys(batch.variantStock).length > 0) ||
+                          (Array.isArray(batch.product?.options) && batch.product.options.length > 0)
+                        )}
                         iconOnly
                       />
                     </div>
@@ -139,7 +143,7 @@ export function ActiveBatchesList({
                              <PreOrderCountdown closingDate={batch.closingDate} />
                            ) : (
                              <div className="text-[11px] font-bold text-amber-600 uppercase tracking-wider text-center py-2 bg-amber-50 rounded-lg border border-amber-100">
-                               🎉 Захиалга нээлттэй хадгалагдсан
+                               {"🎉 Захиалга нээлттэй хадгалагдсан"}
                              </div>
                            )}
                            <p className="text-[10px] text-center text-slate-500 font-medium leading-relaxed bg-slate-50 border border-slate-100 p-1.5 rounded-lg">

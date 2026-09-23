@@ -30,22 +30,33 @@ export async function getCategories(days: number = 30) {
         categoryId: true,
         _count: {
           select: { orders: true }
-        },
-        orders: {
-          where: { status: { isFinal: true } },
-          select: { id: true }
         }
       }
     });
 
+    const batchIds = batches.map(b => b.id);
+    const finalOrderCounts = batchIds.length > 0 ? await db.order.groupBy({
+      by: ['batchId'],
+      where: {
+        batchId: { in: batchIds },
+        status: { isFinal: true }
+      },
+      _count: { id: true }
+    }) : [];
+
+    const finalCountMap = new Map<string, number>();
+    for (const f of finalOrderCounts) {
+      finalCountMap.set(f.batchId, f._count.id);
+    }
+
     const categories = categoriesData.map(c => {
       const catBatches = batches.filter(b => b.categoryId === c.id);
       const totalOrders = catBatches.reduce((sum, b) => sum + b._count.orders, 0);
-      const completedOrders = catBatches.reduce((sum, b) => sum + b.orders.length, 0);
+      const completedOrders = catBatches.reduce((sum, b) => sum + (finalCountMap.get(b.id) || 0), 0);
       
       return {
         ...c,
-        batches: [{ orders: Array(totalOrders).fill({}).map((_, i) => i < completedOrders ? { status: { isFinal: true } } : {}) }] // Mock the structure to avoid breaking UI without changing it yet
+        batches: [{ orders: Array(totalOrders).fill({}).map((_, i) => i < completedOrders ? { status: { isFinal: true } } : {}) }] // Maintain backwards compatibility with UI
       }
     });
     

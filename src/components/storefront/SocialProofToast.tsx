@@ -151,7 +151,21 @@ export function SocialProofToast() {
           <>
             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-indigo-50 border border-indigo-100 overflow-hidden shrink-0 flex items-center justify-center relative">
               {currentOrder.productImage ? (
-                <img src={currentOrder.productImage} alt="Order" className="w-full h-full object-cover" />
+                <img
+                  src={currentOrder.productImage}
+                  alt="Order"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none"
+                    const parent = e.currentTarget.parentElement
+                    if (parent && !parent.querySelector(".fallback-icon")) {
+                      const icon = document.createElement("div")
+                      icon.className = "fallback-icon w-full h-full flex items-center justify-center text-indigo-400"
+                      icon.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>`
+                      parent.appendChild(icon)
+                    }
+                  }}
+                />
               ) : (
                 <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-400" />
               )}

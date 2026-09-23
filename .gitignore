@@ -42,3 +42,14 @@ next-env.d.ts
 
 /src/generated/prisma
 /public/uploads
+
+# dumps & logs
+*.sql
+*.log
+*.txt
+!README.txt
+!SERVER_UPDATE_GUIDE.md
+!vps_setup_guide.md
+scratch/
+tmp/
+backups/

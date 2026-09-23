@@ -4,6 +4,7 @@ import { db } from "@/lib/db"
 import { revalidatePath } from "next/cache"
 import { emitNewOrder } from "@/lib/orderEvents"
 import { getCurrentAdmin, logActivity } from "@/lib/auth"
+import { getVariantKey, getVariantStockTotal } from "@/lib/variant-utils"
 
 export async function getOrders() {
   try {
@@ -460,7 +461,8 @@ export async function createOrder(data: {
     const result = await db.$transaction(async (tx) => {
       // 1. Get batch current state
       const batch = await tx.batch.findUnique({
-        where: { id: data.batchId }
+        where: { id: data.batchId },
+        include: { product: true }
       });
 
       if (!batch) {
@@ -492,20 +494,22 @@ export async function createOrder(data: {
       });
 
       // 3. Decrement remaining quantity AND variant stock if applicable
-      const newQty = Math.max(0, batch.remainingQuantity - data.quantity)
-      const updateData: any = { remainingQuantity: newQty }
+      const updateData: any = {}
 
       // Variant stock management
-      if ((batch as any).variantStock && data.selectedOptions && typeof data.selectedOptions === 'object') {
+      if ((batch as any).variantStock && typeof (batch as any).variantStock === 'object') {
         const variantStock = { ...((batch as any).variantStock as Record<string, number>) }
-        const optionValues = Object.values(data.selectedOptions as Record<string, string>)
-        const variantKey = optionValues.join('-')
+        const variantKey = getVariantKey((batch.product as any)?.options, data.selectedOptions)
 
         if (variantKey && variantStock[variantKey] !== undefined) {
           const newVariantQty = Math.max(0, variantStock[variantKey] - data.quantity)
           variantStock[variantKey] = newVariantQty
           updateData.variantStock = variantStock
         }
+        // Always sync remainingQuantity with variant stock total
+        updateData.remainingQuantity = getVariantStockTotal(variantStock)
+      } else {
+        updateData.remainingQuantity = Math.max(0, batch.remainingQuantity - data.quantity)
       }
 
       await tx.batch.update({
@@ -704,7 +708,7 @@ export async function updateOrderStatus(orderId: string, statusId: string, reaso
     const result = await db.$transaction(async (tx) => {
       const order = await (tx.order as any).findUnique({
         where: { id: orderId },
-        include: { status: true, batch: true }
+        include: { status: true, batch: { include: { product: true } } }
       })
 
       if (!order) throw new Error("Order not found")
@@ -724,16 +728,18 @@ export async function updateOrderStatus(orderId: string, statusId: string, reaso
       if (isToCancelled && !isFromCancelled) {
         updateData.paymentStatus = "REJECTED"
         updateData.cancellationReason = reason || null
-        // Increment batch remaining quantity + variant stock
-        const batchUpdateData: any = { remainingQuantity: { increment: order.quantity } }
+        const batchUpdateData: any = {}
 
-        if (order.batch.variantStock && order.selectedOptions && typeof order.selectedOptions === 'object') {
+        if (order.batch?.variantStock && typeof order.batch.variantStock === 'object') {
           const variantStock = { ...(order.batch.variantStock as Record<string, number>) }
-          const variantKey = Object.values(order.selectedOptions as Record<string, string>).join('-')
+          const variantKey = getVariantKey(order.batch.product?.options, order.selectedOptions)
           if (variantKey && variantStock[variantKey] !== undefined) {
             variantStock[variantKey] += order.quantity
             batchUpdateData.variantStock = variantStock
           }
+          batchUpdateData.remainingQuantity = getVariantStockTotal(variantStock)
+        } else {
+          batchUpdateData.remainingQuantity = { increment: order.quantity }
         }
 
         await (tx.batch as any).update({
@@ -743,24 +749,28 @@ export async function updateOrderStatus(orderId: string, statusId: string, reaso
       }
       // 2. Transition FROM Cancelled (Restore)
       else if (!isToCancelled && isFromCancelled) {
-        // Must check if enough stock exists to restore
-        if (order.batch.remainingQuantity < order.quantity) {
-          throw new Error(`Нөөц хүрэлцээгүй байна (Үлдэгдэл: ${order.batch.remainingQuantity})`)
+        const batchUpdateData: any = {}
+
+        if (order.batch?.variantStock && typeof order.batch.variantStock === 'object') {
+          const variantStock = { ...(order.batch.variantStock as Record<string, number>) }
+          const variantKey = getVariantKey(order.batch.product?.options, order.selectedOptions)
+          if (variantKey && variantStock[variantKey] !== undefined) {
+            if (variantStock[variantKey] < order.quantity) {
+              throw new Error(`Энэ сонголтын нөөц хүрэлцээгүй байна (Үлдэгдэл: ${variantStock[variantKey]})`)
+            }
+            variantStock[variantKey] = Math.max(0, variantStock[variantKey] - order.quantity)
+            batchUpdateData.variantStock = variantStock
+          }
+          batchUpdateData.remainingQuantity = getVariantStockTotal(variantStock)
+        } else {
+          if (order.batch.remainingQuantity < order.quantity) {
+            throw new Error(`Нөөц хүрэлцээгүй байна (Үлдэгдэл: ${order.batch.remainingQuantity})`)
+          }
+          batchUpdateData.remainingQuantity = { decrement: order.quantity }
         }
 
         updateData.paymentStatus = "PENDING" // Reset to pending for admin to re-confirm if needed
         updateData.cancellationReason = null // Clear reason on restore
-        // Decrement batch remaining quantity + variant stock
-        const batchUpdateData: any = { remainingQuantity: { decrement: order.quantity } }
-
-        if (order.batch.variantStock && order.selectedOptions && typeof order.selectedOptions === 'object') {
-          const variantStock = { ...(order.batch.variantStock as Record<string, number>) }
-          const variantKey = Object.values(order.selectedOptions as Record<string, string>).join('-')
-          if (variantKey && variantStock[variantKey] !== undefined) {
-            variantStock[variantKey] = Math.max(0, variantStock[variantKey] - order.quantity)
-            batchUpdateData.variantStock = variantStock
-          }
-        }
 
         await (tx.batch as any).update({
           where: { id: order.batchId },
@@ -804,10 +814,29 @@ export async function updateOrderDetails(orderId: string, data: any) {
       // If quantity changed, adjust batch inventory
       if (data.quantity !== undefined && data.quantity !== oldOrder.quantity) {
         const diff = data.quantity - oldOrder.quantity
-        await (tx.batch as any).update({
+        const batch = await (tx.batch as any).findUnique({
           where: { id: oldOrder.batchId },
-          data: { remainingQuantity: { decrement: diff } }
+          include: { product: true }
         })
+        if (batch?.variantStock && typeof batch.variantStock === 'object') {
+          const variantStock = { ...(batch.variantStock as Record<string, number>) }
+          const variantKey = getVariantKey(batch.product?.options, oldOrder.selectedOptions)
+          if (variantKey && variantStock[variantKey] !== undefined) {
+            variantStock[variantKey] = Math.max(0, variantStock[variantKey] - diff)
+          }
+          await (tx.batch as any).update({
+            where: { id: oldOrder.batchId },
+            data: {
+              variantStock,
+              remainingQuantity: getVariantStockTotal(variantStock)
+            }
+          })
+        } else {
+          await (tx.batch as any).update({
+            where: { id: oldOrder.batchId },
+            data: { remainingQuantity: { decrement: diff } }
+          })
+        }
       }
 
       return await tx.order.update({
@@ -845,15 +874,36 @@ export async function deleteOrder(orderId: string) {
     const admin = await getCurrentAdmin()
     if (!admin) return { success: false, error: "Хандах эрхгүй" }
 
-    const order = await db.order.findUnique({ where: { id: orderId } })
+    const order = await (db.order as any).findUnique({
+      where: { id: orderId },
+      include: { batch: { include: { product: true } }, status: true }
+    })
     if (!order) return { success: false, error: "Захиалга олдсонгүй" }
 
     await db.$transaction(async (tx) => {
-      // 1. Restore batch inventory
-      await (tx.batch as any).update({
-        where: { id: order.batchId },
-        data: { remainingQuantity: { increment: order.quantity } }
-      })
+      // 1. Restore batch inventory ONLY if order was not cancelled/rejected
+      const isCancelled = order.status?.name === "Цуцлагдсан" || order.paymentStatus === "REJECTED"
+      if (!isCancelled && order.batch) {
+        if (order.batch.variantStock && typeof order.batch.variantStock === 'object') {
+          const variantStock = { ...(order.batch.variantStock as Record<string, number>) }
+          const variantKey = getVariantKey(order.batch.product?.options, order.selectedOptions)
+          if (variantKey && variantStock[variantKey] !== undefined) {
+            variantStock[variantKey] += order.quantity
+          }
+          await (tx.batch as any).update({
+            where: { id: order.batchId },
+            data: {
+              variantStock,
+              remainingQuantity: getVariantStockTotal(variantStock)
+            }
+          })
+        } else {
+          await (tx.batch as any).update({
+            where: { id: order.batchId },
+            data: { remainingQuantity: { increment: order.quantity } }
+          })
+        }
+      }
 
       // 2. Delete order
       await tx.order.delete({ where: { id: orderId } })
@@ -887,12 +937,20 @@ export async function restoreGroupOrder(orderIds: string[]) {
     const result = await db.$transaction(async (tx) => {
       const orders = await (tx.order as any).findMany({
         where: { id: { in: orderIds } },
-        include: { batch: true }
+        include: { batch: { include: { product: true } } }
       })
 
       // Check stock for ALL orders in the group before proceeding
       for (const order of orders) {
-        if (order.batch.remainingQuantity < order.quantity) {
+        if (order.batch?.variantStock && typeof order.batch.variantStock === 'object') {
+          const variantStock = order.batch.variantStock as Record<string, number>
+          const variantKey = getVariantKey(order.batch.product?.options, order.selectedOptions)
+          if (variantKey && variantStock[variantKey] !== undefined) {
+            if (variantStock[variantKey] < order.quantity) {
+              throw new Error(`'${order.batch.product?.name || "Бараа"}' сонголтын нөөц хүрэлцээгүй байна`)
+            }
+          }
+        } else if (order.batch.remainingQuantity < order.quantity) {
           throw new Error(`'${order.batch.product?.name || "Бараа"}' нөөц хүрэлцээгүй байна (Үлдэгдэл: ${order.batch.remainingQuantity})`)
         }
       }
@@ -909,10 +967,29 @@ export async function restoreGroupOrder(orderIds: string[]) {
 
       // Decrement stock for each
       for (const order of orders) {
-        await (tx.batch as any).update({
-          where: { id: order.batchId },
-          data: { remainingQuantity: { decrement: order.quantity } }
-        })
+        if (order.batch?.variantStock && typeof order.batch.variantStock === 'object') {
+          const currentBatch = await (tx.batch as any).findUnique({
+            where: { id: order.batchId },
+            include: { product: true }
+          })
+          const variantStock = { ...(currentBatch?.variantStock as Record<string, number> || {}) }
+          const variantKey = getVariantKey(currentBatch?.product?.options, order.selectedOptions)
+          if (variantKey && variantStock[variantKey] !== undefined) {
+            variantStock[variantKey] = Math.max(0, variantStock[variantKey] - order.quantity)
+          }
+          await (tx.batch as any).update({
+            where: { id: order.batchId },
+            data: {
+              variantStock,
+              remainingQuantity: getVariantStockTotal(variantStock)
+            }
+          })
+        } else {
+          await (tx.batch as any).update({
+            where: { id: order.batchId },
+            data: { remainingQuantity: { decrement: order.quantity } }
+          })
+        }
       }
 
       return true
@@ -1595,18 +1672,26 @@ export async function autoCancelExpiredOrders() {
           })
 
           // Барааны үлдэгдлийг буцаан нэмэх + variant stock
-          const batchUpdateData: any = { remainingQuantity: { increment: order.quantity } }
+          const batchUpdateData: any = {}
 
           if (order.selectedOptions && typeof order.selectedOptions === 'object') {
-            const batch = await (tx.batch as any).findUnique({ where: { id: order.batchId } })
-            if (batch?.variantStock) {
+            const batch = await (tx.batch as any).findUnique({
+              where: { id: order.batchId },
+              include: { product: true }
+            })
+            if (batch?.variantStock && typeof batch.variantStock === 'object') {
               const variantStock = { ...(batch.variantStock as Record<string, number>) }
-              const variantKey = Object.values(order.selectedOptions as Record<string, string>).join('-')
+              const variantKey = getVariantKey(batch.product?.options, order.selectedOptions)
               if (variantKey && variantStock[variantKey] !== undefined) {
                 variantStock[variantKey] += order.quantity
                 batchUpdateData.variantStock = variantStock
               }
+              batchUpdateData.remainingQuantity = getVariantStockTotal(variantStock)
+            } else {
+              batchUpdateData.remainingQuantity = { increment: order.quantity }
             }
+          } else {
+            batchUpdateData.remainingQuantity = { increment: order.quantity }
           }
 
           await (tx.batch as any).update({

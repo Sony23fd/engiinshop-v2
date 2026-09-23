@@ -96,8 +96,8 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
           </Link>
 
           <div className="flex items-center gap-4 mt-2 md:mt-0">
-            <Link 
-              href="/track" 
+            <Link
+              href="/track"
               className="hidden md:flex bg-white/10 hover:bg-white/20 border border-white/20 text-white px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm backdrop-blur-sm items-center gap-2 group-hover:bg-white/10"
             >
               <Search className="w-4 h-4" />
@@ -212,7 +212,7 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
               <p>© {new Date().getFullYear()} <strong className="text-white font-medium">Anar Korea Shop</strong>.</p>
             </div>
             <div className="md:w-1/3 text-center">
-              <p>Хөгжүүлсэн: <a href="https://www.facebook.com/engiineeer" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors hover:underline underline-offset-4">Engiineer</a></p>
+              <p>Онлайн дэлгүүрийн системтэй болох бол: <a href="https://www.facebook.com/engiineeer" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors hover:underline underline-offset-4">END DAR  </a></p>
             </div>
             <div className="md:w-1/3 flex justify-center md:justify-end gap-6">
               <a href="#" className="hover:text-white transition-colors">Үйлчилгээний нөхцөл</a>

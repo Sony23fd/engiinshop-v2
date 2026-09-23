@@ -132,6 +132,8 @@ model Order {
   confirmedBy           User?            @relation("ConfirmedOrders", fields: [confirmedById], references: [id])
   status                OrderStatusType? @relation(fields: [statusId], references: [id])
 
+  @@index([batchId])
+  @@index([batchId, paymentStatus])
   @@index([paymentStatus])
   @@index([updatedAt])
   @@index([customerPhone])

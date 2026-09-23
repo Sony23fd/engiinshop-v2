@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Clock } from "lucide-react"
 
 export function PreOrderCountdown({ closingDate }: { closingDate: string }) {
+  const [mounted, setMounted] = useState(false)
   const [timeLeft, setTimeLeft] = useState({
     days: 0,
     hours: 0,
@@ -13,6 +14,7 @@ export function PreOrderCountdown({ closingDate }: { closingDate: string }) {
   })
 
   useEffect(() => {
+    setMounted(true)
     const end = new Date(closingDate).getTime()
 
     const updateTimer = () => {
@@ -37,6 +39,20 @@ export function PreOrderCountdown({ closingDate }: { closingDate: string }) {
     const interval = setInterval(updateTimer, 1000)
     return () => clearInterval(interval)
   }, [closingDate])
+
+  if (!mounted) {
+    return (
+      <div className="bg-amber-50 border border-amber-200/60 rounded-lg p-2 mb-1 opacity-70">
+        <div className="flex items-center justify-center gap-1.5 text-[10px] font-semibold text-amber-700 uppercase tracking-widest mb-1">
+          <Clock className="w-3 h-3" />
+          Захиалга дуусахад
+        </div>
+        <div className="flex justify-center items-center gap-1.5 font-mono text-sm font-bold text-amber-600">
+          --:--:--
+        </div>
+      </div>
+    )
+  }
 
   if (timeLeft.isExpired) {
     return (

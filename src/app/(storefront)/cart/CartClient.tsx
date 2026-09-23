@@ -104,6 +104,7 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
             batchId: item.batchId,
             wantsDelivery: hasPreOrder ? false : wantsDelivery,
             transactionRef: sharedRef,
+            selectedOptions: item.selectedOptions,
           })
         )
       )
@@ -141,56 +142,71 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
         {/* Cart Items */}
         <div className="lg:col-span-3 space-y-3">
-          {items.map(item => (
-            <div key={item.batchId} className="bg-white rounded-xl border p-4 flex gap-4 items-start">
-              <div className="w-16 h-16 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0">
-                {item.imageUrl ? (
-                  <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-slate-300">
-                    <Package className="w-6 h-6" />
-                  </div>
-                )}
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-medium text-slate-900 truncate">{item.name}</p>
-                  {item.isPreOrder && (
-                    <span className="shrink-0 px-1.5 py-0.5 bg-amber-100 text-amber-700 border border-amber-200 text-[10px] font-bold rounded uppercase">Урьдчилсан захиалга</span>
+          {items.map((item, idx) => {
+            const itemIdentifier = item.itemKey || `${item.batchId}-${idx}`
+            return (
+              <div key={itemIdentifier} className="bg-white rounded-xl border p-4 flex gap-4 items-start">
+                <div className="w-16 h-16 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0">
+                  {item.imageUrl ? (
+                    <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-slate-300">
+                      <Package className="w-6 h-6" />
+                    </div>
                   )}
                 </div>
-                <p className="text-sm text-indigo-600 font-semibold mt-1">₮{item.unitPrice.toLocaleString()}</p>
 
-                {/* Qty controls */}
-                <div className="flex items-center gap-2 mt-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-slate-900 truncate">{item.name}</p>
+                    {item.isPreOrder && (
+                      <span className="shrink-0 px-1.5 py-0.5 bg-amber-100 text-amber-700 border border-amber-200 text-[10px] font-bold rounded uppercase">Урьдчилсан захиалга</span>
+                    )}
+                  </div>
+
+                  {/* Selected options tags */}
+                  {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {Object.entries(item.selectedOptions).map(([optName, optVal]) => (
+                        <span key={optName} className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                          {optName}: {optVal}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <p className="text-sm text-indigo-600 font-semibold mt-1">₮{item.unitPrice.toLocaleString()}</p>
+
+                  {/* Qty controls */}
+                  <div className="flex items-center gap-2 mt-3">
+                    <button
+                      onClick={() => updateQty(itemIdentifier, item.qty - 1)}
+                      className="w-7 h-7 rounded-full border flex items-center justify-center hover:bg-slate-100 transition-colors"
+                    >
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    <span className="min-w-[24px] text-center font-semibold text-slate-900 text-sm">{item.qty}</span>
+                    <button
+                      onClick={() => updateQty(itemIdentifier, item.qty + 1)}
+                      className="w-7 h-7 rounded-full border flex items-center justify-center hover:bg-slate-100 transition-colors"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="text-right flex flex-col items-end gap-2">
+                  <p className="font-bold text-slate-900">₮{(item.unitPrice * item.qty).toLocaleString()}</p>
                   <button
-                    onClick={() => updateQty(item.batchId, item.qty - 1)}
-                    className="w-7 h-7 rounded-full border flex items-center justify-center hover:bg-slate-100 transition-colors"
+                    onClick={() => removeItem(itemIdentifier)}
+                    className="text-slate-300 hover:text-red-400 transition-colors p-1"
                   >
-                    <Minus className="w-3 h-3" />
-                  </button>
-                  <span className="min-w-[24px] text-center font-semibold text-slate-900 text-sm">{item.qty}</span>
-                  <button
-                    onClick={() => updateQty(item.batchId, item.qty + 1)}
-                    className="w-7 h-7 rounded-full border flex items-center justify-center hover:bg-slate-100 transition-colors"
-                  >
-                    <Plus className="w-3 h-3" />
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
-
-              <div className="text-right flex flex-col items-end gap-2">
-                <p className="font-bold text-slate-900">₮{(item.unitPrice * item.qty).toLocaleString()}</p>
-                <button
-                  onClick={() => removeItem(item.batchId)}
-                  className="text-slate-300 hover:text-red-400 transition-colors p-1"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         {/* Checkout Form */}
