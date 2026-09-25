@@ -17,13 +17,19 @@ export function CreateBatchForm({ categoryId, onSuccess }: { categoryId: string,
     setLoading(true)
     const formData = new FormData(e.currentTarget)
 
+    const targetQuantity = Number(formData.get("targetQuantity") || 0)
+    const rawRemaining = formData.get("remainingQuantity")
+    const remainingQuantity = (rawRemaining !== null && String(rawRemaining).trim() !== "")
+      ? Number(rawRemaining)
+      : targetQuantity
+
     const result = await createBatch({
       categoryId,
       name: formData.get("name") as string,
       description: formData.get("description") as string,
       cargoFeeStatus: formData.get("cargoFeeStatus") as string,
-      targetQuantity: Number(formData.get("targetQuantity") || 0),
-      remainingQuantity: Number(formData.get("remainingQuantity") || 0),
+      targetQuantity,
+      remainingQuantity,
       price: Number(formData.get("price") || 0),
       weight: Number(formData.get("weight") || 0),
     })
@@ -56,11 +62,32 @@ export function CreateBatchForm({ categoryId, onSuccess }: { categoryId: string,
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <label htmlFor="targetQuantity" className="text-sm font-medium">Зорилтот тоо</label>
-          <Input id="targetQuantity" name="targetQuantity" type="number" required placeholder="0" />
+          <Input
+            id="targetQuantity"
+            name="targetQuantity"
+            type="number"
+            required
+            placeholder="0"
+            onChange={(e) => {
+              const rq = document.getElementById("remainingQuantity") as HTMLInputElement
+              if (rq && (!rq.dataset.touched || rq.dataset.touched === "false")) {
+                rq.value = e.target.value
+              }
+            }}
+          />
         </div>
         <div className="space-y-2">
           <label htmlFor="remainingQuantity" className="text-sm font-medium">Үлдэгдэл</label>
-          <Input id="remainingQuantity" name="remainingQuantity" type="number" required placeholder="0" />
+          <Input
+            id="remainingQuantity"
+            name="remainingQuantity"
+            type="number"
+            placeholder="Зорилтот тоотой адил"
+            onChange={() => {
+              const rq = document.getElementById("remainingQuantity") as HTMLInputElement
+              if (rq) rq.dataset.touched = "true"
+            }}
+          />
         </div>
       </div>
 

@@ -187,9 +187,13 @@ export async function createProduct(data: {
 }) {
   try {
     const hasVariants = data.variantStock && typeof data.variantStock === 'object' && Object.keys(data.variantStock).length > 0
-    const finalRemainingQty = hasVariants
+    let finalRemainingQty = hasVariants
       ? getVariantStockTotal(data.variantStock)
       : data.remainingQuantity
+
+    if (!hasVariants && finalRemainingQty <= 0 && data.targetQuantity > 0) {
+      finalRemainingQty = data.targetQuantity
+    }
 
     let status: BatchStatus = BatchStatus.OPEN
     if (finalRemainingQty <= 0) {
@@ -452,3 +456,75 @@ export async function syncBatchVariantStock(batchId: string) {
     return { success: false, error: error.message }
   }
 }
+
+export async function reconcileAllBatchStocks() {
+  try {
+    const admin = await getCurrentAdmin()
+    if (!admin) return { success: false, error: "Хандах эрхгүй" }
+
+    const batches = await db.batch.findMany({
+      include: {
+        product: true,
+        orders: {
+          select: {
+            quantity: true,
+            paymentStatus: true,
+            status: { select: { name: true } }
+          }
+        }
+      }
+    })
+
+    let updatedCount = 0
+
+    for (const b of batches) {
+      const validOrders = b.orders.filter(
+        o => o.paymentStatus === 'CONFIRMED' && (!o.status || o.status.name !== 'Цуцлагдсан')
+      )
+      const validQty = validOrders.reduce((sum, o) => sum + (o.quantity || 0), 0)
+
+      let newRemaining = b.remainingQuantity
+      let newStatus = b.status
+
+      if (b.variantStock && typeof b.variantStock === 'object' && Object.keys(b.variantStock).length > 0) {
+        newRemaining = getVariantStockTotal(b.variantStock as Record<string, number>)
+      } else {
+        newRemaining = Math.max(0, b.targetQuantity - validQty)
+      }
+
+      if (newRemaining > 0 && b.status === BatchStatus.CLOSED && b.targetQuantity > validQty) {
+        newStatus = BatchStatus.OPEN
+      } else if (newRemaining <= 0 && b.status === BatchStatus.OPEN) {
+        newStatus = BatchStatus.CLOSED
+      }
+
+      if (newRemaining !== b.remainingQuantity || newStatus !== b.status) {
+        await db.batch.update({
+          where: { id: b.id },
+          data: {
+            remainingQuantity: newRemaining,
+            status: newStatus
+          }
+        })
+        updatedCount++
+      }
+    }
+
+    await logActivity({
+      userId: admin.id,
+      userName: admin.name || "Админ",
+      userRole: admin.role,
+      action: "Үлдэгдэл тэнцвэржүүлэв",
+      target: "Бүх багцууд",
+      detail: `Нийт ${updatedCount} багцын үлдэгдэл болон төлөвийг захиалгын түүхээр тэнцвэржүүллээ.`,
+    })
+
+    revalidatePath("/admin/products")
+    revalidatePath("/")
+    return { success: true, updatedCount }
+  } catch (error: any) {
+    console.error("Failed to reconcile batch stocks:", error)
+    return { success: false, error: error.message }
+  }
+}
+

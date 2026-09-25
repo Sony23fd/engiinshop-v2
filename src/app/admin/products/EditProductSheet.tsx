@@ -37,8 +37,9 @@ export function EditProductSheet({ batch, categories = [] }: EditProductSheetPro
   const [bulkStockInput, setBulkStockInput] = useState<string>("")
   const [excludedCombos, setExcludedCombos] = useState<Record<string, boolean>>({})
 
-  // Target quantity state for easy sync button
+  // Target and remaining quantity state for easy sync button
   const [targetQuantity, setTargetQuantity] = useState<number>(batch.targetQuantity || 0)
+  const [remainingQuantity, setRemainingQuantity] = useState<number>(batch.remainingQuantity || 0)
 
   // Presets
   const OPTION_NAME_PRESETS = ["Хэмжээ", "Өнгө", "Төрөл", "Савлагаа", "Загвар"]
@@ -52,6 +53,7 @@ export function EditProductSheet({ batch, categories = [] }: EditProductSheetPro
       : null
 
     setTargetQuantity(batch.targetQuantity || 0)
+    setRemainingQuantity(batch.remainingQuantity || 0)
     setSelectedCategoryId(batch.categoryId || "")
 
     if (norm.length === 1) {
@@ -662,16 +664,32 @@ export function EditProductSheet({ batch, categories = [] }: EditProductSheetPro
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="remainingQuantity" className="text-sm font-medium">
-                Үлдэгдэл {variantMode !== "none" && <span className="text-indigo-600 text-[10px] font-bold">(Автомат)</span>}
-              </label>
+              <div className="flex items-center justify-between">
+                <label htmlFor="remainingQuantity" className="text-sm font-medium">
+                  Үлдэгдэл {variantMode !== "none" && <span className="text-indigo-600 text-[10px] font-bold">(Автомат)</span>}
+                </label>
+                {variantMode === "none" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const ordered = batch._calculatedOrderedSum || 0
+                      setRemainingQuantity(Math.max(0, targetQuantity - ordered))
+                    }}
+                    className="text-[11px] text-indigo-600 font-semibold hover:underline"
+                    title="Зорилтот тооноос одоогийн захиалгыг хасаж үлдэгдлийг автоматаар тэнцүүлнэ"
+                  >
+                    Тооцооллоор тэнцүүлэх
+                  </button>
+                )}
+              </div>
               <Input
                 id="remainingQuantity"
                 name="remainingQuantity"
                 type="number"
                 required
                 disabled={variantMode !== "none"}
-                value={variantMode !== "none" ? totalVariantStock : batch.remainingQuantity}
+                value={variantMode !== "none" ? totalVariantStock : remainingQuantity}
+                onChange={e => setRemainingQuantity(Number(e.target.value) || 0)}
                 className={variantMode !== "none" ? "bg-slate-100 text-slate-700 font-bold" : ""}
               />
             </div>

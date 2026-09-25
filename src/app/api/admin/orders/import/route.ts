@@ -97,15 +97,24 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (created > 0 && admin) {
-      await logActivity({
-        userId: admin.id,
-        userName: admin.name,
-        userRole: admin.role,
-        action: "Захиалга импортлов",
-        target: `Багц: ${batch.batchNumber} (${batch.product?.name})`,
-        detail: `${created} ширхэг захиалга амжилттай импортлогдлоо. Үйлдлийг гүйцэтгэсэн: ${admin.name}`,
+    if (created > 0) {
+      const importedQty = rows.slice(0, created).reduce((sum, r) => sum + (Number(r["Тоо"]) || 1), 0)
+      await db.batch.update({
+        where: { id: batchId },
+        data: {
+          remainingQuantity: Math.max(0, (batch.remainingQuantity || 0) - importedQty)
+        }
       })
+      if (admin) {
+        await logActivity({
+          userId: admin.id,
+          userName: admin.name,
+          userRole: admin.role,
+          action: "Захиалга импортлов",
+          target: `Багц: ${batch.batchNumber} (${batch.product?.name})`,
+          detail: `${created} ширхэг захиалга амжилттай импортлогдлоо. Үйлдлийг гүйцэтгэсэн: ${admin.name}`,
+        })
+      }
     }
 
     return NextResponse.json({ success: true, created, updated: 0, errors })

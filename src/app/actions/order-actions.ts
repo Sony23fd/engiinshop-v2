@@ -596,6 +596,14 @@ export async function addOrderToBatch(batchId: string, data: {
         } as any
       });
 
+      // Update remaining quantity in batch
+      await tx.batch.update({
+        where: { id: batchId },
+        data: {
+          remainingQuantity: Math.max(0, batch.remainingQuantity - data.quantity)
+        }
+      });
+
       return { order, categoryId: batch.categoryId };
     });
 

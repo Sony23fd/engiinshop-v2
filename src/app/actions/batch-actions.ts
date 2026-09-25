@@ -72,15 +72,19 @@ export async function createBatch(data: {
   cargoFeeStatus?: string
 }) {
   try {
+    const finalRemaining = (data.remainingQuantity <= 0 && data.targetQuantity > 0)
+      ? data.targetQuantity
+      : data.remainingQuantity
+
     let status: BatchStatus = BatchStatus.OPEN
-    if (data.remainingQuantity <= 0) {
+    if (finalRemaining <= 0) {
       status = BatchStatus.CLOSED
     }
 
     const batch = await db.batch.create({
       data: {
         targetQuantity: data.targetQuantity,
-        remainingQuantity: data.remainingQuantity,
+        remainingQuantity: finalRemaining,
         status: status,
         price: data.price,
         description: data.description,

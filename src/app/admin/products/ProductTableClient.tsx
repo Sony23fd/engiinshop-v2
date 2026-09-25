@@ -1,12 +1,15 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { useToast } from "@/components/ui/use-toast"
+import { reconcileAllBatchStocks } from "@/app/actions/product-actions"
 import { EditProductSheet } from "./EditProductSheet"
 import { BatchSaleToggle } from "./BatchSaleToggle"
 import { ImageUploader } from "@/components/admin/ImageUploader"
 import { VideoUploader } from "@/components/admin/VideoUploader"
 import { MergeProductsDialog } from "@/components/admin/MergeProductsDialog"
-import { Package, Layers, X } from "lucide-react"
+import { Package, Layers, X, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface ProductTableClientProps {
@@ -24,6 +27,29 @@ export function ProductTableClient({
 }: ProductTableClientProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false)
+  const [reconciling, setReconciling] = useState(false)
+  const router = useRouter()
+  const { toast } = useToast()
+
+  const handleReconcileAll = async () => {
+    if (!confirm("Бүх барааны үлдэгдлийг баталгаажсан захиалгын тооцооллоор тэнцвэржүүлэх үү?")) return
+    setReconciling(true)
+    const res = await reconcileAllBatchStocks()
+    setReconciling(false)
+    if (res.success) {
+      toast({
+        title: "Амжилттай",
+        description: `Нийт ${res.updatedCount} багцын үлдэгдлийг тэнцвэржүүллээ.`
+      })
+      router.refresh()
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Алдаа гарлаа",
+        description: res.error || "Үлдэгдэл тэнцвэржүүлэхэд алдаа гарлаа."
+      })
+    }
+  }
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev =>
@@ -78,6 +104,25 @@ export function ProductTableClient({
         categories={categories}
         onSuccess={() => setSelectedIds([])}
       />
+
+      <div className="flex items-center justify-between px-1 py-1">
+        <span className="text-xs text-slate-500">
+          Нийт <strong className="text-slate-800">{products.length}</strong> бараа
+          {selectedIds.length > 0 && <> (<strong className="text-indigo-600">{selectedIds.length}</strong> сонгогдсон)</>}
+        </span>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={reconciling}
+          onClick={handleReconcileAll}
+          className="text-xs h-8 text-indigo-600 border-indigo-200 hover:bg-indigo-50 font-medium flex items-center gap-1.5 shadow-2xs"
+          title="Бүх барааны бодит захиалгын тооцооллоор үлдэгдэл болон төлөвийг автоматаар тэнцүүлнэ"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${reconciling ? "animate-spin" : ""}`} />
+          {reconciling ? "Тэнцвэржүүлж байна..." : "Үлдэгдэл тэнцвэржүүлэх"}
+        </Button>
+      </div>
 
       <div className="rounded-md border overflow-x-auto bg-white">
         <table className="w-full text-sm text-left">

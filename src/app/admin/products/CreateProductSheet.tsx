@@ -148,12 +148,13 @@ export function CreateProductSheet({ categories }: { categories: any[] }) {
     setLoading(true)
 
     const hasVariants = variantMode !== "none" && finalOptions.length > 0 && finalVariantStockMap !== undefined
-    const remainingQuantity = hasVariants
-      ? totalVariantStock
-      : Number(formData.get("remainingQuantity") || 0)
-
     const rawTarget = Number(formData.get("targetQuantity") || 0)
     const targetQuantity = (hasVariants && rawTarget === 0) ? totalVariantStock : rawTarget
+
+    const rawRemaining = formData.get("remainingQuantity")
+    const remainingQuantity = hasVariants
+      ? totalVariantStock
+      : (rawRemaining !== null && String(rawRemaining).trim() !== "" ? Number(rawRemaining) : targetQuantity)
 
     const res = await createProduct({
       name: formData.get("name") as string,
@@ -570,6 +571,14 @@ export function CreateProductSheet({ categories }: { categories: any[] }) {
                 placeholder="0"
                 defaultValue={variantMode !== "none" ? totalVariantStock : undefined}
                 key={`target-${variantMode}-${totalVariantStock}`}
+                onChange={(e) => {
+                  if (variantMode === "none") {
+                    const rqInput = document.getElementById("remainingQuantity") as HTMLInputElement
+                    if (rqInput && (!rqInput.dataset.touched || rqInput.dataset.touched === "false")) {
+                      rqInput.value = e.target.value
+                    }
+                  }
+                }}
               />
             </div>
             <div className="space-y-2">
@@ -580,10 +589,13 @@ export function CreateProductSheet({ categories }: { categories: any[] }) {
                 id="remainingQuantity"
                 name="remainingQuantity"
                 type="number"
-                required
-                placeholder="0"
+                placeholder="Зорилтот тоотой адил"
                 disabled={variantMode !== "none"}
-                value={variantMode !== "none" ? totalVariantStock : undefined}
+                defaultValue={variantMode !== "none" ? totalVariantStock : undefined}
+                onChange={() => {
+                  const rqInput = document.getElementById("remainingQuantity") as HTMLInputElement
+                  if (rqInput) rqInput.dataset.touched = "true"
+                }}
                 className={variantMode !== "none" ? "bg-slate-100 text-slate-700 font-bold" : ""}
               />
             </div>
