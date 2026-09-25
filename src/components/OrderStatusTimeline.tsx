@@ -11,29 +11,41 @@ interface StatusTimelineProps {
 }
 
 export function OrderStatusTimeline({ status, isFinal, deliveryScheduleDays = "3,6" }: StatusTimelineProps) {
-  const isRejected = status.toLowerCase().includes("цуцлагдсан") || status.toLowerCase().includes("rejected");
+  const lowerStatus = (status || "").toLowerCase().trim();
+  const isRejected = 
+    lowerStatus.includes("цуцлагдсан") || 
+    lowerStatus.includes("буцаагдсан") || 
+    lowerStatus.includes("rejected") || 
+    lowerStatus.includes("refund");
 
-    const steps = [
-    { name: "Захиалга үүссэн", icon: Clock, matches: ["Төлбөр хүлээгдэж байна", "Хүлээн авсан", "Received", "Pending"] },
-    { name: "Баталгаажсан", icon: CheckCircle2, matches: ["Баталгаажсан", "Confirmed", "Батлагдсан"] },
-    { name: "Солонгосоос гарсан", icon: Truck, matches: ["Солонгосоос гарсан", "Shipped", "Гарсан", "хөдөлсөн", "Departed"] },
-    { name: "Улаанбаатарт ирсэн", icon: Box, matches: ["Ирсэн", "Arrived", "Монголд ирсэн", "Улаанбаатарт ирсэн", "UB ирсэн"] },
-    { name: "Хүлээн авсан", icon: Home, matches: ["Өөрөө ирж авсан", "Хүргэлтээр авсан", "Delivered", "Picked up", "Дууссан", "Авсан"] },
+  const steps = [
+    { name: "Захиалга үүссэн", icon: Clock, matches: ["төлбөр хүлээгдэж байна", "хүлээгдэж байна", "pending", "шинэ", "үүссэн"] },
+    { name: "Баталгаажсан", icon: CheckCircle2, matches: ["баталгаажсан", "батлагдсан", "төлөгдсөн", "confirmed", "paid"] },
+    { name: "Солонгосоос хөдөлсөн", icon: Truck, matches: ["солонгосоос", "хөдөлсөн", "shipped", "departed", "тээвэрлэлтэд"] },
+    { name: "Улаанбаатарт ирсэн", icon: Box, matches: ["улаанбаатарт", "монголд", "агуулахад", "ub ирсэн", "arrived", "ирсэн"] },
+    { name: "Хүлээн авсан", icon: Home, matches: ["хүргэлтээр", "өөрөө", "дууссан", "авсан", "хүлээн авсан", "хүлээж авсан", "хүргэгдсэн", "delivered", "picked up", "completed"] },
   ];
 
-  // Find the current step index
-  let currentStepIndex = steps.findIndex(step => 
-    step.matches.some(m => status.toLowerCase().includes(m.toLowerCase()))
-  );
+  // Resolve current step index
+  let currentStepIndex = -1;
 
-  // Default to step 0 if not found
-  if (currentStepIndex === -1) {
-    currentStepIndex = 0;
-  }
-
-  // If rejected, special case
   if (isRejected) {
     currentStepIndex = -1;
+  } else if (isFinal) {
+    // Non-rejected finalized orders have completed the entire delivery lifecycle
+    currentStepIndex = steps.length - 1;
+  } else {
+    // Check backwards from the final step down to step 0
+    for (let i = steps.length - 1; i >= 0; i--) {
+      if (steps[i].matches.some(m => lowerStatus.includes(m))) {
+        currentStepIndex = i;
+        break;
+      }
+    }
+    // Default to step 0 if not explicitly matched
+    if (currentStepIndex === -1) {
+      currentStepIndex = 0;
+    }
   }
 
   // Progress Bar width calculation

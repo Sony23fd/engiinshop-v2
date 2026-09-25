@@ -26,7 +26,11 @@ export function GroupStatusUpdater({
     setLoading(false)
 
     if (res.success) {
-      toast({ title: "Амжилттай", description: `Сонгогдсон ${selectedOrderIds.length} захиалгын төлөв өөрчлөгдлөө.` })
+      const skippedMsg = res.skippedFinalCount ? ` (${res.skippedFinalCount} дууссан захиалга хамгаалагдаж алгасагдсан)` : ""
+      toast({ 
+        title: "Амжилттай", 
+        description: `Сонгогдсон ${res.count ?? selectedOrderIds.length} захиалгын төлөв өөрчлөгдлөө.${skippedMsg}` 
+      })
       setSelectedStatus("")
       onUpdated()
     } else {

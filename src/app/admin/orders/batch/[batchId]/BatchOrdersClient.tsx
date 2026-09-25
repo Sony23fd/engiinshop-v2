@@ -107,9 +107,10 @@ export function BatchOrdersClient({ activeOrders, batch, statuses, role }: { act
 
     if (res.success) {
       const statusName = statuses.find(s => s.id === selectedStatus)?.name || ""
+      const skippedMsg = res.skippedFinalCount ? ` (${res.skippedFinalCount} дууссан захиалга хамгаалагдаж алгасагдсан)` : ""
       toast({ 
         title: "Бөөнөөр шинэчиллээ", 
-        description: `${selectedIds.length} захиалгын төлөвийг '${statusName}' болгож шинэчиллээ.` 
+        description: `${res.count ?? selectedIds.length} захиалгын төлөвийг '${statusName}' болгож шинэчиллээ.${skippedMsg}` 
       })
       setSelectedIds([])
       setSelectedStatus("")

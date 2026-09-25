@@ -53,7 +53,7 @@ export async function getPickedUpOrders(days: number = 30, page: number = 1, lim
     const whereClause: any = {
       status: {
         isFinal: true,
-        name: { notIn: ["Цуцлагдсан", "Rejected", "Canceled"] }
+        name: { in: ["Өөрөө ирж авсан", "Өөрөө авсан"] }
       },
       paymentStatus: { not: "REJECTED" }
     };
@@ -132,7 +132,7 @@ export async function getDeliveredOrders(days: number = 30, page: number = 1, li
     const whereClause: any = {
       status: {
         isFinal: true,
-        name: { notIn: ["Цуцлагдсан", "Rejected", "Canceled"] }
+        name: { in: ["Хүргэлтээр гарсан", "Хүргэлтээр авсан", "Хүргэгдсэн"] }
       },
       paymentStatus: { not: "REJECTED" }
     };
@@ -276,9 +276,16 @@ export async function confirmDeliveryGroup(orderIds: string[]) {
     if (!adminMode) return { success: false, error: "Хандах эрхгүй" }
 
     const deliveredStatus = await db.orderStatusType.findFirst({
-      where: { name: "Хүргэлтээр авсан", isFinal: true }
+      where: {
+        name: { in: ["Хүргэлтээр гарсан", "Хүргэлтээр авсан", "Хүргэгдсэн"] },
+        isFinal: true
+      }
+    }) || await db.orderStatusType.findFirst({
+      where: {
+        name: { in: ["Хүргэлтээр гарсан", "Хүргэлтээр авсан", "Хүргэгдсэн"] }
+      }
     })
-    if (!deliveredStatus) return { success: false, error: "Хүргэлтээр авсан төлөв олдсонгүй" }
+    if (!deliveredStatus) return { success: false, error: "Хүргэлтийн төлөв олдсонгүй" }
 
     await db.order.updateMany({
       where: { id: { in: orderIds } },
@@ -296,7 +303,9 @@ export async function confirmDeliveryGroup(orderIds: string[]) {
 
     revalidatePath("/admin/orders/delivery")
     revalidatePath("/admin/orders/delivered")
+    revalidatePath("/admin/orders/picked-up")
     revalidatePath("/admin/orders")
+    revalidatePath("/track")
 
     return { success: true }
   } catch (err: any) {
@@ -1079,7 +1088,12 @@ export async function moveOrdersToBatch(orderIds: string[], targetBatchId: strin
   }
 }
 
-export async function updateBatchOrderStatusesByIds(orderIds: string[], statusId: string, reason?: string) {
+export async function updateBatchOrderStatusesByIds(
+  orderIds: string[], 
+  statusId: string, 
+  reason?: string,
+  options?: { allowOverrideFinal?: boolean }
+) {
   try {
     const adminMode = await getCurrentAdmin()
     if (!adminMode) return { success: false, error: "Хандах эрхгүй" }
@@ -1093,6 +1107,9 @@ export async function updateBatchOrderStatusesByIds(orderIds: string[], statusId
 
     const isToCancelled = targetStatus.name === "Цуцлагдсан"
 
+    let updatedCount = 0
+    let skippedFinalCount = 0
+
     await db.$transaction(async (tx) => {
       // 1. Get orders to check their previous statuses and batches
       const orders = await (tx.order as any).findMany({
@@ -1101,6 +1118,12 @@ export async function updateBatchOrderStatusesByIds(orderIds: string[], statusId
       })
 
       for (const order of orders) {
+        // Protect completed/final orders from being reverted to active/in-transit statuses during bulk actions
+        if (!targetStatus.isFinal && order.status?.isFinal && !options?.allowOverrideFinal) {
+          skippedFinalCount++
+          continue
+        }
+
         const isFromCancelled = order.status?.name === "Цуцлагдсан"
         const updateData: any = { statusId }
 
@@ -1135,24 +1158,30 @@ export async function updateBatchOrderStatusesByIds(orderIds: string[], statusId
           where: { id: order.id },
           data: updateData
         })
+        updatedCount++
       }
     })
 
+    const skippedDetail = skippedFinalCount > 0 ? ` (${skippedFinalCount} дууссан захиалга алгасагдсан)` : ""
     await logActivity({
       userId: adminMode.id,
       userName: adminMode.name || "Сайтын админ",
       userRole: adminMode.role,
       action: "Багц статус баталгаажуулав",
       target: "Захиалгууд",
-      detail: `${orderIds.length} ширхэг захиалгыг '${targetStatus?.name || statusId}' төлөвт шилжүүллээ. ${isToCancelled ? `Шалтгаан: ${reason || "Тайлбаргүй"}` : ""}`,
+      detail: `${updatedCount} ширхэг захиалгыг '${targetStatus?.name || statusId}' төлөвт шилжүүллээ.${skippedDetail} ${isToCancelled ? `Шалтгаан: ${reason || "Тайлбаргүй"}` : ""}`,
     })
 
     // Revalidate widespread paths due to mass update
     revalidatePath("/admin/orders/search")
     revalidatePath("/admin/orders")
     revalidatePath("/admin/orders/rejected")
+    revalidatePath("/admin/orders/delivery")
+    revalidatePath("/admin/orders/delivered")
+    revalidatePath("/admin/orders/picked-up")
+    revalidatePath("/track")
 
-    return { success: true, count: orderIds.length }
+    return { success: true, count: updatedCount, skippedFinalCount }
   } catch (error: any) {
     console.error("Failed to update bulk order statuses by IDs:", error)
     return { success: false, error: error.message || "Failed to update bulk statuses" }
