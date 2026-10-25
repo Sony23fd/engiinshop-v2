@@ -475,7 +475,41 @@ export async function createOrder(data: {
       });
 
       if (!batch) {
-        throw new Error("Batch not found");
+        throw new Error("Багц олдсонгүй");
+      }
+
+      // Check 1: Batch status must not be closed, shipped, or arrived
+      if (batch.status === 'CLOSED' || batch.status === 'SHIPPED' || batch.status === 'ARRIVED') {
+        throw new Error(`'${batch.product?.name || "Энэ бараа"}' захиалга хаагдсан тул нэмж захиалга авах боломжгүй байна.`);
+      }
+
+      // Check 2: Batch must be available for sale
+      if (!batch.isAvailableForSale) {
+        throw new Error(`'${batch.product?.name || "Энэ бараа"}' худалдаанаас хаагдсан байна.`);
+      }
+
+      // Check 3: Check closing date for pre-orders or scheduled batches
+      if (batch.closingDate && new Date() > new Date(batch.closingDate)) {
+        throw new Error(`'${batch.product?.name || "Энэ бараа"}'-ны захиалгын хугацаа дууссан байна.`);
+      }
+
+      // Check 4: Stock check for ready stock items (not pre-orders)
+      if (!batch.isPreOrder) {
+        if (batch.variantStock && typeof batch.variantStock === 'object') {
+          const variantStock = batch.variantStock as Record<string, number>;
+          const variantKey = getVariantKey((batch.product as any)?.options, data.selectedOptions);
+          if (variantKey && variantStock[variantKey] !== undefined) {
+            if (variantStock[variantKey] < data.quantity) {
+              throw new Error(`'${batch.product?.name || "Бараа"}' сонгосон хувилбарын үлдэгдэл хүрэлцэхгүй байна (${variantStock[variantKey]} ш үлдсэн).`);
+            }
+          } else if (batch.remainingQuantity < data.quantity) {
+            throw new Error(`'${batch.product?.name || "Бараа"}' үлдэгдэл хүрэлцэхгүй байна (${batch.remainingQuantity} ш үлдсэн).`);
+          }
+        } else {
+          if (batch.remainingQuantity < data.quantity) {
+            throw new Error(`'${batch.product?.name || "Бараа"}' үлдэгдэл хүрэлцэхгүй байна (${batch.remainingQuantity} ш үлдсэн).`);
+          }
+        }
       }
 
       // 2. Create the order
@@ -504,6 +538,7 @@ export async function createOrder(data: {
 
       // 3. Decrement remaining quantity AND variant stock if applicable
       const updateData: any = {}
+      let newRemaining = batch.remainingQuantity;
 
       // Variant stock management
       if ((batch as any).variantStock && typeof (batch as any).variantStock === 'object') {
@@ -516,9 +551,16 @@ export async function createOrder(data: {
           updateData.variantStock = variantStock
         }
         // Always sync remainingQuantity with variant stock total
-        updateData.remainingQuantity = getVariantStockTotal(variantStock)
+        newRemaining = getVariantStockTotal(variantStock)
+        updateData.remainingQuantity = newRemaining
       } else {
-        updateData.remainingQuantity = Math.max(0, batch.remainingQuantity - data.quantity)
+        newRemaining = Math.max(0, batch.remainingQuantity - data.quantity)
+        updateData.remainingQuantity = newRemaining
+      }
+
+      // Auto-close batch if remaining stock reaches 0
+      if (!batch.isPreOrder && newRemaining <= 0) {
+        updateData.status = 'CLOSED';
       }
 
       await tx.batch.update({

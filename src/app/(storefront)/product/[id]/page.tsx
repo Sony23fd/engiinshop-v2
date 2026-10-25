@@ -23,6 +23,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     db.batch.findMany({
       where: { 
         isAvailableForSale: true, 
+        status: { not: "CLOSED" },
         id: { not: batch.id } 
       } as any,
       include: { product: true, category: true },
@@ -38,6 +39,9 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   const batchFee = Number((batch as any).deliveryFee || 0)
   const globalFee = Number(shopSettings.delivery_fee || 0)
   const deliveryFee = batchFee > 0 ? batchFee : globalFee
+
+  const isExpired = Boolean(batch.closingDate && new Date() > new Date(batch.closingDate))
+  const isClosed = batch.status === "CLOSED" || !batch.isAvailableForSale || isExpired || (!batch.isPreOrder && batch.remainingQuantity <= 0)
 
   // Serialize Prisma Decimal and Date fields to plain JSON object
   const serializedBatch = JSON.parse(JSON.stringify(batch))
@@ -65,9 +69,15 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
               ₮{unitPrice.toLocaleString()}
             </p>
           </div>
-          <Link href="#order-form" className="bg-[#4F46E5] text-white px-8 py-3 rounded-xl font-bold text-sm shrink-0 shadow-sm shadow-indigo-200">
-            Захиалах
-          </Link>
+          {isClosed ? (
+            <span className="bg-slate-100 text-slate-400 px-6 py-3 rounded-xl font-bold text-sm shrink-0 border border-slate-200">
+              Хаагдсан
+            </span>
+          ) : (
+            <Link href="#order-form" className="bg-[#4F46E5] text-white px-8 py-3 rounded-xl font-bold text-sm shrink-0 shadow-sm shadow-indigo-200">
+              Захиалах
+            </Link>
+          )}
         </div>
       </div>
       

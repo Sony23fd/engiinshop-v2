@@ -194,6 +194,9 @@ export function ProductDetailClient({
         </h2>
         <ProductOrderForm
           batchId={batch.id}
+          status={batch.status}
+          closingDate={batch.closingDate}
+          isAvailableForSale={batch.isAvailableForSale}
           productName={batch.product?.name}
           productImage={batch.product?.imageUrl}
           activeVariantImageUrl={activeVariantImageUrl}

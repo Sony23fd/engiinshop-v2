@@ -22,6 +22,9 @@ import {
 
 interface Props {
   batchId: string
+  status?: string
+  closingDate?: string | null
+  isAvailableForSale?: boolean
   productName?: string
   productImage?: string | null
   activeVariantImageUrl?: string | null
@@ -59,6 +62,9 @@ function getNextDeliveryDate(scheduleDaysStr: string): string {
 
 export function ProductOrderForm({
   batchId,
+  status,
+  closingDate,
+  isAvailableForSale = true,
   productName,
   productImage,
   activeVariantImageUrl,
@@ -179,12 +185,20 @@ export function ProductOrderForm({
     }
   }
 
+  const isExpired = Boolean(closingDate && new Date() > new Date(closingDate))
+  const isClosed = status === "CLOSED" || status === "SHIPPED" || status === "ARRIVED" || isAvailableForSale === false || isExpired || (!isPreOrder && currentStock <= 0)
+
   const canSubmit =
+    !isClosed &&
     agreedToTerms &&
     !phoneError &&
-    (isPreOrder || currentStock > 0)
+    (isPreOrder || currentStock >= qty)
 
   function handleAddToCart() {
+    if (isClosed) {
+      setError("Уучлаарай, энэ барааны захиалга хаагдсан байна.")
+      return
+    }
     if (!isPreOrder && currentStock < qty) {
       setError(`Таны сонгосон хувилбарын үлдэгдэл хүрэлцэхгүй байна (${currentStock} ширхэг үлдсэн)`)
       return
@@ -206,6 +220,11 @@ export function ProductOrderForm({
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
+
+    if (isClosed) {
+      setError("Уучлаарай, энэ барааны захиалга хаагдсан тул захиалга өгөх боломжгүй.")
+      return
+    }
 
     const data = new FormData(e.currentTarget)
     const phone = (data.get("phoneNumber") as string || "").replace(/\D/g, "")
@@ -271,6 +290,19 @@ export function ProductOrderForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+      {isClosed && (
+        <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 flex items-center gap-3 animate-in fade-in">
+          <AlertCircle className="w-5 h-5 text-rose-500 shrink-0" />
+          <div>
+            <p className="text-sm font-bold text-rose-800">Захиалга хаагдсан байна</p>
+            <p className="text-xs text-rose-600 mt-0.5">
+              {isExpired
+                ? "Захиалгын хугацаа дууссан тул нэмж захиалга авах боломжгүй."
+                : "Энэ барааны захиалга түр хаагдсан эсвэл үлдэгдэл дууссан байна."}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Accuracy notice */}
       <div className="flex gap-2 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-3 py-2.5">
@@ -547,21 +579,25 @@ export function ProductOrderForm({
         <Button
           type="button"
           variant="outline"
-          disabled={!isPreOrder && currentStock <= 0}
+          disabled={isClosed}
           onClick={handleAddToCart}
-          className="flex-1 py-6 border-indigo-300 text-indigo-600 hover:bg-indigo-50 font-semibold"
+          className="flex-1 py-6 border-indigo-300 text-indigo-600 hover:bg-indigo-50 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {cartAdded ? <><Check className="w-4 h-4 mr-1 text-green-600" /> Сагсанд нэмэгдлээ</> : <><ShoppingCart className="w-4 h-4 mr-1" /> Сагслах</>}
         </Button>
         <Button
           type="submit"
           disabled={submitting || !canSubmit}
-          className="flex-2 bg-[#4F46E5] hover:bg-[#4338ca] py-6 text-base font-semibold disabled:opacity-60 disabled:cursor-not-allowed shadow-md shadow-indigo-200"
+          className={`flex-2 py-6 text-base font-semibold shadow-md shadow-indigo-200 disabled:opacity-60 disabled:cursor-not-allowed ${
+            isClosed
+              ? "bg-slate-200 text-slate-500 hover:bg-slate-200"
+              : "bg-[#4F46E5] hover:bg-[#4338ca] text-white"
+          }`}
         >
           {submitting
             ? "Илгээж байна..."
-            : (!isPreOrder && currentStock <= 0)
-              ? "Дууссан"
+            : isClosed
+              ? "Захиалга хаагдсан"
               : "✅ Захиалах"}
         </Button>
       </div>

@@ -14,9 +14,10 @@ interface Props {
   isPreOrder?: boolean
   iconOnly?: boolean
   hasVariants?: boolean
+  disabled?: boolean
 }
 
-export function AddToCartButton({ batchId, name, imageUrl, unitPrice, deliveryFee, isPreOrder, iconOnly, hasVariants }: Props) {
+export function AddToCartButton({ batchId, name, imageUrl, unitPrice, deliveryFee, isPreOrder, iconOnly, hasVariants, disabled = false }: Props) {
   const { addItem, items } = useCart()
   const [added, setAdded] = useState(false)
   const router = useRouter()
@@ -25,6 +26,7 @@ export function AddToCartButton({ batchId, name, imageUrl, unitPrice, deliveryFe
   function handleAdd(e: React.MouseEvent) {
     e.preventDefault() // prevent navigating to product detail if clicked inside a link area
     e.stopPropagation()
+    if (disabled) return
     if (hasVariants) {
       router.push(`/product/${batchId}#order-form`)
       return
@@ -32,6 +34,27 @@ export function AddToCartButton({ batchId, name, imageUrl, unitPrice, deliveryFe
     addItem({ batchId, name, imageUrl, unitPrice, deliveryFee, isPreOrder, qty: 1 })
     setAdded(true)
     setTimeout(() => setAdded(false), 1500)
+  }
+
+  if (disabled) {
+    if (iconOnly) {
+      return (
+        <span
+          className="flex items-center justify-center p-2.5 rounded-full bg-slate-100 text-slate-300 cursor-not-allowed"
+          title="Захиалга хаагдсан"
+        >
+          <ShoppingCart className="w-5 h-5" />
+        </span>
+      )
+    }
+    return (
+      <button
+        disabled
+        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg font-semibold text-sm bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
+      >
+        Хаагдсан
+      </button>
+    )
   }
 
   if (iconOnly) {

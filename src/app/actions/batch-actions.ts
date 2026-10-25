@@ -197,7 +197,13 @@ export async function bulkUpdateBatchStatus(ids: string[], data: {
     if (!ids || ids.length === 0) return { success: false, error: "No batches selected" }
 
     const updateData: any = {};
-    if (data.status) updateData.status = data.status;
+    if (data.status) {
+      updateData.status = data.status;
+      // When batch is CLOSED, auto-disable storefront sale unless explicitly specified
+      if (data.status === BatchStatus.CLOSED && data.isAvailableForSale === undefined) {
+        updateData.isAvailableForSale = false;
+      }
+    }
     if (data.cargoFeeStatus !== undefined) updateData.cargoFeeStatus = data.cargoFeeStatus;
     if (data.isAvailableForSale !== undefined) updateData.isAvailableForSale = data.isAvailableForSale;
 
@@ -206,6 +212,7 @@ export async function bulkUpdateBatchStatus(ids: string[], data: {
       data: updateData
     })
 
+    revalidatePath("/admin/products")
     revalidatePath("/admin/orders")
     revalidatePath("/", "layout")
     return { success: true }

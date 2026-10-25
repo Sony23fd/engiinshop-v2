@@ -74,6 +74,7 @@ export const getActiveProducts = cache(async () => {
     const batches = await db.batch.findMany({
       where: { 
         isAvailableForSale: true,
+        status: { not: BatchStatus.CLOSED },
         category: {
           isArchived: false,
           name: { not: { contains: "Сарын захиалга" } }
