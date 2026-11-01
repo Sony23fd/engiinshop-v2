@@ -60,7 +60,7 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
       { name: "Хүргэлт & Тайлбар", url: "/admin/settings/notices", icon: Truck, roles: ["ADMIN", "CARGO_ADMIN"] },
       { name: "Холбоо барих & Хаяг", url: "/admin/settings/contact", icon: PhoneCall, roles: ["ADMIN"] },
       { name: "Төлбөрийн тохиргоо", url: "/admin/settings/payment", icon: CreditCard, roles: ["ADMIN"] },
-      { name: "Карго төлбөр", url: "/admin/cargo-settings", icon: CreditCard, highlight: true, roles: ["CARGO_ADMIN"] },
+      { name: "Карго төлбөр & Данс", url: "/admin/cargo-settings", icon: CreditCard, highlight: true, roles: ["ADMIN", "CARGO_ADMIN"] },
       { name: "Нөхцөлийн тохиргоо", url: "/admin/settings/terms", icon: FileText, roles: ["ADMIN"] },
       { name: "Үйлдлийн лог", url: "/admin/activity", icon: FileText, roles: ["ADMIN", "DATAADMIN"] },
       { name: "Чатбот Заавар", url: "/admin/faqs", icon: Bot, roles: ["ADMIN"] },

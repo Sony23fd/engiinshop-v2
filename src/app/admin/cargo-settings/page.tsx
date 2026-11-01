@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic"
 
 export default async function CargoSettingsPage() {
   const admin = await getCurrentAdmin()
-  if (admin?.role !== "CARGO_ADMIN") {
+  if (admin?.role !== "CARGO_ADMIN" && admin?.role !== "ADMIN") {
     redirect("/admin/home")
   }
 

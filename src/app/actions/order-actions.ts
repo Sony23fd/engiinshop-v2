@@ -1290,7 +1290,14 @@ export async function requestDelivery(orderIds: string[], deliveryAddress: strin
   try {
     const orders = await (db.order as any).findMany({
       where: { id: { in: orderIds } },
-      include: { status: true }
+      include: {
+        status: true,
+        batch: {
+          include: {
+            product: true
+          }
+        }
+      }
     })
     if (!orders || orders.length === 0) return { success: false, error: "Захиалга олдсонгүй" }
 
@@ -1303,10 +1310,20 @@ export async function requestDelivery(orderIds: string[], deliveryAddress: strin
     const { getShopSettings } = await import("./settings-actions")
     const settings = await getShopSettings()
     const deliveryFee = Number(settings.delivery_fee || "6000")
-    const qpayEnabled = settings.qpay_enabled === "true"
 
-    if (deliveryFee <= 0) {
-      // Free delivery: immediate confirm
+    // Calculate total cargo fee for eligible orders
+    let totalCargoFee = 0
+    for (const o of eligibleOrders) {
+      const unitCargoFee = Number(o.batch?.cargoFeeStatus || 0) * Number(o.batch?.product?.weight || 0)
+      const customCargoFee = Number(o.cargoFee || 0)
+      const orderFee = customCargoFee > 0 ? customCargoFee * Number(o.quantity || 1) : unitCargoFee * Number(o.quantity || 1)
+      totalCargoFee += orderFee
+    }
+
+    const totalPayableFee = totalCargoFee + deliveryFee
+
+    if (totalPayableFee <= 0) {
+      // Free delivery & cargo: immediate confirm
       await (db.order as any).updateMany({
         where: { id: { in: eligibleIds } },
         data: {
@@ -1332,16 +1349,19 @@ export async function requestDelivery(orderIds: string[], deliveryAddress: strin
       return { success: true, directlyConfirmed: true }
     }
 
-    // Force Cargo Manual Bank Transfer for Delivery Fee, bypassing QPay entirely
+    // Force Cargo Manual Bank Transfer for Cargo & Delivery Fee
+    const bankNote = settings.cargo_payment_instruction || `${eligibleOrders[0]?.customerPhone || ""} хүргэлт карго`
     return {
       success: true,
       isManual: true,
       manualData: {
-        fee: deliveryFee,
-        bank_name: settings.cargo_bank_name || "",
-        bank_account: settings.cargo_bank_account || "",
-        bank_holder: settings.cargo_bank_holder || "",
-        bank_note: settings.cargo_payment_instruction || "Гүйлгээний утга дээр утасны дугаараа бичнэ үү"
+        fee: totalPayableFee,
+        cargoFee: totalCargoFee,
+        deliveryFee: deliveryFee,
+        bank_name: settings.cargo_bank_name || settings.bank_name || "Хаан Банк",
+        bank_account: settings.cargo_bank_account || settings.bank_account || "",
+        bank_holder: settings.cargo_bank_holder || settings.bank_holder || "",
+        bank_note: bankNote
       }
     }
   } catch (err: any) {

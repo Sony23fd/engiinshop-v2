@@ -95,36 +95,58 @@ export default function DeliveryRequestButton({ orderIds, deliveryScheduleDays =
   if (manualData) {
     return (
       <div className="space-y-4 bg-white rounded-xl border p-5 shadow-sm animate-in fade-in">
-        <div className="text-center mb-4">
+        <div className="text-center mb-3">
           <p className="font-bold text-slate-800 text-[15px] flex justify-center items-center gap-2">
-            💳 Хүргэлтийн хураамж төлөх
+            💳 Карго & Хүргэлтийн төлбөр төлөх
+          </p>
+          <p className="text-xs text-slate-500 mt-1">
+            Карго болон хүргэлтийн төлбөр зориулалтын тусдаа дансанд ордог болохыг анхаарна уу.
           </p>
         </div>
 
         <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-sm space-y-3">
-          <div className="flex justify-between items-center pb-2 border-b border-slate-200">
-            <span className="text-slate-500 font-medium">Төлөх дүн:</span>
-            <span className="font-bold text-lg text-indigo-600">{Number(manualData.fee).toLocaleString()} ₮</span>
-          </div>
+          {Number(manualData.cargoFee) > 0 ? (
+            <div className="space-y-2 pb-2 border-b border-slate-200">
+              <div className="flex justify-between items-center text-xs text-slate-600">
+                <span>Каргоны төлбөр:</span>
+                <span className="font-bold text-slate-800">{Number(manualData.cargoFee).toLocaleString()} ₮</span>
+              </div>
+              <div className="flex justify-between items-center text-xs text-slate-600">
+                <span>Хүргэлтийн хураамж:</span>
+                <span className="font-bold text-slate-800">{Number(manualData.deliveryFee).toLocaleString()} ₮</span>
+              </div>
+              <div className="flex justify-between items-center pt-1.5 border-t border-slate-200">
+                <span className="text-slate-800 font-extrabold text-sm">Нийт төлөх дүн:</span>
+                <span className="font-black text-xl text-indigo-600">{Number(manualData.fee).toLocaleString()} ₮</span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex justify-between items-center pb-2 border-b border-slate-200">
+              <span className="text-slate-600 font-medium">Төлөх дүн:</span>
+              <span className="font-black text-xl text-indigo-600">{Number(manualData.fee).toLocaleString()} ₮</span>
+            </div>
+          )}
+
           <div className="flex justify-between items-center pt-1">
-            <span className="text-slate-500 font-medium">Банк:</span>
+            <span className="text-slate-500 font-medium">Хүлээн авах банк:</span>
             <span className="font-bold text-slate-800">{manualData.bank_name}</span>
           </div>
-          <div className="flex justify-between items-center pt-2">
-            <span className="text-slate-500 font-medium">Данс:</span>
+          <div className="flex justify-between items-center pt-1">
+            <span className="text-slate-500 font-medium">Карго данс:</span>
             <div className="flex items-center gap-2">
-              <span className="font-bold text-slate-800 text-base">{manualData.bank_account}</span>
+              <span className="font-bold text-slate-900 text-base font-mono">{manualData.bank_account}</span>
               <button
+                type="button"
                 onClick={() => copyToClipboard(manualData.bank_account)}
-                className="flex items-center gap-1 bg-slate-200 hover:bg-slate-300 text-slate-700 px-2 py-1 rounded text-[10px] uppercase font-bold transition-colors"
+                className="flex items-center gap-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-[10px] uppercase font-bold transition-colors"
               >
                 {copiedData === manualData.bank_account ? <CheckCircle2 className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
                 {copiedData === manualData.bank_account ? "Хуулсан" : "Хуулах"}
               </button>
             </div>
           </div>
-          <div className="flex justify-between items-center pt-2 pb-1">
-            <span className="text-slate-500 font-medium">Дансны нэр:</span>
+          <div className="flex justify-between items-center pt-1 pb-1">
+            <span className="text-slate-500 font-medium">Данс эзэмшигч:</span>
             <span className="font-bold text-slate-800">{manualData.bank_holder}</span>
           </div>
         </div>
@@ -132,10 +154,11 @@ export default function DeliveryRequestButton({ orderIds, deliveryScheduleDays =
         <div className="bg-red-50 border-2 border-red-200 p-4 rounded-xl">
           <p className="text-xs text-red-600 font-bold uppercase tracking-wider mb-2">Гүйлгээний утга (Маш чухал)</p>
           <div className="bg-white border border-red-100 rounded-lg p-3 flex justify-between items-center">
-            <span className="font-semibold text-sm text-red-900 leading-tight">
+            <span className="font-bold text-sm text-red-900 leading-tight">
               {manualData.bank_note || "Утасны дугаараа бичнэ үү"}
             </span>
             <button
+              type="button"
               onClick={() => copyToClipboard(manualData.bank_note || "Утасны дугаараа бичнэ үү")}
               className="flex items-center gap-1 bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1.5 rounded text-[10px] uppercase font-bold transition-colors shrink-0 ml-2"
             >
@@ -143,20 +166,35 @@ export default function DeliveryRequestButton({ orderIds, deliveryScheduleDays =
               {copiedData === (manualData.bank_note || "Утасны дугаараа бичнэ үү") ? "Хуулсан" : "Хуулах"}
             </button>
           </div>
-          <p className="text-[11px] text-red-700 mt-2 font-medium">Шилжүүлэг хийхдээ гүйлгээний утгыг зөв бичсэнээр таны хүргэлт баталгаажна.</p>
+          <p className="text-[11px] text-red-700 mt-2 font-medium">Шилжүүлэг хийхдээ гүйлгээний утгыг зөв бичсэнээр таны хүргэлт & карго төлбөр баталгаажна.</p>
         </div>
 
         {error && (
           <p className="text-xs text-red-600 bg-red-50 rounded px-3 py-2 text-center">{error}</p>
         )}
 
-        <button
-          onClick={handleManualConfirm}
-          disabled={loading}
-          className="w-full py-3 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 mt-4"
-        >
-          {loading ? "Түр хүлээнэ үү..." : "Би төлбөрөө шилжүүлсэн"}
-        </button>
+        <div className="space-y-2 pt-2">
+          <button
+            type="button"
+            onClick={handleManualConfirm}
+            disabled={loading}
+            className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-all shadow-md active:scale-[0.99] flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <CheckCircle2 className="w-4 h-4" />
+            )}
+            {loading ? "Түр хүлээнэ үү..." : "Шилжүүлэг хийсэн, хүргэлтээ баталгаажуулах"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setManualData(null)}
+            className="w-full text-slate-500 hover:text-slate-700 py-1.5 text-xs font-semibold text-center block transition-colors"
+          >
+            Буцах
+          </button>
+        </div>
       </div>
     )
   }

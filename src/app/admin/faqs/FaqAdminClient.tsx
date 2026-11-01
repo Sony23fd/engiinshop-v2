@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, GripVertical, Trash2, Edit2, CheckCircle2, Save, X } from "lucide-react"
+import { Plus, Trash2, Edit2, CheckCircle2, Save, X, Sparkles, HelpCircle } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { saveShopSetting } from "@/app/actions/settings-actions"
 
@@ -12,6 +12,93 @@ export type FaqNode = {
   isActive: boolean
   order: number
 }
+
+export const DEFAULT_FAQS: FaqNode[] = [
+  {
+    id: "faq_1",
+    question: "Захиалга хэрхэн өгөх вэ?",
+    answer: "Та сонирхсон бараагаа сонгон өнгө, хэмжээгээ сонгоод \"Сагсанд нэмэх\" эсвэл \"Захиалах\" товчийг дарна.\nҮүний дараа өөрийн нэр, утасны дугаараа оруулан захиалгаа үүсгэж, төлбөрөө төлснөөр таны захиалга шууд баталгаажна.",
+    isActive: true,
+    order: 0
+  },
+  {
+    id: "faq_2",
+    question: "Төлбөрөө яаж төлөх вэ?",
+    answer: "Манай дэлгүүр 2 төрлийн төлбөрийн сонголттой:\n1. QPay: Бүх банкны апп-аар QR код уншуулан 1 секундийн дотор автоматаар баталгаажуулна.\n2. Дансаар шилжүүлэх: Заагдсан Хаан банкны данс руу шилжүүлнэ. Гүйлгээний утга дээр системийн өгсөн захиалгын кодоо (Ref) заавал бичнэ.",
+    isActive: true,
+    order: 1
+  },
+  {
+    id: "faq_3",
+    question: "Гүйлгээний утга яагаад чухал вэ?",
+    answer: "Дансаар шилжүүлэхдээ гүйлгээний утга дээр зөвхөн захиалга өгөхөд гарч ирсэн Код (Transaction Ref)-ыг хуулж тавина.\n⚠️ Хэрэв өөр зүйл (нэр, утас г.м) бичвэл систем таны төлбөрийг танихгүй тул захиалга баталгаажихгүй саатах эрсдэлтэйг анхаарна уу!",
+    isActive: true,
+    order: 2
+  },
+  {
+    id: "faq_4",
+    question: "Бараа хэд хоногт ирэх вэ?",
+    answer: "• Монголд бэлэн байгаа бараа: Хүргэлтийн хуваарийн дагуу 24-72 цагийн дотор хүргэгдэнэ.\n• Солонгосоос захиалах бараа: Захиалга баталгаажиж, Солонгосоос хөдөлснөөс хойш хэвийн нөхцөлд 7-14 хоногийн дотор Улаанбаатарт ирнэ.",
+    isActive: true,
+    order: 3
+  },
+  {
+    id: "faq_5",
+    question: "Захиалгаа хаанаас шалгах вэ?",
+    answer: "Та манай сайтын цэсэнд байрлах \"Захиалга шалгах\" хуудас руу ороод бүртгүүлсэн утасны дугаараа оруулан хайхад таны захиалгын төлөв (Баталгаажсан, Солонгосоос гарсан, Улаанбаатарт ирсэн гэх мэт) бодит цагаар харагдана.",
+    isActive: true,
+    order: 4
+  },
+  {
+    id: "faq_6",
+    question: "Каргоны төлбөрийг яаж, ямар дансанд төлөх вэ?",
+    answer: "Бараа Монголд ирсний дараа таны захиалгын жин, овор хэмжээгээр каргоны төлбөр бодогдоно.\n• Та \"Захиалга шалгах\" цэс рүү утасны дугаараараа ороход төлөх каргоны дүн болон Каргоны тусдаа дансны мэдээлэл харагдах болно.\n• Каргоны төлбөр нь барааны үндсэн төлбөрөөс тусдаа зориулалтын дансанд ордог тул зөвхөн системд заасан каргоны данс руу шилжүүлнэ үү.",
+    isActive: true,
+    order: 5
+  },
+  {
+    id: "faq_7",
+    question: "Хүргэлтийн хуваарь ямар байдаг вэ?",
+    answer: "Манай хот доторх хүргэлт долоо хоног бүрийн Лхагва, Бямба гарагуудад бүсчилсэн хуваариар гардаг.\nХүргэлтийн суурь хураамж хот дотор 6,000₮ байдаг бөгөөд товлосон өдрөөс хойш 24–72 цагийн дотор таны гар дээр хүрнэ.",
+    isActive: true,
+    order: 6
+  },
+  {
+    id: "faq_8",
+    question: "Хүргэлтийн хаягаа яаж өгөх вэ?",
+    answer: "Таны захиалсан бараа Улаанбаатарт ирж, хүргэлтэд бэлэн болмогц \"Захиалга шалгах\" хуудас дээр \"Хүргэлт захиалах\" товч идэвхжинэ.\nТэр товч дээр дарж хүргүүлэх дүүрэг, хороо, байрны дэлгэрэнгүй хаягаа оруулахад хангалттай.",
+    isActive: true,
+    order: 7
+  },
+  {
+    id: "faq_9",
+    question: "Өөрөө очиж авч болох уу? Хаана байдаг вэ?",
+    answer: "Болно. Бараа ирсний дараа өөрийн биеэр хүрэлцэн ирж авах боломжтой.\n• Хаяг: БЗД, 26-р хороо Саруул хороолол 122-р байр, Үйлчилгээний төв 3 давхарт\n• Цагийн хуваарь: Даваа - Бямба: 10:00 - 19:00 (Нямд амарна)\nИрэхдээ утасны дугаар болон захиалгын дугаараа бэлдэж ирнэ үү.",
+    isActive: true,
+    order: 8
+  },
+  {
+    id: "faq_10",
+    question: "Захиалга цуцлах болон буцаах нөхцөл?",
+    answer: "Солонгосоос захиалж буй бараанууд захиалга баталгаажсанаас хойш шууд худалдан авалт хийгддэг тул цуцлах боломжгүй.\nХэрэв бараа буруу ирсэн эсвэл үйлдвэрийн гэмтэлтэй тохиолдолд бараа хүлээн авснаас хойш 24 цагийн дотор админтай холбогдож асуудлыг шийдвэрлүүлнэ.",
+    isActive: true,
+    order: 9
+  },
+  {
+    id: "faq_11",
+    question: "Бараагаа авахгүй удвал яах вэ?",
+    answer: "Монголд ирсэн барааг 14 хоног үнэгүй хадгална.\n14-өөс дээш хоног хадгалагдсан тохиолдолд хадгалалтын хураамж (хоног тутамд) тооцогдох тул бараагаа цаг тухайд нь хүлээн авна уу.",
+    isActive: true,
+    order: 10
+  },
+  {
+    id: "faq_12",
+    question: "Админтай хэрхэн холбогдох вэ?",
+    answer: "Танд нэмэлт тодруулах зүйл байвал манай дараах сувгуудаар холбогдоно уу:\n• Лавлах утас: +976 8853 9667, +976 8853 9887\n• Facebook хуудас: Anar Korea Shop\n• Instagram: @anar_korea_shop\nБид ажлын цагаар шуурхай хариулах болно!",
+    isActive: true,
+    order: 11
+  }
+]
 
 export function FaqAdminClient({ initialFaqs }: { initialFaqs: FaqNode[] }) {
   const [faqs, setFaqs] = useState<FaqNode[]>(initialFaqs.sort((a, b) => a.order - b.order))
@@ -47,6 +134,13 @@ export function FaqAdminClient({ initialFaqs }: { initialFaqs: FaqNode[] }) {
     setEditForm(newFaq)
   }
 
+  function handleLoadDefaults() {
+    if (faqs.length > 0) {
+      if (!confirm("Та системийн бэлэн 12 FAQ зааврыг оруулахдаа итгэлтэй байна уу? (Одоо байгаа жагсаалт 12 стандарт заавраар шинэчлэгдэнэ)")) return
+    }
+    handleSaveFaqs(DEFAULT_FAQS)
+  }
+
   function handleDelete(id: string) {
     if (!confirm("Устгахдаа итгэлтэй байна уу?")) return
     const updated = faqs.filter(f => f.id !== id).map((f, i) => ({ ...f, order: i }))
@@ -59,7 +153,6 @@ export function FaqAdminClient({ initialFaqs }: { initialFaqs: FaqNode[] }) {
     const temp = updated[index]
     updated[index] = updated[index + direction]
     updated[index + direction] = temp
-    // Fix orders
     const reordered = updated.map((f, i) => ({ ...f, order: i }))
     handleSaveFaqs(reordered)
   }
@@ -81,11 +174,31 @@ export function FaqAdminClient({ initialFaqs }: { initialFaqs: FaqNode[] }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center bg-white p-4 rounded-xl border shadow-sm">
-        <p className="text-sm text-slate-500 font-medium">Нийт <strong className="text-indigo-600">{faqs.length}</strong> асуулт байна</p>
-        <button onClick={handleAdd} className="bg-[#4F46E5] text-white px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 hover:bg-[#4338ca] transition-colors">
-          <Plus className="w-4 h-4" /> Шинэ асуулт нэмэх
-        </button>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-xl border shadow-sm">
+        <div>
+          <p className="text-sm text-slate-500 font-medium">
+            Нийт <strong className="text-indigo-600">{faqs.length}</strong> асуулт хариулт байна
+          </p>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Чатботод харагдах түгээмэл асуултууд болон дэлгэрэнгүй зааврууд
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleLoadDefaults}
+            disabled={isSaving}
+            className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3.5 py-2 rounded-lg font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-colors shadow-sm disabled:opacity-50"
+          >
+            <Sparkles className="w-4 h-4 text-indigo-600" />
+            12 бэлэн заавар оруулах
+          </button>
+          <button
+            onClick={handleAdd}
+            className="bg-[#4F46E5] text-white px-4 py-2 rounded-lg font-medium text-xs sm:text-sm flex items-center gap-2 hover:bg-[#4338ca] transition-colors shadow-sm"
+          >
+            <Plus className="w-4 h-4" /> Шинэ асуулт нэмэх
+          </button>
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -94,7 +207,7 @@ export function FaqAdminClient({ initialFaqs }: { initialFaqs: FaqNode[] }) {
             {editingId === faq.id ? (
               <div className="p-5 space-y-4 bg-indigo-50/30">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase">Асуулт (Товчны нэр)</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase">Асуулт (Чатботын товчны нэр)</label>
                   <input 
                     type="text" 
                     value={editForm.question || ""} 
@@ -104,13 +217,13 @@ export function FaqAdminClient({ initialFaqs }: { initialFaqs: FaqNode[] }) {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase">Хариулт (Чатбот хариу)</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase">Хариулт (Чатботын тайлбар)</label>
                   <textarea 
                     value={editForm.answer || ""} 
                     onChange={e => setEditForm({...editForm, answer: e.target.value})}
                     rows={5}
                     className="w-full border-slate-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2.5 border"
-                    placeholder="HTML эсвэл энгийн текст байж болно. Мөр шилжих нь хадгалагдана."
+                    placeholder="Хариултын текст бичнэ үү..."
                   />
                 </div>
                 <div className="flex justify-end gap-2 pt-2">
@@ -132,19 +245,20 @@ export function FaqAdminClient({ initialFaqs }: { initialFaqs: FaqNode[] }) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-1">
+                    <span className="text-xs font-bold text-indigo-500 w-5">#{index + 1}</span>
                     <h3 className="font-bold text-slate-900 text-base">{faq.question}</h3>
                     {!faq.isActive && <span className="text-[10px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Идэвхгүй</span>}
                   </div>
-                  <p className="text-sm text-slate-500 line-clamp-2 whitespace-pre-wrap">{faq.answer}</p>
+                  <p className="text-sm text-slate-600 line-clamp-2 whitespace-pre-wrap pl-8">{faq.answer}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <button onClick={() => toggleActive(faq.id)} className={`p-2 rounded-lg transition-colors ${faq.isActive ? 'text-green-600 hover:bg-green-50' : 'text-slate-400 hover:bg-slate-100'}`} title={faq.isActive ? "Идэвхтэй байна (Дарж унтраах)" : "Идэвхгүй байна (Дарж асаах)"}>
                     {faq.isActive ? <CheckCircle2 className="w-5 h-5" /> : <X className="w-5 h-5" />}
                   </button>
-                  <button onClick={() => { setEditingId(faq.id); setEditForm(faq); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                  <button onClick={() => { setEditingId(faq.id); setEditForm(faq); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Засах">
                     <Edit2 className="w-4 h-4" />
                   </button>
-                  <button onClick={() => handleDelete(faq.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                  <button onClick={() => handleDelete(faq.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Устгах">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -154,8 +268,23 @@ export function FaqAdminClient({ initialFaqs }: { initialFaqs: FaqNode[] }) {
         ))}
 
         {faqs.length === 0 && (
-          <div className="text-center py-12 bg-white border border-dashed rounded-xl">
-            <p className="text-slate-500 font-medium">Одоогоор ямар ч заавар бүртгэгдээгүй байна.</p>
+          <div className="text-center py-12 px-4 bg-white border-2 border-dashed border-indigo-200 rounded-2xl max-w-lg mx-auto shadow-sm space-y-4">
+            <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto text-2xl border border-indigo-100">
+              <HelpCircle className="w-8 h-8 text-indigo-600" />
+            </div>
+            <div>
+              <h4 className="font-bold text-slate-800 text-lg">Одоогоор асуулт хариулт оруулаагүй байна</h4>
+              <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto leading-relaxed">
+                Та дэлгүүрийн захиалга, төлбөр, каргоны тусдаа данс, хүргэлт, байршлын бэлэн 12 стандартыг 1 товшилтоор шууд оруулж болно.
+              </p>
+            </div>
+            <button
+              onClick={handleLoadDefaults}
+              disabled={isSaving}
+              className="bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm inline-flex items-center gap-2 shadow-md hover:shadow-lg transition-all disabled:opacity-50"
+            >
+              <Sparkles className="w-4 h-4" /> Бэлэн 12 FAQ зааврыг шууд оруулах
+            </button>
           </div>
         )}
       </div>

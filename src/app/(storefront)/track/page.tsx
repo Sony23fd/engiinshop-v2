@@ -211,6 +211,13 @@ function UnifiedDeliverySection({ groups, settings }: { groups: any[][], setting
   if (alreadyDelivered.length === 0 && eligibleForDelivery.length === 0 && notYetDeliverable.length === 0) return null
   const hasMixedDeliverable = eligibleForDelivery.length > 0 && notYetDeliverable.length > 0;
 
+  const totalEligibleCargoFee = eligibleForDelivery.reduce((sum: number, o: any) => {
+    const unit = Number(o.batch?.cargoFeeStatus || 0) * Number(o.batch?.product?.weight || 0);
+    const custom = Number(o.cargoFee || 0);
+    const orderFee = custom > 0 ? custom * Number(o.quantity || 1) : unit * Number(o.quantity || 1);
+    return sum + orderFee;
+  }, 0);
+
   return (
     <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl border border-indigo-100 p-5 space-y-4 shadow-sm">
       <div className="flex items-center gap-2">
@@ -228,9 +235,16 @@ function UnifiedDeliverySection({ groups, settings }: { groups: any[][], setting
       )}
       {eligibleForDelivery.length > 0 && (
         <div className="space-y-3 bg-white p-4 rounded-xl border border-indigo-100 shadow-sm">
-          <p className="text-sm text-slate-700 font-medium">
-            🚚 <strong>{eligibleForDelivery.length}</strong> бараа хүргэлтэд бэлэн байна.
-          </p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <p className="text-sm text-slate-700 font-medium">
+              🚚 <strong>{eligibleForDelivery.length}</strong> бараа хүргэлтэд бэлэн байна.
+            </p>
+            {totalEligibleCargoFee > 0 && (
+              <span className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-lg self-start sm:self-auto">
+                Каргоны төлбөр: {totalEligibleCargoFee.toLocaleString()} ₮
+              </span>
+            )}
+          </div>
           <DeliveryRequestButton orderIds={eligibleForDelivery.map((o: any) => o.id)} deliveryScheduleDays={deliveryScheduleDays} />
           
           <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
@@ -371,7 +385,22 @@ function OrderGroup({ orders, completed = false, deliveryScheduleDays = "3,6", s
                   <p className={`font-bold text-sm truncate ${isCancelled || completed ? "text-slate-400 font-bold" : isPending ? "text-slate-500" : "text-slate-800"}`}>
                     {order.batch?.product?.name}
                   </p>
-                  <p className="text-[10px] text-slate-400 mt-0.5 font-bold uppercase tracking-wide">#{order.orderNumber} · {order.quantity} ширхэг</p>
+                  <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wide">#{order.orderNumber} · {order.quantity} ширхэг</span>
+                    {(() => {
+                      const unit = Number(order.batch?.cargoFeeStatus || 0) * Number(order.batch?.product?.weight || 0);
+                      const custom = Number(order.cargoFee || 0);
+                      const fee = custom > 0 ? custom * Number(order.quantity || 1) : unit * Number(order.quantity || 1);
+                      if (fee > 0) {
+                        return (
+                          <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded">
+                            Карго: {fee.toLocaleString()}₮
+                          </span>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
