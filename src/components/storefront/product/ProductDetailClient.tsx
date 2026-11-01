@@ -159,7 +159,7 @@ export function ProductDetailClient({
               <p className="text-[11px] text-slate-500 font-medium">Хүргэгдэх хугацаа</p>
               <p className="text-xs sm:text-sm font-bold text-slate-800">
                 {Number(batch.cargoFeeStatus) > 0
-                  ? "Ойролцоогоор 7-14 хоног (Солонгосоос)"
+                  ? (shopSettings.product_cargo_estimate_text || "Ойролцоогоор 7-14 хоног (Солонгосоос)")
                   : (() => {
                       const DAY_NAMES = ["Ням", "Даваа", "Мягмар", "Лхагва", "Пүрэв", "Баасан", "Бямба"]
                       const scheduleDays = (shopSettings.delivery_schedule_days || "3,6")
@@ -170,7 +170,7 @@ export function ProductDetailClient({
                     })()}
               </p>
               {Number(batch.cargoFeeStatus) <= 0 && (
-                <p className="text-[10px] text-slate-400 mt-0.5">Товлосон өдрөөс 24-72 цагийн дотор хүргэгдэнэ</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">{shopSettings.product_local_estimate_text || "Товлосон өдрөөс 24-72 цагийн дотор хүргэгдэнэ"}</p>
               )}
             </div>
           </div>

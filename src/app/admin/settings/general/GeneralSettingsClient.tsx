@@ -4,10 +4,12 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { Loader2, Upload, ImageIcon } from "lucide-react"
+import { Loader2, Upload, ImageIcon, Sparkles } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import Image from "next/image"
 import { Switch } from "@/components/ui/switch"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 
 import { SystemUpdateCard } from "@/components/admin/SystemUpdateCard"
 import { Role } from "@prisma/client"
@@ -22,10 +24,14 @@ export function GeneralSettingsClient({ initialSettings, userRole }: Props) {
   const { toast } = useToast()
   
   const [logoUrl, setLogoUrl] = useState(initialSettings["site_logo"] || "")
-  // Default to true if not explicitly set to "false"
   const [showHeroText, setShowHeroText] = useState(initialSettings["hero_text_visible"] !== "false")
-  
+  const [heroBadgeText, setHeroBadgeText] = useState(initialSettings["hero_badge_text"] || "Шууд захиалах боломжтой")
+  const [heroTitle, setHeroTitle] = useState(initialSettings["hero_title"] || "Солонгосоос шууд таны гарт хүргэнэ")
+  const [heroSubtitle, setHeroSubtitle] = useState(initialSettings["hero_subtitle"] || "Чанарын баталгаат, трэнд болж буй гоо сайхан, хувцас, ахуйн хэрэглээний барааг Солонгосоос хамгийн хурднаар, найдвартай захиалж аваарай.")
+
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(initialSettings["maintenance_mode"] === "true")
+  const [maintenanceTitle, setMaintenanceTitle] = useState(initialSettings["maintenance_title"] || "Түр засвартай байна")
+  const [maintenanceMessage, setMaintenanceMessage] = useState(initialSettings["maintenance_message"] || "Эрхэм харилцагч танд энэ өдрийн мэнд хүргэе. Манай сайт дээр одоогоор өгөгдлийн шинэчлэл хийгдэж байгаа тул түр хугацаанд хаагдлаа. Та хэсэг хугацааны дараа дахин хандана уу. Баярлалаа!")
   
   const [heroBgColor, setHeroBgColor] = useState(initialSettings["hero_bg_color"] || "#5442cc")
   
@@ -81,53 +87,26 @@ export function GeneralSettingsClient({ initialSettings, userRole }: Props) {
   async function handleSave() {
     setIsSaving(true)
     try {
-      // Save logo
-      const resLogo = await fetch("/api/admin/settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: "site_logo", value: logoUrl }),
-      })
-      if (!resLogo.ok) throw new Error("Лого хадгалахад алдаа гарлаа")
+      const settingsPayload: Record<string, string> = {
+        site_logo: logoUrl,
+        hero_text_visible: showHeroText ? "true" : "false",
+        hero_badge_text: heroBadgeText,
+        hero_title: heroTitle,
+        hero_subtitle: heroSubtitle,
+        maintenance_mode: isMaintenanceMode ? "true" : "false",
+        maintenance_title: maintenanceTitle,
+        maintenance_message: maintenanceMessage,
+        hero_bg_color: heroBgColor,
+        delivery_schedule_days: deliveryScheduleDays.join(","),
+        hero_carousel_images: JSON.stringify(carouselImages),
+      }
 
-      // Save hero text visibility
-      const resHero = await fetch("/api/admin/settings", {
+      const res = await fetch("/api/admin/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: "hero_text_visible", value: showHeroText ? "true" : "false" }),
+        body: JSON.stringify({ settings: settingsPayload }),
       })
-      if (!resHero.ok) throw new Error("Нүүрний текстийн тохиргоо хадгалахад алдаа гарлаа")
-
-      // Save maintenance mode
-      const resMaint = await fetch("/api/admin/settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: "maintenance_mode", value: isMaintenanceMode ? "true" : "false" }),
-      })
-      if (!resMaint.ok) throw new Error("Засварын горим хадгалахад алдаа гарлаа")
-
-      // Save hero bg color
-      const resColor = await fetch("/api/admin/settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: "hero_bg_color", value: heroBgColor }),
-      })
-      if (!resColor.ok) throw new Error("Арын өнгө хадгалахад алдаа гарлаа")
-
-      // Save delivery schedule days
-      const resSchedule = await fetch("/api/admin/settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: "delivery_schedule_days", value: deliveryScheduleDays.join(",") }),
-      })
-      if (!resSchedule.ok) throw new Error("Хүргэлтийн хуваарь хадгалахад алдаа гарлаа")
-
-      // Save carousel images
-      const resCarousel = await fetch("/api/admin/settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: "hero_carousel_images", value: JSON.stringify(carouselImages) }),
-      })
-      if (!resCarousel.ok) throw new Error("Carousel хадгалахад алдаа гарлаа")
+      if (!res.ok) throw new Error("Тохиргоо хадгалахад алдаа гарлаа")
 
       toast({
         title: "Амжилттай",
@@ -193,33 +172,97 @@ export function GeneralSettingsClient({ initialSettings, userRole }: Props) {
             </div>
           </div>
           
-          <div className="pt-6 border-t border-slate-100 space-y-4 flex flex-col items-start">
-            <div className="w-full flex items-center justify-between">
-              <div className="space-y-0.5">
-                <label className="text-base font-semibold text-slate-800">Нүүр хуудасны текст</label>
-                <p className="text-sm text-slate-500">
-                  Сайтын хамгийн эхэнд байрлах том текстийг (уриа үг) нуух эсвэл харуулах
-                </p>
+          <div className="pt-6 border-t border-slate-100 space-y-5 flex flex-col items-start">
+            {/* Hero Text Toggle & Inputs */}
+            <div className="w-full space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <label className="text-base font-semibold text-slate-800">Нүүр хуудасны уриа текст</label>
+                  <p className="text-sm text-slate-500">
+                    Сайтын хамгийн эхэнд байрлах том текстийг (уриа үг) нуух эсвэл харуулах
+                  </p>
+                </div>
+                <Switch 
+                  checked={showHeroText} 
+                  onCheckedChange={setShowHeroText} 
+                />
               </div>
-              <Switch 
-                checked={showHeroText} 
-                onCheckedChange={setShowHeroText} 
-              />
+
+              {showHeroText && (
+                <div className="w-full bg-slate-50 p-4 rounded-xl border border-slate-200/80 space-y-3 mt-2">
+                  <div>
+                    <label className="text-xs font-semibold text-slate-700">Тэмдэглэгээ (Badge) текст</label>
+                    <Input
+                      value={heroBadgeText}
+                      onChange={e => setHeroBadgeText(e.target.value)}
+                      placeholder="Шууд захиалах боломжтой"
+                      className="mt-1 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-700">Үндсэн том гарчиг</label>
+                    <Input
+                      value={heroTitle}
+                      onChange={e => setHeroTitle(e.target.value)}
+                      placeholder="Солонгосоос шууд таны гарт хүргэнэ"
+                      className="mt-1 bg-white font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-700">Уриа дэд тайлбар</label>
+                    <Textarea
+                      rows={2}
+                      value={heroSubtitle}
+                      onChange={e => setHeroSubtitle(e.target.value)}
+                      placeholder="Чанарын баталгаат, трэнд болж буй гоо сайхан, хувцас, ахуйн хэрэглээний барааг Солонгосоос хамгийн хурднаар, найдвартай захиалж аваарай."
+                      className="mt-1 bg-white resize-none"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="w-full pt-4 border-t border-slate-100 flex items-center justify-between">
-              <div className="space-y-0.5">
-                <label className="text-base font-semibold text-slate-800">Сайтыг түр хаах (Засвартай горим)</label>
-                <p className="text-sm text-slate-500">
-                  Идэвхжүүлсэн үед хэрэглэгчдэд "Түр засвартай" гэсэн хуудас харагдах ба худалдан авалт хийх боломжгүй болно.
-                </p>
+            {/* Maintenance Mode Toggle & Message */}
+            <div className="w-full pt-4 border-t border-slate-100 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <label className="text-base font-semibold text-slate-800">Сайтыг түр хаах (Засвартай горим)</label>
+                  <p className="text-sm text-slate-500">
+                    Идэвхжүүлсэн үед хэрэглэгчдэд "Түр засвартай" гэсэн хуудас харагдах ба худалдан авалт хийх боломжгүй болно.
+                  </p>
+                </div>
+                <Switch 
+                  checked={isMaintenanceMode} 
+                  onCheckedChange={setIsMaintenanceMode} 
+                />
               </div>
-              <Switch 
-                checked={isMaintenanceMode} 
-                onCheckedChange={setIsMaintenanceMode} 
-              />
+
+              {isMaintenanceMode && (
+                <div className="w-full bg-amber-50/70 p-4 rounded-xl border border-amber-200 space-y-3 mt-2">
+                  <div>
+                    <label className="text-xs font-semibold text-amber-900">Засварын хуудасны гарчиг</label>
+                    <Input
+                      value={maintenanceTitle}
+                      onChange={e => setMaintenanceTitle(e.target.value)}
+                      placeholder="Түр засвартай байна"
+                      className="mt-1 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-amber-900">Засварын дэлгэрэнгүй тайлбар</label>
+                    <Textarea
+                      rows={3}
+                      value={maintenanceMessage}
+                      onChange={e => setMaintenanceMessage(e.target.value)}
+                      placeholder="Эрхэм харилцагч танд энэ өдрийн мэнд хүргэе..."
+                      className="mt-1 bg-white resize-none"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
+            {/* Background Color */}
             <div className="w-full pt-4 border-t border-slate-100 flex items-center justify-between">
               <div className="space-y-0.5">
                 <label className="text-base font-semibold text-slate-800">Арын өнгө (Background Color)</label>
@@ -241,6 +284,7 @@ export function GeneralSettingsClient({ initialSettings, userRole }: Props) {
               </div>
             </div>
 
+            {/* Delivery Schedule Days */}
             <div className="w-full pt-4 border-t border-slate-100 space-y-3">
               <div className="space-y-0.5">
                 <label className="text-base font-semibold text-slate-800">🚚 Хүргэлтийн Хуваарь</label>
@@ -276,6 +320,7 @@ export function GeneralSettingsClient({ initialSettings, userRole }: Props) {
               )}
             </div>
 
+            {/* Carousel Images */}
             <div className="w-full pt-4 border-t border-slate-100 space-y-4">
               <div className="space-y-0.5">
                 <label className="text-base font-semibold text-slate-800">Carousel зургууд (Слайд)</label>

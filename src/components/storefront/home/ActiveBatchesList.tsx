@@ -11,13 +11,15 @@ export function ActiveBatchesList({
   title = "Яг одоо захиалах",
   subtitle = "Хамгийн эрэлттэй, захиалга нь нээлттэй байгаа бараанууд",
   badge = "Тренд бараанууд",
-  theme = "ready"
+  theme = "ready",
+  preorderEstimateText
 }: { 
   batches: any[],
   title?: string,
   subtitle?: string,
   badge?: string,
-  theme?: "ready" | "preorder" | string
+  theme?: "ready" | "preorder" | string,
+  preorderEstimateText?: string
 }) {
   const [visibleCount, setVisibleCount] = useState(8)
   const [isClient, setIsClient] = useState(false)
@@ -147,7 +149,7 @@ export function ActiveBatchesList({
                              </div>
                            )}
                            <p className="text-[10px] text-center text-slate-500 font-medium leading-relaxed bg-slate-50 border border-slate-100 p-1.5 rounded-lg">
-                             Захиалга хаагдсанаас хойш<br/>7-14 хоногт ирнэ
+                             {preorderEstimateText ? preorderEstimateText : <>Захиалга хаагдсанаас хойш<br/>7-14 хоногт ирнэ</>}
                            </p>
                         </div>
                       ) : (

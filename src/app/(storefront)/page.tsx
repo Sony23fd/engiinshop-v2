@@ -1,4 +1,5 @@
 import { getActiveProducts } from "@/app/actions/product-actions"
+import { getShopSettings } from "@/app/actions/settings-actions"
 import { HeroSection } from "@/components/storefront/home/HeroSection"
 import { HowItWorks } from "@/components/storefront/home/HowItWorks"
 import { ActiveBatchesList } from "@/components/storefront/home/ActiveBatchesList"
@@ -8,7 +9,10 @@ import { LiveTicker } from "@/components/storefront/home/LiveTicker"
 export const dynamic = "force-dynamic"
 
 export default async function StorefrontHomePage() {
-  const { products, success } = await getActiveProducts()
+  const [{ products, success }, settings] = await Promise.all([
+    getActiveProducts(),
+    getShopSettings()
+  ])
 
   return (
     <div className="bg-white min-h-screen">
@@ -30,10 +34,10 @@ export default async function StorefrontHomePage() {
         subtitle="Урьдчилж захиалаад илүү хямдаар аваарай"
         badge="Тун удахгүй ирэх"
         theme="preorder"
+        preorderEstimateText={settings.preorder_estimate_text}
       />
       
       <HowItWorks />
     </div>
   )
 }
-

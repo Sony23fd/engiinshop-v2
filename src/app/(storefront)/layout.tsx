@@ -4,7 +4,7 @@ import { CartProvider } from "@/context/CartContext"
 import { CartIcon } from "@/components/storefront/CartIcon"
 import Link from "next/link"
 import Image from "next/image"
-import { db } from "@/lib/db"
+import { getShopSettings } from "@/app/actions/settings-actions"
 
 import { AnimatedHeroBackground } from "@/components/storefront/home/AnimatedHeroBackground"
 import { VisitorTracker } from "@/components/storefront/VisitorTracker"
@@ -16,23 +16,17 @@ import { ChatbotWidget } from "@/components/storefront/ChatbotWidget"
 export const dynamic = "force-dynamic"
 
 export default async function StorefrontLayout({ children }: { children: ReactNode }) {
-  let siteLogo = null;
-  let isMaintenanceMode = false;
-  let faqs = [];
+  const settings = await getShopSettings()
+  const siteLogo = settings.site_logo || null
+  const isMaintenanceMode = settings.maintenance_mode === "true"
+  let faqs = []
 
   try {
-    const settings = await db.shopSettings.findMany({
-      where: { key: { in: ["site_logo", "maintenance_mode", "faq_data"] } }
-    });
-
-    siteLogo = settings.find(s => s.key === "site_logo")?.value;
-    isMaintenanceMode = settings.find(s => s.key === "maintenance_mode")?.value === "true";
-    const faqDataStr = settings.find(s => s.key === "faq_data")?.value;
-    if (faqDataStr) {
-      faqs = JSON.parse(faqDataStr);
+    if (settings.faq_data) {
+      faqs = JSON.parse(settings.faq_data)
     }
   } catch (error) {
-    console.error("Failed to load settings in layout:", error)
+    console.error("Failed to parse faqs in layout:", error)
   }
 
   if (isMaintenanceMode) {
@@ -42,21 +36,27 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
           <div className="w-20 h-20 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-6 rotate-3">
             <span className="text-4xl text-indigo-500 font-black">🛠️</span>
           </div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 mb-3 tracking-tight">Түр засвартай байна</h1>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 mb-3 tracking-tight">
+            {settings.maintenance_title || "Түр засвартай байна"}
+          </h1>
           <p className="text-slate-600 mb-8 text-sm md:text-base leading-relaxed">
-            Эрхэм харилцагч танд энэ өдрийн мэнд хүргэе. Манай сайт дээр одоогоор өгөгдлийн шинэчлэл хийгдэж байгаа тул түр хугацаанд хаагдлаа. Та хэсэг хугацааны дараа дахин хандана уу. Баярлалаа!
+            {settings.maintenance_message || "Эрхэм харилцагч танд энэ өдрийн мэнд хүргэе. Манай сайт дээр одоогоор өгөгдлийн шинэчлэл хийгдэж байгаа тул түр хугацаанд хаагдлаа. Та хэсэг хугацааны дараа дахин хандана уу. Баярлалаа!"}
           </p>
           <div className="flex justify-center gap-3">
-            <a href="#" className="hover:opacity-80 transition-opacity">
-              <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-[#4e3dc7] hover:bg-[#4e3dc7] hover:text-white transition-all">
-                <Facebook className="w-5 h-5" />
-              </div>
-            </a>
-            <a href="#" className="hover:opacity-80 transition-opacity">
-              <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-[#4e3dc7] hover:bg-[#4e3dc7] hover:text-white transition-all">
-                <Instagram className="w-5 h-5" />
-              </div>
-            </a>
+            {settings.social_facebook && (
+              <a href={settings.social_facebook} target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">
+                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-[#4e3dc7] hover:bg-[#4e3dc7] hover:text-white transition-all">
+                  <Facebook className="w-5 h-5" />
+                </div>
+              </a>
+            )}
+            {settings.social_instagram && (
+              <a href={settings.social_instagram} target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">
+                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-[#4e3dc7] hover:bg-[#4e3dc7] hover:text-white transition-all">
+                  <Instagram className="w-5 h-5" />
+                </div>
+              </a>
+            )}
           </div>
           <p className="text-xs text-slate-400 mt-8">Anar Korea Shop © {new Date().getFullYear()}</p>
         </div>
@@ -151,15 +151,19 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
                 )}
               </div>
               <p className="text-sm leading-relaxed text-slate-400">
-                Солонгос улсаас чанарын баталгаат бараа бүтээгдэхүүнийг хамгийн хурднаар, найдвартай захиалж аваарай.
+                {settings.footer_slogan || "Солонгос улсаас чанарын баталгаат бараа бүтээгдэхүүнийг хамгийн хурднаар, найдвартай захиалж аваарай."}
               </p>
               <div className="flex gap-4 pt-2">
-                <a href="https://www.instagram.com/anar_korea_shop" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 flex items-center justify-center text-white hover:scale-110 shadow-sm transition-transform" title="Instagram">
-                  <Instagram className="w-5 h-5 drop-shadow-sm" />
-                </a>
-                <a href="https://www.facebook.com/profile.php?id=100086582256535" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full bg-gradient-to-b from-blue-500 to-blue-700 flex items-center justify-center text-white hover:scale-110 shadow-sm transition-transform" title="Facebook">
-                  <Facebook className="w-5 h-5 fill-white drop-shadow-sm" />
-                </a>
+                {settings.social_instagram && (
+                  <a href={settings.social_instagram} target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 flex items-center justify-center text-white hover:scale-110 shadow-sm transition-transform" title="Instagram">
+                    <Instagram className="w-5 h-5 drop-shadow-sm" />
+                  </a>
+                )}
+                {settings.social_facebook && (
+                  <a href={settings.social_facebook} target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full bg-gradient-to-b from-blue-500 to-blue-700 flex items-center justify-center text-white hover:scale-110 shadow-sm transition-transform" title="Facebook">
+                    <Facebook className="w-5 h-5 fill-white drop-shadow-sm" />
+                  </a>
+                )}
               </div>
             </div>
 
@@ -167,15 +171,15 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
               <h3 className="text-white font-semibold text-sm uppercase tracking-wider mb-6">Холбоо барих</h3>
               <div className="flex items-start gap-3 text-sm">
                 <MapPin className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
-                <p className="leading-relaxed">БЗД, 26-р хороо Саруул хороолол<br />122-р байр, Үйлчилгээний хэсгийн 3 давхарт</p>
+                <p className="leading-relaxed">{settings.shop_address || "БЗД, 26-р хороо Саруул хороолол 122-р байр, Үйлчилгээний хэсгийн 3 давхарт"}</p>
               </div>
               <div className="flex items-center gap-3 text-sm">
                 <Phone className="w-5 h-5 text-indigo-400 shrink-0" />
-                <p>+976 8853 9667</p>
+                <p>{settings.shop_phone || "+976 8853 9667"}</p>
               </div>
               <div className="flex items-center gap-3 text-sm">
                 <Mail className="w-5 h-5 text-indigo-400 shrink-0" />
-                <p>info@anarkorea.mn</p>
+                <p>{settings.shop_email || "info@anarkorea.mn"}</p>
               </div>
             </div>
 
@@ -184,11 +188,11 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
               <ul className="text-sm space-y-3">
                 <li className="flex justify-between items-center pb-2 border-b border-white/5">
                   <span className="text-slate-400">Даваа - Бямба</span>
-                  <span className="text-indigo-400 font-medium">10:00 - 19:00</span>
+                  <span className="text-indigo-400 font-medium">{settings.shop_hours_weekdays || "10:00 - 19:00"}</span>
                 </li>
                 <li className="flex justify-between items-center pb-2 border-b border-white/5">
                   <span className="text-slate-400">Ням</span>
-                  <span className="text-rose-400 font-medium tracking-wide">Амарна</span>
+                  <span className="text-rose-400 font-medium tracking-wide">{settings.shop_hours_weekend || "Амарна"}</span>
                 </li>
               </ul>
             </div>
@@ -198,9 +202,11 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
               <div className="flex items-start gap-3">
                 <ShieldCheck className="w-8 h-8 text-green-400 shrink-0" />
                 <div>
-                  <h4 className="text-slate-200 font-medium text-sm mb-1">Найдвартай хүргэлт</h4>
+                  <h4 className="text-slate-200 font-medium text-sm mb-1">
+                    {settings.footer_guarantee_title || "Найдвартай хүргэлт"}
+                  </h4>
                   <p className="text-xs text-slate-400 leading-relaxed">
-                    Захиалгын төлбөр баталгаажсанаас хойш шууд ачигдах бөгөөд албан ёсны каргогоор танд хүрнэ.
+                    {settings.footer_guarantee_text || "Захиалгын төлбөр баталгаажсанаас хойш шууд ачигдах бөгөөд албан ёсны каргогоор танд хүрнэ."}
                   </p>
                 </div>
               </div>

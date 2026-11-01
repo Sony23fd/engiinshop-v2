@@ -8,9 +8,19 @@ interface StatusTimelineProps {
   status: string;
   isFinal?: boolean;
   deliveryScheduleDays?: string;
+  noticeInTransitTitle?: string;
+  noticeInTransitText?: string;
+  noticeDeliveryText?: string;
 }
 
-export function OrderStatusTimeline({ status, isFinal, deliveryScheduleDays = "3,6" }: StatusTimelineProps) {
+export function OrderStatusTimeline({ 
+  status, 
+  isFinal, 
+  deliveryScheduleDays = "3,6",
+  noticeInTransitTitle,
+  noticeInTransitText,
+  noticeDeliveryText
+}: StatusTimelineProps) {
   const lowerStatus = (status || "").toLowerCase().trim();
   const isRejected = 
     lowerStatus.includes("цуцлагдсан") || 
@@ -126,7 +136,7 @@ export function OrderStatusTimeline({ status, isFinal, deliveryScheduleDays = "3
             </div>
             <p className="text-[11px] text-emerald-700 leading-relaxed">
               <strong>Хүргэлт захиалах боломжтой.</strong>{" "}
-              Хүргэлт <strong>{deliveryScheduleDays.split(",").map(Number).map(d => DAY_NAMES[d]).filter(Boolean).join(", ")}</strong> гарагуудад гарна. Товлосон өдрөөс <strong>24–72 цаг</strong>ийн дотор хүргэгдэнэ.
+              Хүргэлт <strong>{deliveryScheduleDays.split(",").map(Number).map(d => DAY_NAMES[d]).filter(Boolean).join(", ")}</strong> гарагуудад гарна. {noticeDeliveryText || "Товлосон өдрөөс 24–72 цагийн дотор хүргэгдэнэ."}
             </p>
           </div>
         </div>
@@ -139,7 +149,8 @@ export function OrderStatusTimeline({ status, isFinal, deliveryScheduleDays = "3
               <Truck className="w-3.5 h-3.5 text-blue-600" />
             </div>
             <p className="text-[11px] text-blue-800 leading-relaxed">
-              <strong>Ойролцоох хугацаа:</strong> Бараа Солонгосоос хөдөлсөн бөгөөд хэвийн нөхцөлд <strong>7-10 хоногийн</strong> дараа Улаанбаатарт ирдэг.
+              <strong>{noticeInTransitTitle || "Ойролцоох хугацаа:"}</strong>{" "}
+              {noticeInTransitText || "Бараа Солонгосоос хөдөлсөн бөгөөд хэвийн нөхцөлд 7-10 хоногийн дараа Улаанбаатарт ирдэг."}
             </p>
           </div>
         </div>

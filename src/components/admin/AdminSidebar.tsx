@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, Package, ShoppingBag, Search, Activity, ListFilter, CheckCircle, XCircle, Clock, CreditCard, FileText, Truck, Users, Settings, Handshake, PackageCheck, Archive, BookOpen, Database, RefreshCcw, Bot, AlertTriangle } from "lucide-react"
+import { LayoutDashboard, Package, ShoppingBag, Search, Activity, ListFilter, CheckCircle, XCircle, Clock, CreditCard, FileText, Truck, Users, Settings, Handshake, PackageCheck, Archive, BookOpen, Database, RefreshCcw, Bot, AlertTriangle, PhoneCall } from "lucide-react"
 
 type AdminRole = "ADMIN" | "CARGO_ADMIN" | "DATAADMIN"
 
@@ -57,6 +57,8 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
       { name: "Өгөгдлийн төв", url: "/admin/data-center", icon: Database, highlight: true, roles: ["DATAADMIN"] },
       { name: "Хэрэглэгчид", url: "/admin/users", icon: Users, roles: ["ADMIN", "DATAADMIN"] },
       { name: "Ерөнхий тохиргоо", url: "/admin/settings/general", icon: Settings, roles: ["ADMIN"] },
+      { name: "Хүргэлт & Тайлбар", url: "/admin/settings/notices", icon: Truck, roles: ["ADMIN", "CARGO_ADMIN"] },
+      { name: "Холбоо барих & Хаяг", url: "/admin/settings/contact", icon: PhoneCall, roles: ["ADMIN"] },
       { name: "Төлбөрийн тохиргоо", url: "/admin/settings/payment", icon: CreditCard, roles: ["ADMIN"] },
       { name: "Карго төлбөр", url: "/admin/cargo-settings", icon: CreditCard, highlight: true, roles: ["CARGO_ADMIN"] },
       { name: "Нөхцөлийн тохиргоо", url: "/admin/settings/terms", icon: FileText, roles: ["ADMIN"] },

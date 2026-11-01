@@ -147,7 +147,7 @@ export default async function TrackOrderPage({
               </ul>
               <div className="mt-8 flex justify-center gap-3">
                 <a href="/track" className="bg-slate-100 text-slate-700 px-6 py-2.5 rounded-lg font-bold hover:bg-slate-200 transition-colors">Дахин хайх</a>
-                <a href={settings.facebook_link || "https://facebook.com"} target="_blank" className="bg-[#4F46E5] text-white px-6 py-2.5 rounded-lg font-bold hover:bg-[#4338ca] transition-colors">Админтай холбогдох</a>
+                <a href={settings.support_chat_url || settings.social_facebook || settings.facebook_link || "https://facebook.com"} target="_blank" rel="noopener noreferrer" className="bg-[#4F46E5] text-white px-6 py-2.5 rounded-lg font-bold hover:bg-[#4338ca] transition-colors">Админтай холбогдох</a>
               </div>
             </div>
           ) : (
@@ -161,7 +161,7 @@ export default async function TrackOrderPage({
                   <div className="space-y-6">
                     <UnifiedDeliverySection groups={activeGroups} settings={settings} />
                     {activeGroups.map((groupOrders) => (
-                      <OrderGroup key={groupOrders[0].transactionRef || groupOrders[0].id} orders={groupOrders} deliveryScheduleDays={settings.delivery_schedule_days || "3,6"} />
+                      <OrderGroup key={groupOrders[0].transactionRef || groupOrders[0].id} orders={groupOrders} deliveryScheduleDays={settings.delivery_schedule_days || "3,6"} settings={settings} />
                     ))}
                   </div>
                 ) : (
@@ -179,7 +179,7 @@ export default async function TrackOrderPage({
                   </h2>
                   <div className="space-y-6">
                     {completedGroups.map((groupOrders) => (
-                      <OrderGroup key={groupOrders[0].transactionRef || groupOrders[0].id} orders={groupOrders} completed deliveryScheduleDays={settings.delivery_schedule_days || "3,6"} />
+                      <OrderGroup key={groupOrders[0].transactionRef || groupOrders[0].id} orders={groupOrders} completed deliveryScheduleDays={settings.delivery_schedule_days || "3,6"} settings={settings} />
                     ))}
                   </div>
                 </div>
@@ -238,9 +238,10 @@ function UnifiedDeliverySection({ groups, settings }: { groups: any[][], setting
               <Home className="w-4 h-4 text-indigo-500" /> Дэлгүүрээс өөрөө ирж авах бол
             </h4>
             <div className="text-xs text-slate-600 space-y-1.5 bg-slate-50 p-3 rounded-lg border border-slate-100">
-              <p><strong>Хаяг:</strong> {settings.store_address || "Дэлгүүрийн хаяг тохируулаагүй байна."}</p>
+              <p><strong>Хаяг:</strong> {settings.shop_address || settings.store_address || "Дэлгүүрийн хаяг тохируулаагүй байна."}</p>
               <p><strong>Цагийн хуваарь:</strong> {settings.store_hours || "Даваа - Баасан: 10:00 - 18:00"}</p>
-              <p><strong>Утас:</strong> {settings.store_phone || ""}</p>
+              <p><strong>Утас:</strong> {settings.shop_phone || settings.store_phone || ""}</p>
+              {settings.pickup_guide_text && <p className="text-[11px] text-slate-500 pt-1 border-t border-slate-200/60 mt-1">{settings.pickup_guide_text}</p>}
             </div>
           </div>
 
@@ -266,7 +267,7 @@ function UnifiedDeliverySection({ groups, settings }: { groups: any[][], setting
   )
 }
 
-function OrderGroup({ orders, completed = false, deliveryScheduleDays = "3,6" }: { orders: any[]; completed?: boolean; deliveryScheduleDays?: string }) {
+function OrderGroup({ orders, completed = false, deliveryScheduleDays = "3,6", settings }: { orders: any[]; completed?: boolean; deliveryScheduleDays?: string; settings?: any }) {
   const first = orders[0]
   const totalAmount = orders.reduce((s: number, o: any) => s + Number(o.totalAmount || 0), 0)
   const allRejected = orders.every((o: any) => o.status?.name === "Цуцлагдсан" || o.paymentStatus === "REJECTED")
@@ -343,6 +344,9 @@ function OrderGroup({ orders, completed = false, deliveryScheduleDays = "3,6" }:
           status={allRejected ? "Цуцлагдсан" : (first.status?.name || "")} 
           isFinal={first.status?.isFinal} 
           deliveryScheduleDays={deliveryScheduleDays}
+          noticeInTransitTitle={settings?.notice_in_transit_title}
+          noticeInTransitText={settings?.notice_in_transit_text}
+          noticeDeliveryText={settings?.notice_ready_for_delivery_text}
         />
       </div>
 

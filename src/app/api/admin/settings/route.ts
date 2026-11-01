@@ -25,6 +25,21 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
+
+    if (body.settings && typeof body.settings === "object") {
+      const entries = Object.entries(body.settings)
+      await Promise.all(
+        entries.map(([k, v]) =>
+          db.shopSettings.upsert({
+            where: { key: k },
+            update: { value: String(v ?? "") },
+            create: { key: k, value: String(v ?? "") }
+          })
+        )
+      )
+      return NextResponse.json({ success: true })
+    }
+
     const { key, value } = body
 
     if (!key) {
@@ -33,8 +48,8 @@ export async function POST(req: Request) {
 
     const updated = await db.shopSettings.upsert({
       where: { key },
-      update: { value: String(value) },
-      create: { key, value: String(value) }
+      update: { value: String(value ?? "") },
+      create: { key, value: String(value ?? "") }
     })
 
     return NextResponse.json({ success: true, setting: updated })

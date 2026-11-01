@@ -109,7 +109,7 @@ export default async function OrderPendingPage({ params }: { params: Promise<{ o
         </div>
 
         <p className="text-center text-xs text-slate-400">
-          Асуулт байвал: <span className="text-indigo-500">+976 8853-9887</span>
+          Асуулт байвал: <span className="text-indigo-500 font-medium">{settings.shop_phone || settings.shop_secondary_phone || "+976 8853 9667"}</span>
         </p>
       </div>
     </div>

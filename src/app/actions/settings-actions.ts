@@ -20,7 +20,31 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   cargo_payment_instruction: "Гүйлгээний утга дээр утасныхаа дугаарыг заавал бичнэ үү.",
   delivery_delay_active: "false",
   delivery_delay_message: "Хүргэлтийн захиалга хэт олон байгаагаас шалтгаалан таны захиалга бага зэрэг саатаж очих магадлалтайг анхаарна уу.",
-  delivery_schedule_days: "3,6"
+  delivery_schedule_days: "3,6",
+  shop_phone: "+976 8853 9667",
+  shop_secondary_phone: "+976 8853 9887",
+  shop_email: "info@anarkorea.mn",
+  shop_address: "БЗД, 26-р хороо Саруул хороолол 122-р байр, Үйлчилгээний хэсгийн 3 давхарт",
+  shop_hours_weekdays: "10:00 - 19:00",
+  shop_hours_weekend: "Ням: Амарна",
+  social_facebook: "https://www.facebook.com/profile.php?id=100086582256535",
+  social_instagram: "https://www.instagram.com/anar_korea_shop",
+  support_chat_url: "",
+  notice_in_transit_title: "Ойролцоох хугацаа:",
+  notice_in_transit_text: "Бараа Солонгосоос хөдөлсөн бөгөөд хэвийн нөхцөлд 7-10 хоногийн дараа Улаанбаатарт ирдэг.",
+  notice_ready_for_delivery_text: "Товлосон өдрөөс 24–72 цагийн дотор хүргэгдэнэ.",
+  product_cargo_estimate_text: "Ойролцоогоор 7-14 хоног (Солонгосоос)",
+  product_local_estimate_text: "Товлосон өдрөөс 24-72 цагийн дотор хүргэгдэнэ",
+  preorder_estimate_text: "Захиалга хаагдсанаас хойш 7-14 хоногт ирнэ",
+  pickup_guide_text: "Бэлэн болсон захиалгыг дээрх хаягаар өөрийн биеэр ирж авах боломжтой.",
+  hero_badge_text: "Шууд захиалах боломжтой",
+  hero_title: "Солонгосоос шууд таны гарт хүргэнэ",
+  hero_subtitle: "Чанарын баталгаат, трэнд болж буй гоо сайхан, хувцас, ахуйн хэрэглээний барааг Солонгосоос хамгийн хурднаар, найдвартай захиалж аваарай.",
+  footer_slogan: "Солонгос улсаас чанарын баталгаат бараа бүтээгдэхүүнийг хамгийн хурднаар, найдвартай захиалж аваарай.",
+  footer_guarantee_title: "Найдвартай хүргэлт",
+  footer_guarantee_text: "Захиалгын төлбөр баталгаажсанаас хойш шууд ачигдах бөгөөд албан ёсны каргогоор танд хүрнэ.",
+  maintenance_title: "Түр засвартай байна",
+  maintenance_message: "Эрхэм харилцагч танд энэ өдрийн мэнд хүргэе. Манай сайт дээр одоогоор өгөгдлийн шинэчлэл хийгдэж байгаа тул түр хугацаанд хаагдлаа. Та хэсэг хугацааны дараа дахин хандана уу. Баярлалаа!"
 }
 
 export const getShopSettings = cache(async (): Promise<Record<string, string>> => {
@@ -28,6 +52,12 @@ export const getShopSettings = cache(async (): Promise<Record<string, string>> =
     const rows = await (db as any).shopSettings.findMany()
     const map: Record<string, string> = { ...DEFAULT_SETTINGS }
     rows.forEach((r: any) => { map[r.key] = r.value })
+    if (!map.store_address && map.shop_address) map.store_address = map.shop_address
+    if (!map.store_phone && map.shop_phone) map.store_phone = map.shop_phone
+    if (!map.store_hours && map.shop_hours_weekdays) {
+      map.store_hours = `Даваа - Бямба: ${map.shop_hours_weekdays}, ${map.shop_hours_weekend || "Ням: Амарна"}`
+    }
+    if (!map.facebook_link && map.social_facebook) map.facebook_link = map.social_facebook
     return map
   } catch {
     return DEFAULT_SETTINGS
@@ -41,12 +71,45 @@ export async function saveShopSetting(key: string, value: string) {
       update: { value },
       create: { key, value }
     })
+    revalidatePath("/admin/settings/general")
+    revalidatePath("/admin/settings/contact")
+    revalidatePath("/admin/settings/notices")
     revalidatePath("/admin/settings/payment")
     revalidatePath("/admin/settings/terms")
     revalidatePath("/admin/cargo-settings")
     revalidatePath("/admin/faqs")
     revalidatePath("/cart")
     revalidatePath("/track")
+    revalidatePath("/product", "layout")
+    revalidatePath("/", "layout")
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+export async function saveMultipleShopSettings(settings: Record<string, string>) {
+  try {
+    const entries = Object.entries(settings)
+    await Promise.all(
+      entries.map(([key, value]) =>
+        (db as any).shopSettings.upsert({
+          where: { key },
+          update: { value: String(value ?? "") },
+          create: { key, value: String(value ?? "") }
+        })
+      )
+    )
+    revalidatePath("/admin/settings/general")
+    revalidatePath("/admin/settings/contact")
+    revalidatePath("/admin/settings/notices")
+    revalidatePath("/admin/settings/payment")
+    revalidatePath("/admin/settings/terms")
+    revalidatePath("/admin/cargo-settings")
+    revalidatePath("/admin/faqs")
+    revalidatePath("/cart")
+    revalidatePath("/track")
+    revalidatePath("/product", "layout")
     revalidatePath("/", "layout")
     return { success: true }
   } catch (error: any) {
