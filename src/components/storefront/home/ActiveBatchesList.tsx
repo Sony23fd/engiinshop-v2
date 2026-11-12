@@ -91,6 +91,13 @@ export function ActiveBatchesList({
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center text-slate-400 font-medium">Зураггүй</div>
                   )}
+                  {/* Free Cargo Badge */}
+                  {(batch.product?.isFreeCargo || batch.isFreeCargo) && (
+                    <div className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-emerald-600/95 backdrop-blur-md px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-black text-white flex items-center gap-1 shadow-md border border-emerald-400/40 z-10">
+                      <span>✈️ Карго төлөхгүй</span>
+                    </div>
+                  )}
+
                   {/* Urgency Badge */}
                   {batch.isPreOrder ? (
                     <div className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-white/90 backdrop-blur-md px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold text-slate-800 flex items-center gap-1.5 shadow-sm border border-slate-200/50">
@@ -122,6 +129,11 @@ export function ActiveBatchesList({
                         {Number(batch.deliveryFee) > 0 && (
                           <p className="text-[11px] text-slate-500 font-medium mt-0.5">+₮{Number(batch.deliveryFee).toLocaleString()} хүргэлт</p>
                         )}
+                        {(batch.product?.isFreeCargo || batch.isFreeCargo) && (
+                          <p className="text-[11px] text-emerald-600 font-bold flex items-center gap-1 mt-0.5">
+                            <span>✨ Карго төлбөргүй</span>
+                          </p>
+                        )}
                       </div>
                       <AddToCartButton
                         batchId={batch.id}
@@ -130,6 +142,7 @@ export function ActiveBatchesList({
                         unitPrice={(() => { const bp = parseFloat(String(batch.price ?? 0)); const pp = parseFloat(String(batch.product?.price ?? 0)); return bp > 0 ? bp : pp; })()}
                         deliveryFee={Number(batch.deliveryFee || 0)}
                         isPreOrder={batch.isPreOrder}
+                        isFreeCargo={Boolean(batch.product?.isFreeCargo || batch.isFreeCargo)}
                         hasVariants={Boolean(
                           (batch.variantStock && typeof batch.variantStock === 'object' && Object.keys(batch.variantStock).length > 0) ||
                           (Array.isArray(batch.product?.options) && batch.product.options.length > 0)

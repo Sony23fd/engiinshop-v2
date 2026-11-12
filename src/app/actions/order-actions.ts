@@ -1314,6 +1314,9 @@ export async function requestDelivery(orderIds: string[], deliveryAddress: strin
     // Calculate total cargo fee for eligible orders
     let totalCargoFee = 0
     for (const o of eligibleOrders) {
+      if (o.batch?.product?.isFreeCargo || o.batch?.isFreeCargo) {
+        continue // Free cargo item
+      }
       const unitCargoFee = Number(o.batch?.cargoFeeStatus || 0) * Number(o.batch?.product?.weight || 0)
       const customCargoFee = Number(o.cargoFee || 0)
       const orderFee = customCargoFee > 0 ? customCargoFee * Number(o.quantity || 1) : unitCargoFee * Number(o.quantity || 1)

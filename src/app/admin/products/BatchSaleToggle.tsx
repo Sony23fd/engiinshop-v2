@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { toggleBatchForSale, updateBatchDeliveryFee, toggleBatchPreOrder } from "@/app/actions/product-actions"
+import { toggleBatchForSale, updateBatchDeliveryFee, toggleBatchPreOrder, toggleBatchFreeCargo } from "@/app/actions/product-actions"
 import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -87,7 +87,7 @@ function InlineEditDate({ label, value, onSave }: {
   )
 }
 
-export function BatchSaleToggle({ batchId, initialEnabled, initialPreOrder, initialFee, dynamicRemainingQty, targetQty, initialClosingDate }: {
+export function BatchSaleToggle({ batchId, initialEnabled, initialPreOrder, initialFee, dynamicRemainingQty, targetQty, initialClosingDate, initialFreeCargo }: {
   batchId: string
   initialEnabled: boolean
   initialPreOrder: boolean
@@ -95,11 +95,21 @@ export function BatchSaleToggle({ batchId, initialEnabled, initialPreOrder, init
   dynamicRemainingQty: number  // computed: targetQty - total ordered
   targetQty: number
   initialClosingDate?: Date | null
+  initialFreeCargo?: boolean
 }) {
   const [enabled, setEnabled] = useState(initialEnabled)
   const [preOrder, setPreOrder] = useState(initialPreOrder)
   const [loading, setLoading] = useState(false)
   const [preOrderLoading, setPreOrderLoading] = useState(false)
+  const [freeCargo, setFreeCargo] = useState(Boolean(initialFreeCargo))
+  const [freeCargoLoading, setFreeCargoLoading] = useState(false)
+
+  async function handleFreeCargoToggle(val: boolean) {
+    setFreeCargoLoading(true)
+    setFreeCargo(val)
+    await toggleBatchFreeCargo(batchId, val)
+    setFreeCargoLoading(false)
+  }
 
   async function handleToggle(val: boolean) {
     setLoading(true)

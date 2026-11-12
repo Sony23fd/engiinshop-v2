@@ -21,6 +21,7 @@ export function EditProductSheet({ batch, categories = [] }: EditProductSheetPro
   const [loading, setLoading] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(batch.categoryId || "")
+  const [isFreeCargo, setIsFreeCargo] = useState<boolean>(Boolean(batch.product?.isFreeCargo || batch.isFreeCargo))
   const router = useRouter()
 
   // Mode: "none" | "single" | "multi"
@@ -246,7 +247,8 @@ export function EditProductSheet({ batch, categories = [] }: EditProductSheetPro
       sourceLink: formData.get("sourceLink") as string,
       categoryId: selectedCategoryId || undefined,
       options: hasVariants ? finalOptions : [],
-      variantStock: hasVariants ? finalVariantStockMap : null
+      variantStock: hasVariants ? finalVariantStockMap : null,
+      isFreeCargo
     })
 
     setLoading(false)
@@ -698,6 +700,25 @@ export function EditProductSheet({ batch, categories = [] }: EditProductSheetPro
           <div className="space-y-2">
             <label htmlFor="sourceLink" className="text-sm font-medium">Эх сурвалжийн холбоос</label>
             <Input id="sourceLink" name="sourceLink" type="url" defaultValue={batch.product?.sourceLink || ""} />
+          </div>
+
+          <div className="flex items-center justify-between p-3.5 bg-emerald-50/80 border border-emerald-200 rounded-xl shadow-2xs">
+            <div className="space-y-0.5">
+              <label htmlFor="editIsFreeCargo" className="text-xs sm:text-sm font-bold text-emerald-950 flex items-center gap-1.5 cursor-pointer">
+                ✈️ Карго төлөхгүй бараа (Free Cargo)
+              </label>
+              <p className="text-[11px] text-emerald-700 leading-tight">
+                Идэвхжүүлбэл Front дээр онцгой тэмдэглэгээ гарч, каргоны хураамж 0₮ бодогдоно.
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              id="editIsFreeCargo"
+              name="isFreeCargo"
+              checked={isFreeCargo}
+              onChange={(e) => setIsFreeCargo(e.target.checked)}
+              className="w-5 h-5 text-emerald-600 rounded cursor-pointer accent-emerald-600"
+            />
           </div>
 
           <Button type="submit" disabled={loading} className="w-full bg-[#4F46E5] hover:bg-[#4338ca] mt-6 py-6 font-bold shadow-md">

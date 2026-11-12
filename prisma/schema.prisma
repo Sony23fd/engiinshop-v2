@@ -40,6 +40,7 @@ model Product {
   sourceLink    String?
   isActive      Boolean  @default(true)
   weight        Decimal? @default(0.0)
+  isFreeCargo   Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   options       Json?
@@ -67,6 +68,7 @@ model Batch {
   isPreOrder         Boolean     @default(false)
   variantStock       Json?
   closingDate        DateTime?
+  isFreeCargo        Boolean     @default(false)
   category           Category    @relation(fields: [categoryId], references: [id])
   product            Product     @relation(fields: [productId], references: [id])
   orders             Order[]

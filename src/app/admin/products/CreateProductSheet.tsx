@@ -15,6 +15,7 @@ export function CreateProductSheet({ categories }: { categories: any[] }) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [selectedCategoryId, setSelectedCategoryId] = useState("")
+  const [isFreeCargo, setIsFreeCargo] = useState(false)
 
   // Variant mode: "none" | "single" | "multi"
   const [variantMode, setVariantMode] = useState<"none" | "single" | "multi">("none")
@@ -166,7 +167,8 @@ export function CreateProductSheet({ categories }: { categories: any[] }) {
       sourceLink: formData.get("sourceLink") as string,
       categoryId: selectedCategoryId || undefined,
       options: hasVariants ? finalOptions : undefined,
-      variantStock: hasVariants ? finalVariantStockMap : undefined
+      variantStock: hasVariants ? finalVariantStockMap : undefined,
+      isFreeCargo
     })
 
     setLoading(false)
@@ -180,6 +182,7 @@ export function CreateProductSheet({ categories }: { categories: any[] }) {
       setExcludedCombos({})
       setBulkStockInput("")
       setSelectedCategoryId("")
+      setIsFreeCargo(false)
       router.refresh()
     } else {
       alert(res.error || "Алдаа гарлаа")
@@ -604,6 +607,25 @@ export function CreateProductSheet({ categories }: { categories: any[] }) {
           <div className="space-y-2">
             <label htmlFor="sourceLink" className="text-sm font-medium">Эх сурвалжийн холбоос</label>
             <Input id="sourceLink" name="sourceLink" type="url" placeholder="https://..." />
+          </div>
+
+          <div className="flex items-center justify-between p-3.5 bg-emerald-50/80 border border-emerald-200 rounded-xl shadow-2xs">
+            <div className="space-y-0.5">
+              <label htmlFor="isFreeCargo" className="text-xs sm:text-sm font-bold text-emerald-950 flex items-center gap-1.5 cursor-pointer">
+                ✈️ Карго төлөхгүй бараа (Free Cargo)
+              </label>
+              <p className="text-[11px] text-emerald-700 leading-tight">
+                Идэвхжүүлбэл Front дээр онцгой тэмдэглэгээ гарч, каргоны хураамж 0₮ бодогдоно.
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              id="isFreeCargo"
+              name="isFreeCargo"
+              checked={isFreeCargo}
+              onChange={(e) => setIsFreeCargo(e.target.checked)}
+              className="w-5 h-5 text-emerald-600 rounded cursor-pointer accent-emerald-600"
+            />
           </div>
 
           <Button type="submit" disabled={loading} className="w-full bg-[#4F46E5] hover:bg-[#4338ca] mt-6 py-6 shadow-md shadow-indigo-200 font-bold">

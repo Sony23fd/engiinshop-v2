@@ -34,6 +34,7 @@ interface Props {
   termsOfService?: string
   deliveryTerms?: string
   isPreOrder?: boolean
+  isFreeCargo?: boolean
   options?: any
   variantStock?: Record<string, number> | null
   deliveryScheduleDays?: string
@@ -74,6 +75,7 @@ export function ProductOrderForm({
   termsOfService,
   deliveryTerms,
   isPreOrder,
+  isFreeCargo = false,
   options,
   variantStock,
   deliveryScheduleDays = "3,6",
@@ -210,6 +212,7 @@ export function ProductOrderForm({
       unitPrice,
       deliveryFee,
       isPreOrder,
+      isFreeCargo,
       qty,
       selectedOptions: Object.keys(selectedOptions).length > 0 ? selectedOptions : undefined
     })
@@ -560,6 +563,12 @@ export function ProductOrderForm({
           <div className="flex justify-between text-sm text-slate-500">
             <span>Хүргэлт</span>
             <span>+₮{deliveryFee.toLocaleString()}</span>
+          </div>
+        )}
+        {isFreeCargo && (
+          <div className="flex justify-between text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">
+            <span>Олон улсын карго</span>
+            <span>0₮ (Үнэгүй)</span>
           </div>
         )}
         <div className="flex justify-between font-bold text-slate-900 text-base border-t pt-2">

@@ -11,6 +11,7 @@ interface ProductGalleryProps {
   productName: string
   videoUrl?: string | null
   isPreOrder?: boolean
+  isFreeCargo?: boolean
   options?: ProductOption[]
   selectedOptions?: Record<string, string>
   onSelectOption?: (optName: string, optValue: string) => void
@@ -31,6 +32,7 @@ export function ProductGallery({
   productName,
   videoUrl,
   isPreOrder,
+  isFreeCargo,
   options = [],
   selectedOptions = {},
   onSelectOption
@@ -134,6 +136,13 @@ export function ProductGallery({
         {isPreOrder && (
           <div className="absolute top-3.5 left-3.5 bg-white/95 backdrop-blur-md px-3 py-1 rounded-full text-[11px] font-bold text-amber-800 flex items-center gap-1.5 shadow-sm border border-amber-200/80 uppercase tracking-wider z-10">
             <span>📌 Урьдчилсан захиалга</span>
+          </div>
+        )}
+
+        {/* Free Cargo Badge Overlay */}
+        {isFreeCargo && (
+          <div className="absolute top-3.5 right-3.5 bg-emerald-600/95 backdrop-blur-md px-3 py-1 rounded-full text-[11px] font-black text-white flex items-center gap-1.5 shadow-md border border-emerald-400/50 uppercase tracking-wider z-10">
+            <span>✈️ Карго төлөхгүй</span>
           </div>
         )}
 

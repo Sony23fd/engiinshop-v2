@@ -212,6 +212,7 @@ function UnifiedDeliverySection({ groups, settings }: { groups: any[][], setting
   const hasMixedDeliverable = eligibleForDelivery.length > 0 && notYetDeliverable.length > 0;
 
   const totalEligibleCargoFee = eligibleForDelivery.reduce((sum: number, o: any) => {
+    if (o.batch?.product?.isFreeCargo || o.batch?.isFreeCargo) return sum;
     const unit = Number(o.batch?.cargoFeeStatus || 0) * Number(o.batch?.product?.weight || 0);
     const custom = Number(o.cargoFee || 0);
     const orderFee = custom > 0 ? custom * Number(o.quantity || 1) : unit * Number(o.quantity || 1);
@@ -388,6 +389,13 @@ function OrderGroup({ orders, completed = false, deliveryScheduleDays = "3,6", s
                   <div className="flex flex-wrap items-center gap-2 mt-0.5">
                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wide">#{order.orderNumber} · {order.quantity} ширхэг</span>
                     {(() => {
+                      if (order.batch?.product?.isFreeCargo || order.batch?.isFreeCargo) {
+                        return (
+                          <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                            ✈️ Карго: 0₮ (Үнэгүй)
+                          </span>
+                        );
+                      }
                       const unit = Number(order.batch?.cargoFeeStatus || 0) * Number(order.batch?.product?.weight || 0);
                       const custom = Number(order.cargoFee || 0);
                       const fee = custom > 0 ? custom * Number(order.quantity || 1) : unit * Number(order.quantity || 1);

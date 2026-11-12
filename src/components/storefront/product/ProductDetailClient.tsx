@@ -102,12 +102,19 @@ export function ProductDetailClient({
           productName={batch.product?.name || "Бараа"}
           videoUrl={batch.product?.videoUrl}
           isPreOrder={batch.isPreOrder}
+          isFreeCargo={Boolean(batch.product?.isFreeCargo || batch.isFreeCargo)}
           options={normalizedOptions}
           selectedOptions={selectedOptions}
           onSelectOption={handleSelectOption}
         />
 
-        <h1 className="text-2xl font-bold text-slate-900 mb-2 mt-5">{batch.product?.name}</h1>
+        {(batch.product?.isFreeCargo || batch.isFreeCargo) && (
+          <div className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 px-3.5 py-1 rounded-full text-xs font-black mt-4 mb-1 shadow-2xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>✈️ Карго төлөхгүй онцгой бараа</span>
+          </div>
+        )}
+        <h1 className="text-2xl font-bold text-slate-900 mb-2 mt-2">{batch.product?.name}</h1>
         <p className="text-slate-600 mb-6 flex-1 text-sm leading-relaxed whitespace-pre-line">
           {batch.description || batch.product?.description || "Тайлбар оруулаагүй байна."}
         </p>
@@ -156,7 +163,17 @@ export function ProductDetailClient({
               <Truck className="w-4 h-4 text-indigo-600" />
             </div>
             <div>
-              <p className="text-[11px] text-slate-500 font-medium">Хүргэгдэх хугацаа</p>
+              {(batch.product?.isFreeCargo || batch.isFreeCargo) ? (
+                <>
+                  <p className="text-[11px] text-slate-500 font-medium">Хүргэгдэх хугацаа & Карго</p>
+                  <p className="text-xs sm:text-sm font-black text-emerald-700 flex items-center gap-1">
+                    <span>📦 Карго: 0₮ (Үнэгүй)</span>
+                  </p>
+                  <p className="text-[10px] text-emerald-600 mt-0.5">Энэ бүтээгдэхүүнд олон улсын каргоны төлбөр тооцогдохгүй.</p>
+                </>
+              ) : (
+                <p className="text-[11px] text-slate-500 font-medium">Хүргэгдэх хугацаа</p>
+              )}
               <p className="text-xs sm:text-sm font-bold text-slate-800">
                 {Number(batch.cargoFeeStatus) > 0
                   ? (shopSettings.product_cargo_estimate_text || "Ойролцоогоор 7-14 хоног (Солонгосоос)")

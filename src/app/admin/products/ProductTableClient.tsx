@@ -175,8 +175,15 @@ export function ProductTableClient({
                       />
                     </td>
                     <td className="px-3 py-4 font-medium text-slate-700">#{batch.batchNumber}</td>
-                    <td className="px-4 py-4 font-medium text-slate-900 max-w-[200px] truncate" title={batch.product?.name}>
-                      {batch.product?.name}
+                    <td className="px-4 py-4 font-medium text-slate-900 max-w-[200px]" title={batch.product?.name}>
+                      <div className="flex flex-col gap-1">
+                        <span className="truncate">{batch.product?.name}</span>
+                        {(batch.product?.isFreeCargo || batch.isFreeCargo) && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full w-fit">
+                            ✈️ Карго төлөхгүй
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-4 text-center">
                       <EditProductSheet batch={batch} categories={categories} />
@@ -266,6 +273,7 @@ export function ProductTableClient({
                         initialEnabled={batch.isAvailableForSale ?? false}
                         initialPreOrder={batch.isPreOrder ?? false}
                         initialFee={Number(batch.deliveryFee || 0)}
+                        initialFreeCargo={Boolean(batch.product?.isFreeCargo || batch.isFreeCargo)}
                         dynamicRemainingQty={
                           variantCount > 0
                             ? variantTotal

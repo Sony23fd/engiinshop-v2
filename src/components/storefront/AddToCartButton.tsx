@@ -12,12 +12,13 @@ interface Props {
   unitPrice: number
   deliveryFee: number
   isPreOrder?: boolean
+  isFreeCargo?: boolean
   iconOnly?: boolean
   hasVariants?: boolean
   disabled?: boolean
 }
 
-export function AddToCartButton({ batchId, name, imageUrl, unitPrice, deliveryFee, isPreOrder, iconOnly, hasVariants, disabled = false }: Props) {
+export function AddToCartButton({ batchId, name, imageUrl, unitPrice, deliveryFee, isPreOrder, isFreeCargo, iconOnly, hasVariants, disabled = false }: Props) {
   const { addItem, items } = useCart()
   const [added, setAdded] = useState(false)
   const router = useRouter()

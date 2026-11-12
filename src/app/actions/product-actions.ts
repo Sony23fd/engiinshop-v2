@@ -174,6 +174,29 @@ export async function updateBatchClosingDate(batchId: string, closingDate: Date 
   }
 }
 
+export async function toggleBatchFreeCargo(batchId: string, isFreeCargo: boolean) {
+  try {
+    const batch = await db.batch.update({
+      where: { id: batchId },
+      data: { isFreeCargo },
+      include: { product: true }
+    })
+    if (batch.productId) {
+      await db.product.update({
+        where: { id: batch.productId },
+        data: { isFreeCargo }
+      })
+    }
+    revalidatePath("/admin/products")
+    revalidatePath("/")
+    revalidatePath("/track")
+    return { success: true }
+  } catch (error) {
+    console.error("Failed to toggle free cargo:", error)
+    return { success: false, error: "Failed to toggle free cargo" }
+  }
+}
+
 export async function createProduct(data: {
   name: string
   description?: string
@@ -185,6 +208,7 @@ export async function createProduct(data: {
   categoryId?: string
   options?: any[]
   variantStock?: Record<string, number>
+  isFreeCargo?: boolean
 }) {
   try {
     const hasVariants = data.variantStock && typeof data.variantStock === 'object' && Object.keys(data.variantStock).length > 0
@@ -213,6 +237,7 @@ export async function createProduct(data: {
       categoryId = defaultCategory.id
     }
 
+    const isFreeCargo = Boolean(data.isFreeCargo)
     const batch = await db.batch.create({
       data: {
         targetQuantity: data.targetQuantity,
@@ -220,12 +245,14 @@ export async function createProduct(data: {
         status: status,
         price: data.price,
         description: data.description,
+        isFreeCargo: isFreeCargo,
         ...(data.variantStock && { variantStock: data.variantStock }),
         category: { connect: { id: categoryId } },
         product: {
           create: {
             name: data.name,
             price: data.price,
+            isFreeCargo: isFreeCargo,
             ...(data.weight !== undefined && { weight: data.weight }),
             ...(data.sourceLink !== undefined && { sourceLink: data.sourceLink }),
             ...(data.options !== undefined && { options: data.options }),
@@ -255,6 +282,7 @@ export async function updateProduct(data: {
   categoryId?: string
   options?: any[]
   variantStock?: Record<string, number> | null
+  isFreeCargo?: boolean
 }) {
   try {
     // 1. Update the Product entity
@@ -266,7 +294,8 @@ export async function updateProduct(data: {
         price: data.price,
         weight: data.weight,
         sourceLink: data.sourceLink,
-        options: data.options || []
+        options: data.options || [],
+        ...(data.isFreeCargo !== undefined && { isFreeCargo: data.isFreeCargo })
       }
     })
 
@@ -289,6 +318,7 @@ export async function updateProduct(data: {
       targetQuantity: data.targetQuantity,
       remainingQuantity: finalRemainingQty,
       status: status,
+      ...(data.isFreeCargo !== undefined && { isFreeCargo: data.isFreeCargo }),
     }
     if (data.categoryId) {
       batchUpdateData.categoryId = data.categoryId

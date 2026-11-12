@@ -11,6 +11,7 @@ export interface CartItem {
   deliveryFee: number
   qty: number
   isPreOrder?: boolean
+  isFreeCargo?: boolean
   selectedOptions?: Record<string, string>
 }
 
