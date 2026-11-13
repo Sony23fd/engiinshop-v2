@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRight, ShoppingBag } from "lucide-react";
 import { AnimatedHeroBackground } from "./AnimatedHeroBackground";
 import { HeroCarousel } from "./HeroCarousel";
 import { getShopSettings } from "@/app/actions/settings-actions";
@@ -45,6 +46,23 @@ export async function HeroSection() {
             <p className="mt-6 text-lg md:text-xl text-indigo-100/90 max-w-2xl leading-relaxed relative z-10">
               {subtitleText}
             </p>
+
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3 relative z-10">
+              <Link
+                href="/shop"
+                className="px-6 py-3 rounded-2xl bg-white text-indigo-700 font-extrabold text-sm shadow-xl hover:bg-indigo-50 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+              >
+                <ShoppingBag className="w-4 h-4 text-indigo-600" />
+                <span>Дэлгүүр үзэх</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link
+                href="/track"
+                className="px-6 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm backdrop-blur-md border border-white/20 transition-all"
+              >
+                Захиалга шалгах
+              </Link>
+            </div>
           </div>
         )}
 

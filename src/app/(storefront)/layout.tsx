@@ -1,5 +1,5 @@
 import { ReactNode } from "react"
-import { MapPin, Clock, Truck, ShieldCheck, Mail, Phone, Instagram, Facebook, Search } from "lucide-react"
+import { MapPin, Clock, Truck, ShieldCheck, Mail, Phone, Instagram, Facebook, Search, ShoppingBag } from "lucide-react"
 import { CartProvider } from "@/context/CartContext"
 import { CartIcon } from "@/components/storefront/CartIcon"
 import Link from "next/link"
@@ -12,6 +12,10 @@ import { MobileBottomNav } from "@/components/storefront/layout/MobileBottomNav"
 import { ScrollHeaderManager } from "@/components/storefront/layout/ScrollHeaderManager"
 import { SocialProofToast } from "@/components/storefront/SocialProofToast"
 import { ChatbotWidget } from "@/components/storefront/ChatbotWidget"
+import { HeaderSearchTrigger } from "@/components/storefront/layout/HeaderSearchTrigger"
+import { HeaderCartTrigger } from "@/components/storefront/layout/HeaderCartTrigger"
+import { InstantSearchModal } from "@/components/storefront/search/InstantSearchModal"
+import { MiniCartDrawer } from "@/components/storefront/cart/MiniCartDrawer"
 
 export const dynamic = "force-dynamic"
 
@@ -95,14 +99,28 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
             )}
           </Link>
 
-          <div className="flex items-center gap-4 mt-2 md:mt-0">
+          <div className="flex items-center gap-2 sm:gap-3 mt-2 md:mt-0">
+            <Link
+              href="/shop"
+              className="flex items-center gap-1.5 text-white/95 hover:text-white font-bold text-xs sm:text-sm px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all border border-white/15 shadow-sm"
+            >
+              <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-200" />
+              <span>Дэлгүүр</span>
+            </Link>
+
             <Link
               href="/track"
-              className="hidden md:flex bg-white/10 hover:bg-white/20 border border-white/20 text-white px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm backdrop-blur-sm items-center gap-2 group-hover:bg-white/10"
+              className="hidden sm:flex items-center gap-1.5 text-white/95 hover:text-white font-bold text-xs sm:text-sm px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all border border-white/15 shadow-sm"
             >
-              <Search className="w-4 h-4" />
-              Захиалга шалгах
+              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-200" />
+              <span>Шалгах</span>
             </Link>
+
+            <HeaderSearchTrigger />
+
+            <div className="hidden sm:block">
+              <HeaderCartTrigger />
+            </div>
           </div>
         </div>
       </header>
@@ -119,10 +137,12 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
 
       <MobileBottomNav />
 
-      {/* Global Analytics & Social Proof */}
+      {/* Global Analytics, Social Proof & Modals */}
       <VisitorTracker />
       <SocialProofToast />
       <ChatbotWidget faqs={faqs} />
+      <InstantSearchModal />
+      <MiniCartDrawer />
 
       {/* Modern Premium Footer */}
       <footer className="bg-[#1c1642] text-slate-300 pt-16 pb-24 md:pb-8 px-4 md:px-8 lg:px-16 mt-auto">

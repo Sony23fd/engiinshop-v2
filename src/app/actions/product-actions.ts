@@ -69,6 +69,209 @@ export async function getProducts({ search, page = 1, limit = 20 }: { search?: s
   }
 }
 
+
+export interface ShopProductsQuery {
+  search?: string
+  categoryId?: string
+  status?: "all" | "ready" | "preorder"
+  isFreeCargo?: boolean
+  minPrice?: number
+  maxPrice?: number
+  sort?: "newest" | "price_asc" | "price_desc" | "name_asc" | "popular"
+  page?: number
+  limit?: number
+  inStockOnly?: boolean
+}
+
+export async function getShopProducts(query: ShopProductsQuery = {}) {
+  try {
+    const page = Math.max(1, Number(query.page) || 1)
+    const limit = Math.max(1, Math.min(60, Number(query.limit) || 24))
+    const skip = (page - 1) * limit
+
+    const where: any = {
+      isAvailableForSale: true,
+      status: { not: BatchStatus.CLOSED },
+      category: {
+        isArchived: false,
+        name: { not: { contains: "Сарын захиалга" } }
+      }
+    }
+
+    if (query.categoryId && query.categoryId !== "all") {
+      where.categoryId = query.categoryId
+    }
+
+    if (query.status === "ready") {
+      where.isPreOrder = false
+    } else if (query.status === "preorder") {
+      where.isPreOrder = true
+    }
+
+    if (query.isFreeCargo) {
+      where.OR = [
+        { isFreeCargo: true },
+        { product: { isFreeCargo: true } }
+      ]
+    }
+
+    if (query.inStockOnly) {
+      where.OR = [
+        { isPreOrder: true },
+        { remainingQuantity: { gt: 0 } }
+      ]
+    }
+
+    if (query.search && query.search.trim()) {
+      const q = query.search.trim()
+      where.AND = [
+        ...(where.AND || []),
+        {
+          OR: [
+            { product: { name: { contains: q, mode: "insensitive" } } },
+            { product: { description: { contains: q, mode: "insensitive" } } },
+            { description: { contains: q, mode: "insensitive" } },
+            { category: { name: { contains: q, mode: "insensitive" } } }
+          ]
+        }
+      ]
+    }
+
+    if (query.minPrice !== undefined || query.maxPrice !== undefined) {
+      where.price = {
+        ...(query.minPrice !== undefined && { gte: Number(query.minPrice) }),
+        ...(query.maxPrice !== undefined && { lte: Number(query.maxPrice) })
+      }
+    }
+
+    // Determine sorting
+    let orderBy: any = { createdAt: "desc" }
+    if (query.sort === "price_asc") {
+      orderBy = { price: "asc" }
+    } else if (query.sort === "price_desc") {
+      orderBy = { price: "desc" }
+    } else if (query.sort === "name_asc") {
+      orderBy = { product: { name: "asc" } }
+    } else if (query.sort === "popular") {
+      orderBy = { targetQuantity: "desc" }
+    } else {
+      orderBy = { createdAt: "desc" }
+    }
+
+    const [batches, totalCount, categories] = await Promise.all([
+      db.batch.findMany({
+        where,
+        include: {
+          product: true,
+          category: true
+        },
+        orderBy,
+        skip,
+        take: limit
+      }),
+      db.batch.count({ where }),
+      db.category.findMany({
+        where: {
+          isArchived: false,
+          batches: {
+            some: {
+              isAvailableForSale: true,
+              status: { not: BatchStatus.CLOSED }
+            }
+          }
+        },
+        select: {
+          id: true,
+          name: true,
+          _count: {
+            select: {
+              batches: {
+                where: {
+                  isAvailableForSale: true,
+                  status: { not: BatchStatus.CLOSED }
+                }
+              }
+            }
+          }
+        },
+        orderBy: { name: "asc" }
+      })
+    ])
+
+    return {
+      success: true,
+      products: JSON.parse(JSON.stringify(batches)),
+      totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+      currentPage: page,
+      categories: JSON.parse(JSON.stringify(categories))
+    }
+  } catch (error: any) {
+    console.error("Failed to fetch shop products:", error)
+    return {
+      success: false,
+      error: error.message || "Бараа дуудахад алдаа гарлаа",
+      products: [],
+      totalCount: 0,
+      totalPages: 0,
+      currentPage: 1,
+      categories: []
+    }
+  }
+}
+
+export async function getInstantSearchResults(query: string) {
+  try {
+    if (!query || query.trim().length === 0) {
+      return { success: true, results: [] }
+    }
+    const q = query.trim()
+    const batches = await db.batch.findMany({
+      where: {
+        isAvailableForSale: true,
+        status: { not: BatchStatus.CLOSED },
+        category: { isArchived: false },
+        OR: [
+          { product: { name: { contains: q, mode: "insensitive" } } },
+          { product: { description: { contains: q, mode: "insensitive" } } },
+          { category: { name: { contains: q, mode: "insensitive" } } }
+        ]
+      },
+      include: {
+        product: {
+          select: {
+            id: true,
+            name: true,
+            imageUrl: true,
+            price: true,
+            isFreeCargo: true
+          }
+        },
+        category: {
+          select: { id: true, name: true }
+        }
+      },
+      orderBy: { createdAt: "desc" },
+      take: 8
+    })
+
+    const results = batches.map(b => ({
+      id: b.id,
+      name: b.product?.name || "Бараа",
+      imageUrl: b.product?.imageUrl,
+      price: Number(b.price || b.product?.price || 0),
+      isPreOrder: b.isPreOrder,
+      isFreeCargo: Boolean(b.isFreeCargo || b.product?.isFreeCargo),
+      categoryName: b.category?.name || "",
+      remainingQuantity: b.remainingQuantity
+    }))
+
+    return { success: true, results }
+  } catch (error: any) {
+    return { success: false, results: [], error: error.message }
+  }
+}
+
 export const getActiveProducts = cache(async () => {
   try {
     const batches = await db.batch.findMany({

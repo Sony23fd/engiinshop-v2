@@ -3,7 +3,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { AddToCartButton } from "@/components/storefront/AddToCartButton"
-import { Clock, TrendingUp, ChevronDown } from "lucide-react"
+import { Clock, TrendingUp, ChevronDown, ArrowRight } from "lucide-react"
 import { PreOrderCountdown } from "@/components/storefront/home/PreOrderCountdown"
 
 export function ActiveBatchesList({ 
@@ -56,6 +56,14 @@ export function ActiveBatchesList({
             <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">{title}</h2>
             {subtitle && <p className="text-slate-500 mt-2 text-lg">{subtitle}</p>}
           </div>
+
+          <Link
+            href={theme === "preorder" ? "/shop?status=preorder" : "/shop?status=ready"}
+            className="inline-flex items-center gap-1.5 text-sm font-bold text-indigo-600 hover:text-indigo-800 transition-colors py-1 self-start md:self-end group"
+          >
+            <span>Бүгдийг үзэх ({batches.length})</span>
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+          </Link>
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
