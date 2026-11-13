@@ -1,4 +1,5 @@
 "use server"
+import { logAdminActivity } from "@/lib/activity-logger"
 
 import { db } from "@/lib/db"
 import { revalidatePath } from "next/cache"
@@ -393,6 +394,13 @@ export async function toggleBatchFreeCargo(batchId: string, isFreeCargo: boolean
     revalidatePath("/admin/products")
     revalidatePath("/")
     revalidatePath("/track")
+    await logAdminActivity({
+      action: isFreeCargo ? "КАРГОГҮЙ_АСААСАН" : "КАРГОГҮЙ_УНТРААСАН",
+      type: "PRODUCT",
+      target: batch.product?.name || `Багц ${batchId}`,
+      detail: `Каргоны төлбөргүй төлөв: ${isFreeCargo ? "Тийм (0₮)" : "Үгүй"}`,
+      targetUrl: "/admin/products",
+    })
     return { success: true }
   } catch (error) {
     console.error("Failed to toggle free cargo:", error)

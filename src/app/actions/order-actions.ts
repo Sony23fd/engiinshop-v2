@@ -1,4 +1,5 @@
 "use server"
+import { logAdminActivity } from "@/lib/activity-logger"
 
 import { db } from "@/lib/db"
 import { revalidatePath } from "next/cache"
@@ -764,6 +765,9 @@ export async function updateOrderStatus(orderId: string, statusId: string, reaso
     const admin = await getCurrentAdmin()
     if (!admin) return { success: false, error: "Хандах эрхгүй" }
 
+    let oldStatusName = "Тодорхойгүй"
+    let newStatusName = ""
+
     const result = await db.$transaction(async (tx) => {
       const order = await (tx.order as any).findUnique({
         where: { id: orderId },
@@ -771,12 +775,14 @@ export async function updateOrderStatus(orderId: string, statusId: string, reaso
       })
 
       if (!order) throw new Error("Order not found")
+      oldStatusName = order.status?.name || "Тодорхойгүй"
 
       const newStatus = await tx.orderStatusType.findUnique({
         where: { id: statusId }
       })
 
       if (!newStatus) throw new Error("Status not found")
+      newStatusName = newStatus.name
 
       const isToCancelled = newStatus.name === "Цуцлагдсан"
       const isFromCancelled = order.status?.name === "Цуцлагдсан" || order.paymentStatus === "REJECTED"
@@ -854,6 +860,16 @@ export async function updateOrderStatus(orderId: string, statusId: string, reaso
     revalidatePath("/admin/orders/rejected")
     revalidatePath("/admin/orders/delivery")
     revalidatePath("/admin/orders/picked-up")
+    await logAdminActivity({
+      action: "ТӨЛӨВ_ӨӨРЧИЛСӨН",
+      type: "ORDER",
+      target: `Захиалга #${result.orderNumber}`,
+      targetUrl: `/admin/orders/search?q=${result.orderNumber}`,
+      detail: `Төлөв: '${oldStatusName}' -> '${newStatusName}'${reason ? ` (Шалтгаан: ${reason})` : ""}`,
+      userId: admin.id,
+      userName: admin.name || "Админ",
+      userRole: admin.role,
+    })
     return { success: true, order: JSON.parse(JSON.stringify(result)) }
   } catch (error: any) {
     console.error("Failed to update order status:", error)
@@ -1222,6 +1238,16 @@ export async function updateBatchOrderStatusesByIds(
     revalidatePath("/admin/orders/delivered")
     revalidatePath("/admin/orders/picked-up")
     revalidatePath("/track")
+    await logAdminActivity({
+      action: "ОЛНООР_ТӨЛӨВ_СОЛЬСОН",
+      type: "ORDER",
+      target: `${updatedCount} захиалга`,
+      targetUrl: `/admin/orders/search`,
+      detail: `Шинэ төлөв: '${targetStatus.name}'. Амжилттай: ${updatedCount}, Алгассан: ${skippedFinalCount}${reason ? ` (Шалтгаан: ${reason})` : ""}`,
+      userId: adminMode.id,
+      userName: adminMode.name || "Админ",
+      userRole: adminMode.role,
+    })
 
     return { success: true, count: updatedCount, skippedFinalCount }
   } catch (error: any) {

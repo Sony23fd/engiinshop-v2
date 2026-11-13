@@ -70,11 +70,6 @@ export function ShopProductCard({ batch, viewMode = "grid", onQuickView }: ShopP
         <div className="flex-1 min-w-0 flex flex-col justify-between self-stretch py-1">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              {batch.category?.name && (
-                <span className="text-[11px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-md truncate max-w-[200px]">
-                  {batch.category.name}
-                </span>
-              )}
               {isOutOfStock && (
                 <span className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded">
                   Дууссан
@@ -200,12 +195,6 @@ export function ShopProductCard({ batch, viewMode = "grid", onQuickView }: ShopP
 
       <div className="flex-1 flex flex-col justify-between">
         <div>
-          {batch.category?.name && (
-            <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider mb-1 truncate">
-              {batch.category.name}
-            </p>
-          )}
-
           <Link href={`/product/${batch.id}`}>
             <h3 className="font-semibold text-xs sm:text-sm text-slate-900 leading-snug hover:text-indigo-600 hover:underline transition-colors line-clamp-2">
               {product.name}

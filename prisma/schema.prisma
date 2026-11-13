@@ -159,6 +159,7 @@ model ActivityLog {
   userName  String
   userRole  String
   action    String
+  type      String   @default("GENERAL")
   target    String?
   targetUrl String?
   detail    String?
@@ -166,6 +167,7 @@ model ActivityLog {
 
   @@index([userId])
   @@index([createdAt])
+  @@index([type])
 }
 
 model VisitorLog {

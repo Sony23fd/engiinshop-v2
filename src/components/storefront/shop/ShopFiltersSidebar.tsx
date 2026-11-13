@@ -1,11 +1,8 @@
 "use client"
 
-import { Search, X, Filter, Check, Plane, Package, Clock, Sparkles } from "lucide-react"
+import { Search, X, Filter, Check, Package, Clock, Sparkles } from "lucide-react"
 
 interface ShopFiltersSidebarProps {
-  categories: Array<{ id: string; name: string; _count?: { batches: number } }>
-  selectedCategory: string
-  onSelectCategory: (id: string) => void
   status: "all" | "ready" | "preorder"
   onStatusChange: (status: "all" | "ready" | "preorder") => void
   isFreeCargo: boolean
@@ -31,9 +28,6 @@ const PRICE_PRESETS = [
 ]
 
 export function ShopFiltersSidebar({
-  categories,
-  selectedCategory,
-  onSelectCategory,
   status,
   onStatusChange,
   isFreeCargo,
@@ -47,7 +41,6 @@ export function ShopFiltersSidebar({
   onSearchChange,
   onResetAll,
   activeFiltersCount,
-  totalCount
 }: ShopFiltersSidebarProps) {
   return (
     <aside className="space-y-6">
@@ -66,7 +59,7 @@ export function ShopFiltersSidebar({
           <button
             type="button"
             onClick={onResetAll}
-            className="text-xs font-bold text-slate-400 hover:text-red-600 transition-colors flex items-center gap-1"
+            className="text-xs font-bold text-slate-400 hover:text-red-600 transition-colors flex items-center gap-1 cursor-pointer"
           >
             <X className="w-3.5 h-3.5" /> Цэвэрлэх
           </button>
@@ -91,7 +84,7 @@ export function ShopFiltersSidebar({
             <button
               type="button"
               onClick={() => onSearchChange("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -108,7 +101,7 @@ export function ShopFiltersSidebar({
           <button
             type="button"
             onClick={() => onStatusChange("all")}
-            className={`py-2 px-1 rounded-lg transition-all text-center ${
+            className={`py-2 px-1 rounded-lg transition-all text-center cursor-pointer ${
               status === "all"
                 ? "bg-white text-indigo-700 shadow-xs font-extrabold"
                 : "text-slate-600 hover:text-slate-900"
@@ -119,7 +112,7 @@ export function ShopFiltersSidebar({
           <button
             type="button"
             onClick={() => onStatusChange("ready")}
-            className={`py-2 px-1 rounded-lg transition-all text-center flex items-center justify-center gap-1 ${
+            className={`py-2 px-1 rounded-lg transition-all text-center flex items-center justify-center gap-1 cursor-pointer ${
               status === "ready"
                 ? "bg-white text-emerald-700 shadow-xs font-extrabold"
                 : "text-slate-600 hover:text-slate-900"
@@ -130,7 +123,7 @@ export function ShopFiltersSidebar({
           <button
             type="button"
             onClick={() => onStatusChange("preorder")}
-            className={`py-2 px-1 rounded-lg transition-all text-center flex items-center justify-center gap-1 ${
+            className={`py-2 px-1 rounded-lg transition-all text-center flex items-center justify-center gap-1 cursor-pointer ${
               status === "preorder"
                 ? "bg-white text-amber-700 shadow-xs font-extrabold"
                 : "text-slate-600 hover:text-slate-900"
@@ -141,8 +134,12 @@ export function ShopFiltersSidebar({
         </div>
       </div>
 
-      {/* 3. Special Feature Toggles (Free Cargo & In-Stock) */}
-      <div className="space-y-2 pt-1">
+      {/* 3. Free Cargo & Stock Toggles */}
+      <div className="space-y-2.5 pt-1 border-t border-slate-100">
+        <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+          Онцлох шүүлтүүр
+        </label>
+
         {/* Free Cargo Toggle */}
         <label
           onClick={() => onToggleFreeCargo(!isFreeCargo)}
@@ -153,10 +150,10 @@ export function ShopFiltersSidebar({
           }`}
         >
           <div className="flex items-center gap-2">
-            <span className="text-base">✈️</span>
+            <span className="text-base">✨</span>
             <div>
-              <p className="text-xs font-bold leading-tight">Карго төлөхгүй</p>
-              <p className="text-[10px] text-slate-500">Карго 0₮ бараанууд</p>
+              <p className="text-xs font-bold leading-tight">Каргоны төлбөргүй</p>
+              <p className="text-[10px] text-slate-500">Монгол дахь карго 0₮</p>
             </div>
           </div>
           <div
@@ -180,7 +177,7 @@ export function ShopFiltersSidebar({
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-indigo-600" />
             <div>
-              <p className="text-xs font-bold leading-tight">Зөвхөн бэлэн үлдэгдэлтэй</p>
+              <p className="text-xs font-bold leading-tight">Зөвхөн үлдэгдэлтэй</p>
               <p className="text-[10px] text-slate-500">Дууссан барааг нуух</p>
             </div>
           </div>
@@ -207,7 +204,7 @@ export function ShopFiltersSidebar({
                 key={idx}
                 type="button"
                 onClick={() => onPriceChange(p.min, p.max)}
-                className={`text-xs px-2.5 py-1.5 rounded-lg font-bold border transition-all ${
+                className={`text-xs px-2.5 py-1.5 rounded-lg font-bold border transition-all cursor-pointer ${
                   isSelected
                     ? "bg-indigo-600 text-white border-indigo-600 shadow-2xs"
                     : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
@@ -219,74 +216,6 @@ export function ShopFiltersSidebar({
           })}
         </div>
       </div>
-
-      {/* 5. Categories List */}
-      <div className="space-y-2 pt-2 border-t border-slate-100">
-        <div className="flex items-center justify-between">
-          <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-            Ангилал & Багц
-          </label>
-          {selectedCategory !== "all" && (
-            <button
-              type="button"
-              onClick={() => onSelectCategory("all")}
-              className="text-[11px] text-indigo-600 hover:underline font-bold"
-            >
-              Бүгд
-            </button>
-          )}
-        </div>
-
-        <div className="space-y-1 max-h-[280px] overflow-y-auto custom-scrollbar pr-1">
-          <button
-            type="button"
-            onClick={() => onSelectCategory("all")}
-            className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors ${
-              selectedCategory === "all"
-                ? "bg-indigo-600 text-white"
-                : "text-slate-600 hover:bg-slate-100"
-            }`}
-          >
-            <span>Бүх ангилал</span>
-            <span
-              className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                selectedCategory === "all" ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
-              }`}
-            >
-              {totalCount}
-            </span>
-          </button>
-
-          {categories.map((cat) => {
-            const isSelected = selectedCategory === cat.id
-            const count = cat._count?.batches || 0
-            return (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => onSelectCategory(cat.id)}
-                className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors ${
-                  isSelected
-                    ? "bg-indigo-600 text-white"
-                    : "text-slate-600 hover:bg-slate-100"
-                }`}
-              >
-                <span className="truncate pr-2">{cat.name}</span>
-                {count > 0 && (
-                  <span
-                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold shrink-0 ${
-                      isSelected ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
-                    }`}
-                  >
-                    {count}
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
-      </div>
     </aside>
   )
 }
-

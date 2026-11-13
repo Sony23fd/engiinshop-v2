@@ -6,7 +6,7 @@ import { ShopFiltersSidebar } from "./ShopFiltersSidebar"
 import { ShopSortingBar } from "./ShopSortingBar"
 import { ShopProductCard } from "./ShopProductCard"
 import { QuickViewModal } from "@/components/storefront/product/QuickViewModal"
-import { getShopProducts, ShopProductsQuery } from "@/app/actions/product-actions"
+import { getShopProducts } from "@/app/actions/product-actions"
 import { X, Search, RefreshCw, Loader2, Sparkles, ShoppingBag } from "lucide-react"
 
 interface ShopClientProps {
@@ -14,7 +14,6 @@ interface ShopClientProps {
   initialTotalCount: number
   initialTotalPages: number
   initialCurrentPage: number
-  categories: any[]
 }
 
 export function ShopClient({
@@ -22,14 +21,12 @@ export function ShopClient({
   initialTotalCount,
   initialTotalPages,
   initialCurrentPage,
-  categories,
 }: ShopClientProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
 
   // State from URL or initial
   const [search, setSearch] = useState<string>(searchParams?.get("q") || "")
-  const [selectedCategory, setSelectedCategory] = useState<string>(searchParams?.get("cat") || "all")
   const [status, setStatus] = useState<"all" | "ready" | "preorder">(
     (searchParams?.get("status") as any) || "all"
   )
@@ -64,26 +61,18 @@ export function ShopClient({
   const activeFiltersCount = useMemo(() => {
     let count = 0
     if (search.trim()) count++
-    if (selectedCategory !== "all") count++
     if (status !== "all") count++
     if (isFreeCargo) count++
     if (inStockOnly) count++
     if (minPrice !== undefined || maxPrice !== undefined) count++
     return count
-  }, [search, selectedCategory, status, isFreeCargo, inStockOnly, minPrice, maxPrice])
+  }, [search, status, isFreeCargo, inStockOnly, minPrice, maxPrice])
 
   // Active filter chips for quick removal
   const activeChips = useMemo(() => {
     const chips: Array<{ label: string; onRemove: () => void }> = []
     if (search.trim()) {
       chips.push({ label: `Хайлт: "${search}"`, onRemove: () => setSearch("") })
-    }
-    if (selectedCategory !== "all") {
-      const cat = categories.find((c) => c.id === selectedCategory)
-      chips.push({
-        label: `Ангилал: ${cat?.name || selectedCategory}`,
-        onRemove: () => setSelectedCategory("all"),
-      })
     }
     if (status === "ready") {
       chips.push({ label: "Бэлэн байгаа", onRemove: () => setStatus("all") })
@@ -104,7 +93,7 @@ export function ShopClient({
       chips.push({ label, onRemove: () => { setMinPrice(undefined); setMaxPrice(undefined); } })
     }
     return chips
-  }, [search, selectedCategory, status, isFreeCargo, inStockOnly, minPrice, maxPrice, categories])
+  }, [search, status, isFreeCargo, inStockOnly, minPrice, maxPrice])
 
   // Fetch products whenever filters change (with debounce on search)
   useEffect(() => {
@@ -113,7 +102,6 @@ export function ShopClient({
       setLoading(true)
       const res = await getShopProducts({
         search,
-        categoryId: selectedCategory,
         status,
         isFreeCargo,
         inStockOnly,
@@ -133,37 +121,46 @@ export function ShopClient({
         }
         setLoading(false)
       }
-
-      // Sync URL query params without full page reload
-      const params = new URLSearchParams()
-      if (search.trim()) params.set("q", search.trim())
-      if (selectedCategory !== "all") params.set("cat", selectedCategory)
-      if (status !== "all") params.set("status", status)
-      if (isFreeCargo) params.set("freeCargo", "true")
-      if (inStockOnly) params.set("inStock", "true")
-      if (minPrice !== undefined) params.set("minPrice", String(minPrice))
-      if (maxPrice !== undefined) params.set("maxPrice", String(maxPrice))
-      if (sort !== "newest") params.set("sort", sort)
-
-      const qs = params.toString()
-      const newUrl = qs ? `/shop?${qs}` : "/shop"
-      window.history.replaceState(null, "", newUrl)
     }, 250)
+
+    // Sync URL without full navigation
+    const params = new URLSearchParams()
+    if (search.trim()) params.set("q", search.trim())
+    if (status !== "all") params.set("status", status)
+    if (isFreeCargo) params.set("freeCargo", "true")
+    if (inStockOnly) params.set("inStock", "true")
+    if (minPrice !== undefined) params.set("minPrice", String(minPrice))
+    if (maxPrice !== undefined) params.set("maxPrice", String(maxPrice))
+    if (sort !== "newest") params.set("sort", sort)
+
+    const newQuery = params.toString() ? `?${params.toString()}` : "/shop"
+    window.history.replaceState(null, "", newQuery)
 
     return () => {
       active = false
       clearTimeout(timer)
     }
-  }, [search, selectedCategory, status, isFreeCargo, inStockOnly, minPrice, maxPrice, sort])
+  }, [search, status, isFreeCargo, inStockOnly, minPrice, maxPrice, sort])
 
-  // Load more pagination
-  async function handleLoadMore() {
+  // Reset all filters
+  const handleResetAll = () => {
+    setSearch("")
+    setStatus("all")
+    setIsFreeCargo(false)
+    setInStockOnly(false)
+    setMinPrice(undefined)
+    setMaxPrice(undefined)
+    setSort("newest")
+  }
+
+  // Load more pagination handler
+  const handleLoadMore = async () => {
     if (currentPage >= totalPages || loadingMore) return
     setLoadingMore(true)
+
     const nextPage = currentPage + 1
     const res = await getShopProducts({
       search,
-      categoryId: selectedCategory,
       status,
       isFreeCargo,
       inStockOnly,
@@ -173,30 +170,20 @@ export function ShopClient({
       page: nextPage,
       limit: 24,
     })
-    setLoadingMore(false)
-    if (res.success) {
+
+    if (res.success && res.products) {
       setProducts((prev) => [...prev, ...res.products])
       setCurrentPage(nextPage)
     }
-  }
-
-  function handleResetAll() {
-    setSearch("")
-    setSelectedCategory("all")
-    setStatus("all")
-    setIsFreeCargo(false)
-    setInStockOnly(false)
-    setMinPrice(undefined)
-    setMaxPrice(undefined)
-    setSort("newest")
+    setLoadingMore(false)
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Breadcrumbs & Header Banner */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-          <span>Нүүр</span>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+      {/* Top Banner / Breadcrumb */}
+      <div className="mb-6 sm:mb-8">
+        <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 mb-2">
+          <a href="/" className="hover:text-indigo-600 transition-colors">Нүүр</a>
           <span>/</span>
           <span className="text-indigo-600">Дэлгүүр</span>
         </div>
@@ -218,9 +205,6 @@ export function ShopClient({
         {/* Desktop Sidebar (Left Column) */}
         <div className="hidden lg:block w-72 shrink-0 sticky top-20 bg-white p-5 rounded-3xl border border-slate-200/80 shadow-2xs">
           <ShopFiltersSidebar
-            categories={categories}
-            selectedCategory={selectedCategory}
-            onSelectCategory={setSelectedCategory}
             status={status}
             onStatusChange={setStatus}
             isFreeCargo={isFreeCargo}
@@ -302,7 +286,7 @@ export function ShopClient({
                     type="button"
                     onClick={handleLoadMore}
                     disabled={loadingMore}
-                    className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-indigo-600 border border-indigo-200 px-8 py-3.5 rounded-2xl font-bold text-sm shadow-sm hover:shadow-md transition-all active:scale-95 disabled:opacity-50"
+                    className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-indigo-600 border border-indigo-200 px-8 py-3.5 rounded-2xl font-bold text-sm shadow-sm hover:shadow-md transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
                   >
                     {loadingMore ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -332,7 +316,7 @@ export function ShopClient({
               <button
                 type="button"
                 onClick={handleResetAll}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-md transition-all"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-md transition-all cursor-pointer"
               >
                 Бүх шүүлтүүрийг цэвэрлэх
               </button>
@@ -357,19 +341,13 @@ export function ShopClient({
                 <button
                   type="button"
                   onClick={() => setMobileFiltersOpen(false)}
-                  className="p-1.5 rounded-full hover:bg-slate-100 text-slate-500"
+                  className="p-1.5 rounded-full hover:bg-slate-100 text-slate-500 cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
               <ShopFiltersSidebar
-                categories={categories}
-                selectedCategory={selectedCategory}
-                onSelectCategory={(catId) => {
-                  setSelectedCategory(catId)
-                  setMobileFiltersOpen(false)
-                }}
                 status={status}
                 onStatusChange={setStatus}
                 isFreeCargo={isFreeCargo}
@@ -394,7 +372,7 @@ export function ShopClient({
               <button
                 type="button"
                 onClick={() => setMobileFiltersOpen(false)}
-                className="w-full bg-[#4F46E5] text-white py-3 rounded-xl font-bold text-sm shadow-md"
+                className="w-full bg-[#4F46E5] text-white py-3 rounded-xl font-bold text-sm shadow-md cursor-pointer"
               >
                 {totalCount} бараа үзэх
               </button>
@@ -408,4 +386,3 @@ export function ShopClient({
     </div>
   )
 }
-

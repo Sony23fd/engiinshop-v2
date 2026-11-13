@@ -363,7 +363,9 @@ export function CartClient({ termsOfService, deliveryTerms, qpayEnabled, globalD
                 )}
                 <label className="flex items-center gap-2 cursor-pointer pt-1">
                   <input type="checkbox" checked={agreedToTerms} onChange={e => setAgreedToTerms(e.target.checked)} className="accent-indigo-600" />
-                  <span className="text-xs text-slate-700 font-medium">Дээрх нөхцөлүүдтэй танилцаж, зөвшөөрч байна</span>
+                  <span className="text-xs text-slate-700 font-medium">
+                    Дээрх <a href="/terms" target="_blank" className="text-indigo-600 underline font-bold hover:text-indigo-800">үйлчилгээний нөхцөл</a> болон <a href="/privacy" target="_blank" className="text-indigo-600 underline font-bold hover:text-indigo-800">нууцлалын бодлого</a>-той танилцаж, зөвшөөрч байна
+                  </span>
                 </label>
               </div>
             )}

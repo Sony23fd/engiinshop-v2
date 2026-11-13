@@ -197,7 +197,6 @@ export function InstantSearchModal() {
                       </div>
                       <div className="flex items-center gap-2 text-[11px] text-slate-500">
                         <span className="font-bold text-slate-900">₮{item.price.toLocaleString()}</span>
-                        {item.categoryName && <span>· {item.categoryName}</span>}
                         {item.isPreOrder && (
                           <span className="text-amber-600 font-semibold">· Урьдчилсан</span>
                         )}

@@ -3,6 +3,7 @@
 import { db } from "@/lib/db"
 import { revalidatePath } from "next/cache"
 import { getCurrentAdmin, logActivity } from "@/lib/auth"
+import { logAdminActivity } from "@/lib/activity-logger"
 import { cache } from "react"
 
 const DEFAULT_SETTINGS: Record<string, string> = {
@@ -82,6 +83,13 @@ export async function saveShopSetting(key: string, value: string) {
     revalidatePath("/track")
     revalidatePath("/product", "layout")
     revalidatePath("/", "layout")
+    await logAdminActivity({
+      action: "ТОХИРГОО_ШИНЭЧИЛСЭН",
+      type: "SETTINGS",
+      target: key,
+      detail: `Тохиргоо шинэчлэгдсэн: ${String(value).slice(0, 100)}`,
+      targetUrl: "/admin/settings/general",
+    })
     return { success: true }
   } catch (error: any) {
     return { success: false, error: error.message }

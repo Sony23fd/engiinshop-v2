@@ -241,8 +241,8 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
               <p>Онлайн дэлгүүрийн системтэй болох бол: <a href="https://www.facebook.com/engiineeer" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors hover:underline underline-offset-4">END DAR  </a></p>
             </div>
             <div className="md:w-1/3 flex justify-center md:justify-end gap-6">
-              <a href="#" className="hover:text-white transition-colors">Үйлчилгээний нөхцөл</a>
-              <a href="#" className="hover:text-white transition-colors">Нууцлалын бодлого</a>
+              <Link href="/terms" className="hover:text-white transition-colors">Үйлчилгээний нөхцөл</Link>
+              <Link href="/privacy" className="hover:text-white transition-colors">Нууцлалын бодлого</Link>
             </div>
           </div>
         </div>

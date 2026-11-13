@@ -16,7 +16,6 @@ export default async function ShopPage({
 }) {
   const resolvedParams = await searchParams
   const q = typeof resolvedParams.q === "string" ? resolvedParams.q : undefined
-  const cat = typeof resolvedParams.cat === "string" ? resolvedParams.cat : undefined
   const status = typeof resolvedParams.status === "string" ? (resolvedParams.status as any) : undefined
   const freeCargo = resolvedParams.freeCargo === "true"
   const inStock = resolvedParams.inStock === "true"
@@ -27,7 +26,6 @@ export default async function ShopPage({
 
   const res = await getShopProducts({
     search: q,
-    categoryId: cat,
     status,
     isFreeCargo: freeCargo,
     inStockOnly: inStock,
@@ -45,9 +43,7 @@ export default async function ShopPage({
         initialTotalCount={res.totalCount || 0}
         initialTotalPages={res.totalPages || 0}
         initialCurrentPage={res.currentPage || 1}
-        categories={res.categories || []}
       />
     </div>
   )
 }
-

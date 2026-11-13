@@ -17,6 +17,8 @@ export async function getCurrentAdmin() {
   }
 }
 
+import { logAdminActivity } from "@/lib/activity-logger"
+
 /**
  * Write an activity log entry to the database.
  */
@@ -28,6 +30,7 @@ export async function logActivity({
   target,
   targetUrl,
   detail,
+  type = "AUTH",
 }: {
   userId: string
   userName: string
@@ -36,15 +39,18 @@ export async function logActivity({
   target?: string
   targetUrl?: string
   detail?: string
+  type?: any
 }) {
-  try {
-    await (db as any).activityLog.create({
-      data: { userId, userName, userRole, action, target, targetUrl, detail }
-    })
-  } catch (e) {
-    // Don't break the main action if logging fails
-    console.error("Activity log error:", e)
-  }
+  return logAdminActivity({
+    userId,
+    userName,
+    userRole,
+    action,
+    type,
+    target,
+    targetUrl,
+    detail,
+  })
 }
 
 /**
