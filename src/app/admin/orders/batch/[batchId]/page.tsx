@@ -5,7 +5,7 @@ import { getOrderStatuses } from "@/app/actions/order-actions"
 import { getCurrentAdmin } from "@/lib/auth"
 import { normalizeOptions } from "@/lib/variant-utils"
 import { ExportButton } from "./ExportButton"
-import { ImportButton } from "./ImportButton"
+import { ImportModal } from "./ImportModal"
 import { AddOrderSheet } from "./AddOrderSheet"
 import { BatchOrdersClient } from "./BatchOrdersClient"
 
@@ -62,7 +62,7 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ ba
         <h2 className="text-lg font-bold">Захиалгын зүйлс</h2>
         <div className="flex space-x-2">
           <ExportButton batchId={batchId} />
-          <ImportButton batchId={batchId} batchName={batch.product?.name || "Тодорхойгүй"} />
+          <ImportModal batchId={batchId} batch={batch} />
           <AddOrderSheet 
             batchId={batchId} 
             batch={batch} 
