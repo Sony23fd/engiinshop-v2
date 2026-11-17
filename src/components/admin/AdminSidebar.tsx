@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, Package, ShoppingBag, Search, Activity, ListFilter, CheckCircle, XCircle, Clock, CreditCard, FileText, Truck, Users, Settings, Handshake, PackageCheck, Archive, BookOpen, Database, RefreshCcw, Bot, AlertTriangle, PhoneCall, Calendar } from "lucide-react"
+import { LayoutDashboard, Package, ShoppingBag, Search, Activity, ListFilter, CheckCircle, XCircle, Clock, CreditCard, FileText, Truck, Users, Settings, Handshake, PackageCheck, Archive, BookOpen, Database, RefreshCcw, Bot, AlertTriangle, PhoneCall, Calendar, Plane } from "lucide-react"
 
 type AdminRole = "ADMIN" | "CARGO_ADMIN" | "DATAADMIN"
 
@@ -33,6 +33,7 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
     items: [
       { name: "Шинэ & Хүлээгдэж буй", url: "/admin/orders/pending", icon: Clock, highlight: true, roles: ["ADMIN", "CARGO_ADMIN"] },
       { name: "Өдрийн захиалга & Таталт", url: "/admin/orders/daily", icon: Calendar, highlight: true, roles: ["ADMIN", "CARGO_ADMIN"] },
+      { name: "Карго илгээмж (Ачилт & Тулгалт)", url: "/admin/orders/shipments", icon: Plane, highlight: true, roles: ["ADMIN", "CARGO_ADMIN"] },
       { name: "Хүргэлтийн захиалга", url: "/admin/orders/delivery", icon: Truck, highlight: true, roles: ["ADMIN", "CARGO_ADMIN"] },
       { name: "Хугацаа хэтэрсэн", url: "/admin/orders/overdue-storage", icon: AlertTriangle, highlight: true, roles: ["ADMIN", "CARGO_ADMIN"] },
       { name: "Бүх захиалга (Ангиллаар)", url: "/admin/orders", icon: ShoppingBag, roles: ["ADMIN", "CARGO_ADMIN"] },

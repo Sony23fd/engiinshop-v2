@@ -130,9 +130,11 @@ model Order {
   confirmedById         String?
   cancellationReason    String?
   adminNotes            String?
+  shipmentId            String?
   batch                 Batch            @relation(fields: [batchId], references: [id])
   confirmedBy           User?            @relation("ConfirmedOrders", fields: [confirmedById], references: [id])
   status                OrderStatusType? @relation(fields: [statusId], references: [id])
+  shipment              Shipment?        @relation(fields: [shipmentId], references: [id])
 
   @@index([batchId])
   @@index([batchId, paymentStatus])
@@ -143,6 +145,26 @@ model Order {
   @@index([createdAt])
   @@index([accountNumber])
   @@index([statusId])
+  @@index([shipmentId])
+}
+
+model Shipment {
+  id            String    @id @default(cuid())
+  code          String    @unique
+  name          String
+  status        String    @default("IN_TRANSIT")
+  notes         String?
+  totalOrders   Int       @default(0)
+  arrivedOrders Int       @default(0)
+  dispatchedAt  DateTime  @default(now())
+  arrivedAt     DateTime?
+  createdBy     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  orders        Order[]
+
+  @@index([status])
+  @@index([createdAt])
 }
 
 model ShopSettings {

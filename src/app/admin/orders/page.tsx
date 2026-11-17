@@ -1,6 +1,6 @@
 import { getCategories } from "@/app/actions/category-actions"
 import Link from "next/link"
-import { FolderOpen, Archive, Calendar } from "lucide-react"
+import { FolderOpen, Archive, Calendar, Plane } from "lucide-react"
 
 export const dynamic = "force-dynamic"
 import { DateRangeFilter } from "@/components/admin/DateRangeFilter"
@@ -41,6 +41,13 @@ export default async function AdminOrdersCategoriesPage({ searchParams }: { sear
                 <FolderOpen className="w-3.5 h-3.5 text-indigo-600" />
                 Сарын Ангиллаар
               </span>
+              <Link
+                href="/admin/orders/shipments"
+                className="px-3 py-1.5 rounded-md text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors flex items-center gap-1.5"
+              >
+                <Plane className="w-3.5 h-3.5 text-indigo-600" />
+                Карго Ачилтууд
+              </Link>
             </div>
 
             <GlobalAddOrderModal />

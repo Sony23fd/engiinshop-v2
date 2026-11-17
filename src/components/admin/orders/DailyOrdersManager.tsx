@@ -22,12 +22,14 @@ import {
   FolderOpen,
   Plus,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Plane
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { GlobalAddOrderModal } from "@/components/admin/orders/GlobalAddOrderModal"
+import { CreateShipmentModal, SelectedOrderItem } from "@/components/admin/orders/CreateShipmentModal"
 import {
   DailySummaryItem,
   DailyOrderDetailsResult,
@@ -59,6 +61,13 @@ export function DailyOrdersManager({
 
   // Checked items state for shopper in Korea (persisted in local state)
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({})
+
+  // Selected orders for shipment in Orders tab
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Record<string, boolean>>({})
+
+  // Shipment creation modal state
+  const [isShipmentModalOpen, setIsShipmentModalOpen] = useState(false)
+  const [ordersForShipment, setOrdersForShipment] = useState<SelectedOrderItem[]>([])
 
   // Date list filter
   const [dateSearch, setDateSearch] = useState("")
@@ -126,6 +135,88 @@ export function DailyOrdersManager({
     )
   }, [details?.orders, searchFilter])
 
+  // Orders derived from checked purchasing items
+  const checkedPurchasingOrders = useMemo(() => {
+    if (!details?.purchasingList) return []
+    const list: SelectedOrderItem[] = []
+    for (const item of details.purchasingList) {
+      if (checkedItems[item.key]) {
+        for (const c of item.customers) {
+          list.push({
+            id: c.orderId,
+            orderNumber: c.orderNumber,
+            customerName: c.customerName,
+            customerPhone: c.customerPhone,
+            productName: item.productName,
+            quantity: c.quantity,
+            variantDesc: item.variantDesc,
+          })
+        }
+      }
+    }
+    return list
+  }, [details?.purchasingList, checkedItems])
+
+  // Orders derived from selected orders in Orders tab
+  const selectedOrdersList = useMemo(() => {
+    if (!details?.orders) return []
+    return details.orders
+      .filter((o) => selectedOrderIds[o.id])
+      .map((o) => ({
+        id: o.id,
+        orderNumber: o.orderNumber,
+        customerName: o.customerName,
+        customerPhone: o.customerPhone,
+        productName: o.batch?.product?.name || "Бараа",
+        quantity: o.quantity,
+        variantDesc:
+          o.selectedOptions && typeof o.selectedOptions === "object"
+            ? Object.values(o.selectedOptions).join(", ")
+            : undefined,
+      }))
+  }, [details?.orders, selectedOrderIds])
+
+  // Open shipment modal from checked purchasing items
+  const handleDispatchCheckedPurchasing = () => {
+    if (!checkedPurchasingOrders.length) return
+    setOrdersForShipment(checkedPurchasingOrders)
+    setIsShipmentModalOpen(true)
+  }
+
+  // Open shipment modal from selected orders
+  const handleDispatchSelectedOrders = () => {
+    if (!selectedOrdersList.length) return
+    setOrdersForShipment(selectedOrdersList)
+    setIsShipmentModalOpen(true)
+  }
+
+  // Toggle order selection
+  const toggleOrderSelection = (id: string) => {
+    setSelectedOrderIds((prev) => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  // Select all or deselect all orders
+  const toggleSelectAllOrders = () => {
+    if (!filteredOrders.length) return
+    const allSelected = filteredOrders.every((o) => selectedOrderIds[o.id])
+    if (allSelected) {
+      setSelectedOrderIds({})
+    } else {
+      const newSel: Record<string, boolean> = {}
+      filteredOrders.forEach((o) => {
+        newSel[o.id] = true
+      })
+      setSelectedOrderIds(newSel)
+    }
+  }
+
+  // On shipment creation success, refresh details
+  const handleShipmentCreated = () => {
+    setSelectedOrderIds({})
+    setCheckedItems({})
+    handleSelectDate(selectedDate)
+  }
+
   // Export CSV of purchasing items
   const handleExportCSV = () => {
     if (!details || !details.purchasingList.length) return
@@ -190,6 +281,13 @@ export function DailyOrdersManager({
             >
               <FolderOpen className="w-3.5 h-3.5" />
               Сарын Ангиллаар
+            </Link>
+            <Link
+              href="/admin/orders/shipments"
+              className="px-3 py-1.5 rounded-md text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors flex items-center gap-1.5"
+            >
+              <Plane className="w-3.5 h-3.5" />
+              Карго Ачилтууд
             </Link>
           </div>
 
@@ -439,19 +537,33 @@ export function DailyOrdersManager({
               {/* TAB 1: PURCHASING / SHOPPING LIST (FOR SHOPPER IN KOREA) */}
               {activeTab === "purchasing" && (
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-                  <div className="p-4 border-b bg-slate-50/70 flex items-center justify-between">
+                  <div className="p-4 border-b bg-slate-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                         <ShoppingBag className="w-3.5 h-3.5 text-indigo-600" />
                         Солонгосоос Татах Барааны Тооцоолол
                       </h3>
                       <p className="text-[11px] text-slate-500 mt-0.5">
-                        Дэлгүүрт явж байхдаа авсан бараагаа чагтлаад явах боломжтой
+                        Дэлгүүрт авсан бараагаа чагтлаад шууд каргонд ачих боломжтой
                       </p>
                     </div>
-                    <span className="text-xs font-bold text-slate-600">
-                      Нийт: <b>{filteredPurchasingList.length}</b> төрөл
-                    </span>
+
+                    <div className="flex items-center gap-2.5">
+                      {checkedPurchasingOrders.length > 0 && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={handleDispatchCheckedPurchasing}
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm"
+                        >
+                          <Plane className="w-3.5 h-3.5" />
+                          Авсан {checkedPurchasingOrders.length} барааг Каргонд ачих
+                        </Button>
+                      )}
+                      <span className="text-xs font-bold text-slate-600">
+                        Нийт: <b>{filteredPurchasingList.length}</b> төрөл
+                      </span>
+                    </div>
                   </div>
 
                   {filteredPurchasingList.length > 0 ? (
@@ -543,88 +655,146 @@ export function DailyOrdersManager({
               {/* TAB 2: CUSTOMER ORDERS LIST */}
               {activeTab === "orders" && (
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-                  <div className="p-4 border-b bg-slate-50/70 flex items-center justify-between">
+                  <div className="p-4 border-b bg-slate-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                         <User className="w-3.5 h-3.5 text-indigo-600" />
                         Захиалагчдын Нэгдсэн Бүртгэл
                       </h3>
                       <p className="text-[11px] text-slate-500 mt-0.5">
-                        Энэ өдөр орсон бүх харилцагчийн захиалга
+                        Энэ өдөр орсон захиалгуудаас сонгон каргонд ачих
                       </p>
                     </div>
-                    <span className="text-xs font-bold text-slate-600">
-                      Нийт: <b>{filteredOrders.length}</b> захиалга
-                    </span>
+
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={toggleSelectAllOrders}
+                        className="text-xs font-bold h-8 border-slate-200"
+                      >
+                        {filteredOrders.length > 0 && filteredOrders.every((o) => selectedOrderIds[o.id])
+                          ? "Бүх сонголтыг цуцлах"
+                          : "Бүгдийг сонгох"}
+                      </Button>
+
+                      {selectedOrdersList.length > 0 && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={handleDispatchSelectedOrders}
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm"
+                        >
+                          <Plane className="w-3.5 h-3.5" />
+                          Сонгосон {selectedOrdersList.length} барааг Каргонд ачих
+                        </Button>
+                      )}
+
+                      <span className="text-xs font-bold text-slate-600">
+                        Нийт: <b>{filteredOrders.length}</b> захиалга
+                      </span>
+                    </div>
                   </div>
 
                   {filteredOrders.length > 0 ? (
                     <div className="divide-y divide-slate-100">
-                      {filteredOrders.map((o) => (
-                        <div
-                          key={o.id}
-                          className="p-4 hover:bg-slate-50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                        >
-                          <div className="space-y-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-xs font-black px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">
-                                #{o.orderNumber}
-                              </span>
-                              <span className="text-sm font-bold text-slate-900">
-                                {o.customerName}
-                              </span>
-                              <span className="text-xs text-slate-500 flex items-center gap-1 font-medium">
-                                <Phone className="w-3 h-3 text-slate-400" />
-                                {o.customerPhone}
-                              </span>
-                              {o.paymentStatus === "CONFIRMED" || o.paymentStatus === "PAID" ? (
-                                <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">
-                                  Төлөгдсөн
-                                </span>
-                              ) : (
-                                <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">
-                                  Хүлээгдэж буй
-                                </span>
-                              )}
+                      {filteredOrders.map((o) => {
+                        const isSelected = Boolean(selectedOrderIds[o.id])
+                        return (
+                          <div
+                            key={o.id}
+                            className={`p-4 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                              isSelected ? "bg-indigo-50/40" : "hover:bg-slate-50"
+                            }`}
+                          >
+                            <div className="flex items-start gap-3 min-w-0">
+                              <button
+                                type="button"
+                                onClick={() => toggleOrderSelection(o.id)}
+                                className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 mt-1 transition-colors ${
+                                  isSelected
+                                    ? "bg-indigo-600 border-indigo-600 text-white"
+                                    : "border-slate-300 hover:border-indigo-400 bg-white"
+                                }`}
+                                title={isSelected ? "Сонгогдсон" : "Сонгох"}
+                              >
+                                {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                              </button>
+
+                              <div className="space-y-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-xs font-black px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">
+                                    #{o.orderNumber}
+                                  </span>
+                                  <span className="text-sm font-bold text-slate-900">
+                                    {o.customerName}
+                                  </span>
+                                  <span className="text-xs text-slate-500 flex items-center gap-1 font-medium">
+                                    <Phone className="w-3 h-3 text-slate-400" />
+                                    {o.customerPhone}
+                                  </span>
+                                  {o.paymentStatus === "CONFIRMED" || o.paymentStatus === "PAID" ? (
+                                    <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">
+                                      Төлөгдсөн
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">
+                                      Хүлээгдэж буй
+                                    </span>
+                                  )}
+                                  {o.status && (
+                                    <span
+                                      className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+                                      style={{
+                                        backgroundColor: o.status.color === "emerald" ? "#d1fae5" : o.status.color === "sky" ? "#e0f2fe" : "#f1f5f9",
+                                        color: o.status.color === "emerald" ? "#065f46" : o.status.color === "sky" ? "#0369a1" : "#475569",
+                                      }}
+                                    >
+                                      {o.status.name}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <p className="text-xs text-slate-600 truncate">
+                                  Бараа: <b>{o.batch?.product?.name || "Бараа"}</b>{" "}
+                                  {o.selectedOptions && typeof o.selectedOptions === "object" && (
+                                    <span className="text-indigo-600 font-semibold">
+                                      ({Object.values(o.selectedOptions).join(", ")})
+                                    </span>
+                                  )}{" "}
+                                  • <b>{o.quantity}ш</b>
+                                </p>
+
+                                {o.deliveryAddress && (
+                                  <p className="text-[11px] text-slate-500 flex items-center gap-1 truncate">
+                                    <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                                    Хаяг: {o.deliveryAddress}
+                                  </p>
+                                )}
+
+                                {o.adminNotes && (
+                                  <p className="text-[11px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200/60 w-max">
+                                    Тэмдэглэл: {o.adminNotes}
+                                  </p>
+                                )}
+                              </div>
                             </div>
 
-                            <p className="text-xs text-slate-600 truncate">
-                              Бараа: <b>{o.batch?.product?.name || "Бараа"}</b>{" "}
-                              {o.selectedOptions && typeof o.selectedOptions === "object" && (
-                                <span className="text-indigo-600 font-semibold">
-                                  ({Object.values(o.selectedOptions).join(", ")})
-                                </span>
-                              )}{" "}
-                              • <b>{o.quantity}ш</b>
-                            </p>
-
-                            {o.deliveryAddress && (
-                              <p className="text-[11px] text-slate-500 flex items-center gap-1 truncate">
-                                <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                                Хаяг: {o.deliveryAddress}
+                            <div className="text-right shrink-0">
+                              <p className="text-sm font-black text-slate-900">
+                                ₮{Number(o.totalAmount || 0).toLocaleString()}
                               </p>
-                            )}
-
-                            {o.adminNotes && (
-                              <p className="text-[11px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200/60 w-max">
-                                Тэмдэглэл: {o.adminNotes}
-                              </p>
-                            )}
+                              <span className="text-[11px] text-slate-400 block">
+                                {new Date(o.createdAt).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit"
+                                })}
+                              </span>
+                            </div>
                           </div>
-
-                          <div className="text-right shrink-0">
-                            <p className="text-sm font-black text-slate-900">
-                              ₮{Number(o.totalAmount || 0).toLocaleString()}
-                            </p>
-                            <span className="text-[11px] text-slate-400 block">
-                              {new Date(o.createdAt).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit"
-                              })}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   ) : (
                     <div className="py-12 text-center text-xs text-slate-400">
@@ -643,6 +813,15 @@ export function DailyOrdersManager({
           )}
         </div>
       </div>
+
+      {/* Create Cargo Shipment Modal */}
+      <CreateShipmentModal
+        isOpen={isShipmentModalOpen}
+        onClose={() => setIsShipmentModalOpen(false)}
+        selectedOrders={ordersForShipment}
+        defaultDateStr={details?.displayDate}
+        onSuccess={handleShipmentCreated}
+      />
     </div>
   )
 }
