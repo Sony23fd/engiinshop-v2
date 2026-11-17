@@ -59,7 +59,7 @@ export function QuickViewModal({ batch, onClose }: QuickViewModalProps) {
           )}
 
           {/* Badges */}
-          <div className="absolute top-3.5 left-3.5 flex flex-col gap-1.5 z-10">
+          <div className="absolute top-3.5 left-3.5 flex flex-col items-start gap-1.5 z-10 pointer-events-none">
             {isPreOrder ? (
               <span className="bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-bold text-slate-800 flex items-center gap-1 shadow-sm border border-slate-200/60">
                 <Clock className="w-3.5 h-3.5 text-amber-500" /> Урьдчилсан захиалга
@@ -69,13 +69,13 @@ export function QuickViewModal({ batch, onClose }: QuickViewModalProps) {
                 <Clock className="w-3.5 h-3.5 text-emerald-500" /> Бэлэн байгаа
               </span>
             )}
-          </div>
 
-          {isFreeCargo && (
-            <div className="absolute top-3.5 right-12 md:right-3.5 bg-emerald-600 text-white px-2.5 py-1 rounded-full text-xs font-black shadow-md border border-emerald-400/40 z-10">
-              ✈️ Карго 0₮
-            </div>
-          )}
+            {isFreeCargo && (
+              <div className="bg-emerald-600 text-white px-2.5 py-1 rounded-full text-xs font-black shadow-md border border-emerald-400/40">
+                ✈️ Карго 0₮
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Product Details Side */}

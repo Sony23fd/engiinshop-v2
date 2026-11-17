@@ -99,26 +99,29 @@ export function ActiveBatchesList({
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center text-slate-400 font-medium">Зураггүй</div>
                   )}
-                  {/* Free Cargo Badge */}
-                  {(batch.product?.isFreeCargo || batch.isFreeCargo) && (
-                    <div className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-emerald-600/95 backdrop-blur-md px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-black text-white flex items-center gap-1 shadow-md border border-emerald-400/40 z-10">
-                      <span>✈️ Карго төлөхгүй</span>
-                    </div>
-                  )}
+                  {/* Badges Container - Stacked Vertically */}
+                  <div className="absolute top-2 left-2 sm:top-3 sm:left-3 flex flex-col items-start gap-1 sm:gap-1.5 z-10 pointer-events-none">
+                    {/* Urgency Badge */}
+                    {batch.isPreOrder ? (
+                      <div className="bg-white/95 backdrop-blur-md px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold text-slate-800 flex items-center gap-1.5 shadow-sm border border-slate-200/50">
+                        <Clock className="w-3.5 h-3.5 text-amber-500" />
+                        <span className="hidden sm:inline">Урьдчилсан захиалга</span>
+                        <span className="sm:hidden">Урьдчилсан</span>
+                      </div>
+                    ) : (
+                      <div className="bg-white/95 backdrop-blur-md px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold text-slate-800 flex items-center gap-1.5 shadow-sm border border-slate-200/50">
+                        <Clock className="w-3.5 h-3.5 text-orange-500" />
+                        <span>Нээлттэй</span>
+                      </div>
+                    )}
 
-                  {/* Urgency Badge */}
-                  {batch.isPreOrder ? (
-                    <div className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-white/90 backdrop-blur-md px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold text-slate-800 flex items-center gap-1.5 shadow-sm border border-slate-200/50">
-                      <Clock className="w-3.5 h-3.5 text-amber-500" />
-                      <span className="hidden sm:inline">Урьдчилсан захиалга</span>
-                      <span className="sm:hidden">Урьдчилсан</span>
-                    </div>
-                  ) : (
-                    <div className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-white/90 backdrop-blur-md px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold text-slate-800 flex items-center gap-1.5 shadow-sm border border-slate-200/50">
-                      <Clock className="w-3.5 h-3.5 text-orange-500" />
-                      <span>Нээлттэй</span>
-                    </div>
-                  )}
+                    {/* Free Cargo Badge */}
+                    {(batch.product?.isFreeCargo || batch.isFreeCargo) && (
+                      <div className="bg-emerald-600/95 backdrop-blur-md px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-black text-white flex items-center gap-1 shadow-md border border-emerald-400/40">
+                        <span>✈️ Карго төлөхгүй</span>
+                      </div>
+                    )}
+                  </div>
                 </Link>
 
                 <div className="flex-1 flex flex-col gap-3">

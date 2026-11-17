@@ -132,19 +132,22 @@ export function ProductGallery({
           </div>
         )}
 
-        {/* Pre-order Badge Overlay */}
-        {isPreOrder && (
-          <div className="absolute top-3.5 left-3.5 bg-white/95 backdrop-blur-md px-3 py-1 rounded-full text-[11px] font-bold text-amber-800 flex items-center gap-1.5 shadow-sm border border-amber-200/80 uppercase tracking-wider z-10">
-            <span>📌 Урьдчилсан захиалга</span>
-          </div>
-        )}
+        {/* Badges Container - Stacked Vertically */}
+        <div className="absolute top-3.5 left-3.5 flex flex-col items-start gap-1.5 z-10 pointer-events-none">
+          {/* Pre-order Badge Overlay */}
+          {isPreOrder && (
+            <div className="bg-white/95 backdrop-blur-md px-3 py-1 rounded-full text-[11px] font-bold text-amber-800 flex items-center gap-1.5 shadow-sm border border-amber-200/80 uppercase tracking-wider">
+              <span>📌 Урьдчилсан захиалга</span>
+            </div>
+          )}
 
-        {/* Free Cargo Badge Overlay */}
-        {isFreeCargo && (
-          <div className="absolute top-3.5 right-3.5 bg-emerald-600/95 backdrop-blur-md px-3 py-1 rounded-full text-[11px] font-black text-white flex items-center gap-1.5 shadow-md border border-emerald-400/50 uppercase tracking-wider z-10">
-            <span>✈️ Карго төлөхгүй</span>
-          </div>
-        )}
+          {/* Free Cargo Badge Overlay */}
+          {isFreeCargo && (
+            <div className="bg-emerald-600/95 backdrop-blur-md px-3 py-1 rounded-full text-[11px] font-black text-white flex items-center gap-1.5 shadow-md border border-emerald-400/50 uppercase tracking-wider">
+              <span>✈️ Карго төлөхгүй</span>
+            </div>
+          )}
+        </div>
 
         {/* Video / Photo switcher if video exists */}
         {videoUrl && (

@@ -47,8 +47,8 @@ export function ShopProductCard({ batch, viewMode = "grid", onQuickView }: ShopP
             </div>
           )}
 
-          {/* Badges */}
-          <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
+          {/* Badges Container - Stacked Vertically */}
+          <div className="absolute top-2 left-2 flex flex-col items-start gap-1 z-10 pointer-events-none">
             {isPreOrder ? (
               <span className="bg-white/95 backdrop-blur-md px-2 py-0.5 rounded-full text-[10px] font-bold text-slate-800 flex items-center gap-1 shadow-sm border border-slate-200/60">
                 <Clock className="w-3 h-3 text-amber-500" /> Урьдчилсан
@@ -58,13 +58,13 @@ export function ShopProductCard({ batch, viewMode = "grid", onQuickView }: ShopP
                 <Clock className="w-3 h-3 text-emerald-500" /> Бэлэн
               </span>
             )}
-          </div>
 
-          {isFreeCargo && (
-            <div className="absolute top-2 right-2 bg-emerald-600/95 backdrop-blur-md px-2 py-0.5 rounded-full text-[10px] font-black text-white flex items-center gap-1 shadow-sm border border-emerald-400/40 z-10">
-              ✈️ Карго 0₮
-            </div>
-          )}
+            {isFreeCargo && (
+              <div className="bg-emerald-600/95 backdrop-blur-md px-2 py-0.5 rounded-full text-[10px] font-black text-white flex items-center gap-1 shadow-sm border border-emerald-400/40">
+                ✈️ Карго 0₮
+              </div>
+            )}
+          </div>
         </Link>
 
         <div className="flex-1 min-w-0 flex flex-col justify-between self-stretch py-1">
@@ -159,8 +159,8 @@ export function ShopProductCard({ batch, viewMode = "grid", onQuickView }: ShopP
           )}
         </Link>
 
-        {/* Top-Left Status Badge */}
-        <div className="absolute top-2 left-2 z-10 pointer-events-none">
+        {/* Badges Container - Stacked Vertically */}
+        <div className="absolute top-2 left-2 flex flex-col items-start gap-1 z-10 pointer-events-none">
           {isPreOrder ? (
             <div className="bg-white/95 backdrop-blur-md px-2 py-0.5 rounded-full text-[10px] font-bold text-slate-800 flex items-center gap-1 shadow-sm border border-slate-200/50">
               <Clock className="w-3 h-3 text-amber-500" />
@@ -172,14 +172,13 @@ export function ShopProductCard({ batch, viewMode = "grid", onQuickView }: ShopP
               <span>Бэлэн</span>
             </div>
           )}
-        </div>
 
-        {/* Top-Right Free Cargo Badge */}
-        {isFreeCargo && (
-          <div className="absolute top-2 right-2 bg-emerald-600/95 backdrop-blur-md px-2 py-0.5 rounded-full text-[10px] font-black text-white flex items-center gap-1 shadow-md border border-emerald-400/40 z-10 pointer-events-none">
-            ✈️ Карго 0₮
-          </div>
-        )}
+          {isFreeCargo && (
+            <div className="bg-emerald-600/95 backdrop-blur-md px-2 py-0.5 rounded-full text-[10px] font-black text-white flex items-center gap-1 shadow-md border border-emerald-400/40">
+              ✈️ Карго 0₮
+            </div>
+          )}
+        </div>
 
         {/* Quick View Button on Hover */}
         {onQuickView && (
