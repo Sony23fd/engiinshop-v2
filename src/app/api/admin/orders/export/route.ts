@@ -44,21 +44,30 @@ export async function GET(req: NextRequest) {
       orderBy: { orderNumber: "asc" },
     })
 
-    const rows = orders.map((o) => ({
-      "Барааны нэр": o.batch?.product?.name ?? "",
-      "Сонголт / Size": formatSelectedOptions(o.selectedOptions),
-      "Захиалгын дугаар": o.orderNumber,
-      "Нэр": o.customerName,
-      "Утасны дугаар": o.customerPhone ?? "",
-      "Дансны дугаар": o.accountNumber ?? "",
-      "Тоо": o.quantity,
-      "Захиалсан огноо": new Date(o.createdAt).toLocaleDateString("mn-MN"),
-      "Ирэх өдөр": o.arrivalDate ? new Date(o.arrivalDate).toISOString().split("T")[0] : "",
-      "Хүргүүлэх өдөр": o.deliveryDate ? new Date(o.deliveryDate).toISOString().split("T")[0] : "",
-      "Статус": o.status?.name ?? "",
-      "Хаяг": o.deliveryAddress ?? "",
-      "Карго үнэ": Number(o.cargoFee ?? 0),
-    }))
+    const rows = orders.map((o) => {
+      const isFree = Boolean(o.batch?.product?.isFreeCargo || o.batch?.isFreeCargo);
+      const unitCargo = Number(o.batch?.cargoFeeStatus || 0) * Number(o.batch?.product?.weight || 0);
+      const customCargo = Number(o.cargoFee || 0);
+      const finalCargo = isFree ? 0 : (customCargo > 0 ? customCargo * o.quantity : unitCargo * o.quantity);
+
+      return {
+        "Барааны нэр": o.batch?.product?.name ?? "",
+        "Сонголт / Size": formatSelectedOptions(o.selectedOptions),
+        "Захиалгын дугаар": o.orderNumber,
+        "Нэр": o.customerName,
+        "Утасны дугаар": o.customerPhone ?? "",
+        "Дансны дугаар": o.accountNumber ?? "",
+        "Тоо": o.quantity,
+        "Захиалсан огноо": new Date(o.createdAt).toLocaleDateString("mn-MN"),
+        "Ирэх өдөр": o.arrivalDate ? new Date(o.arrivalDate).toISOString().split("T")[0] : "",
+        "Хүргүүлэх өдөр": o.deliveryDate ? new Date(o.deliveryDate).toISOString().split("T")[0] : "",
+        "Статус": o.status?.name ?? "",
+        "Хаяг": o.deliveryAddress ?? "",
+        "Карго үнэ": finalCargo,
+        "Нийт дүн": Number(o.totalAmount ?? 0),
+        "Хүргэлт": o.wantsDelivery ? "Хүргэлтээр" : "Өөрөө авах",
+      };
+    })
 
     const wb = XLSX.utils.book_new()
     const ws = XLSX.utils.json_to_sheet(rows)
@@ -74,9 +83,11 @@ export async function GET(req: NextRequest) {
       { wch: 14 }, // Захиалсан огноо
       { wch: 12 }, // Ирэх өдөр
       { wch: 14 }, // Хүргүүлэх өдөр
-      { wch: 22 }, // Статус
-      { wch: 32 }, // Хаяг
-      { wch: 10 }, // Карго үнэ
+      { wch: 18 }, // Статус
+      { wch: 30 }, // Хаяг
+      { wch: 12 }, // Карго үнэ
+      { wch: 14 }, // Нийт дүн
+      { wch: 12 }, // Хүргэлт
     ]
 
     XLSX.utils.book_append_sheet(wb, ws, "Захиалгууд")

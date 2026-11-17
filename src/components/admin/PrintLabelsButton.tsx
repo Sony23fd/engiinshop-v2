@@ -64,9 +64,12 @@ export function PrintLabelsButton({ orders }: { orders: any[] }) {
             <div class="bold" style="font-size: 18px; margin-bottom: 5px;">📞 ${order.customerPhone}</div>
             <div style="font-size: 12px; color: #333; max-height: 28px; overflow: hidden; font-weight: 500;">${order.batch?.product?.name || ""}</div>
             ${optionsText ? `<div style="font-size: 12px; font-weight: bold; color: #1e1b4b; background: #e0e7ff; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 4px;">🏷️ ${optionsText}</div>` : ''}
+            <div style="font-size: 11px; font-weight: 800; color: #047857; background: #d1fae5; border: 1px solid #a7f3d0; padding: 2px 6px; border-radius: 4px; display: block; margin-top: 6px; text-align: center;">
+              ✓ ТӨЛБӨР ТӨЛӨГДСӨН (МӨНГӨ АВАХГҮЙ)
+            </div>
           </div>
           <div class="footer">
-            <div class="cargo">Карго: ₮${finalCargoFee.toLocaleString()}</div>
+            <div class="cargo">Карго: ₮${finalCargoFee.toLocaleString()} (Төлөгдсөн)</div>
             <div class="qty">${order.quantity} ш</div>
           </div>
         </div>

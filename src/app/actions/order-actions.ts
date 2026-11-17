@@ -94,7 +94,7 @@ export async function getPickedUpOrders(days: number = 30, page: number = 1, lim
     let filteredOrders = orders || []
     if (q) {
       const ql = q.toLowerCase()
-      filteredOrders = filteredOrders.filter((o: any) => 
+      filteredOrders = filteredOrders.filter((o: any) =>
         o.customerName?.toLowerCase().includes(ql) ||
         o.customerPhone?.includes(ql) ||
         o.accountNumber?.toLowerCase().includes(ql) ||
@@ -110,13 +110,13 @@ export async function getPickedUpOrders(days: number = 30, page: number = 1, lim
       if (!grouped[key]) grouped[key] = []
       grouped[key].push(order)
     }
-    
+
     const allGroups = Object.values(grouped)
     const totalPages = Math.ceil(allGroups.length / limit);
     const paginatedGroups = allGroups.slice((page - 1) * limit, page * limit);
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       groups: JSON.parse(JSON.stringify(paginatedGroups)),
       totalItems: filteredOrders.length,
       totalGroups: allGroups.length,
@@ -176,7 +176,7 @@ export async function getDeliveredOrders(days: number = 30, page: number = 1, li
     let filteredOrders = orders || []
     if (q) {
       const ql = q.toLowerCase()
-      filteredOrders = filteredOrders.filter((o: any) => 
+      filteredOrders = filteredOrders.filter((o: any) =>
         o.customerName?.toLowerCase().includes(ql) ||
         o.customerPhone?.includes(ql) ||
         o.accountNumber?.toLowerCase().includes(ql) ||
@@ -193,7 +193,7 @@ export async function getDeliveredOrders(days: number = 30, page: number = 1, li
       if (!grouped[key]) grouped[key] = []
       grouped[key].push(order)
     }
-    
+
     const rawGroups = Object.values(grouped)
     const allGroups = rawGroups.filter((groupOrders: any[]) => {
       const wantsDelivery = groupOrders.some((o: any) => o.wantsDelivery)
@@ -202,7 +202,7 @@ export async function getDeliveredOrders(days: number = 30, page: number = 1, li
         return addr && addr !== "Өөрөө ирж авна" && addr !== "Өөрөө авна" && addr !== "Дэлгүүрээс авна";
       });
       const isAllPickedUpStatus = groupOrders.every((o: any) => o.status?.name === "Өөрөө ирж авсан");
-      
+
       if (isAllPickedUpStatus && !wantsDelivery && !hasValidAddress) return false;
       return wantsDelivery || hasValidAddress || !isAllPickedUpStatus;
     });
@@ -210,8 +210,8 @@ export async function getDeliveredOrders(days: number = 30, page: number = 1, li
     const totalPages = Math.ceil(allGroups.length / limit);
     const paginatedGroups = allGroups.slice((page - 1) * limit, page * limit);
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       groups: JSON.parse(JSON.stringify(paginatedGroups)),
       totalItems: filteredOrders.length,
       totalGroups: allGroups.length,
@@ -229,7 +229,13 @@ export async function getDeliveryOrders(date?: string, tab: string = "ready") {
       paymentStatus: "CONFIRMED", // Must be confirmed by Main Admin first
       wantsDelivery: true,
       deliveryAddress: { not: "" },
-      status: { isFinal: false }
+      status: {
+        isFinal: false,
+        OR: [
+          { isDeliverable: true },
+          { name: { in: ["Улаанбаатарт ирсэн", "Хүргэлтийн ажилтанд өгсөн", "Хүргэлтэд гарсан"] } }
+        ]
+      }
     }
 
     if (date) {
@@ -266,12 +272,12 @@ export async function getDeliveryOrders(date?: string, tab: string = "ready") {
       orderBy: { updatedAt: "desc" }
     })
 
-    const readyOrders = allOrders.filter((o: any) => 
-      !o.status?.name?.toLowerCase().includes("ажилтанд өгсөн") && 
+    const readyOrders = allOrders.filter((o: any) =>
+      !o.status?.name?.toLowerCase().includes("ажилтанд өгсөн") &&
       !o.status?.name?.toLowerCase().includes("хүргэлтэд гарсан")
     )
-    const inTransitOrders = allOrders.filter((o: any) => 
-      o.status?.name?.toLowerCase().includes("ажилтанд өгсөн") || 
+    const inTransitOrders = allOrders.filter((o: any) =>
+      o.status?.name?.toLowerCase().includes("ажилтанд өгсөн") ||
       o.status?.name?.toLowerCase().includes("хүргэлтэд гарсан")
     )
 
@@ -282,8 +288,8 @@ export async function getDeliveryOrders(date?: string, tab: string = "ready") {
       filteredOrders = inTransitOrders
     }
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       orders: JSON.parse(JSON.stringify(filteredOrders)),
       readyCount: readyOrders.length,
       inTransitCount: inTransitOrders.length
@@ -293,7 +299,34 @@ export async function getDeliveryOrders(date?: string, tab: string = "ready") {
   }
 }
 
-export async function handoverOrdersToCourier(orderIds: string[]) {
+export async function markDeliveryFeePaid(orderIds: string[], isPaid: boolean = true) {
+  try {
+    const adminMode = await getCurrentAdmin()
+    if (!adminMode) return { success: false, error: "Хандах эрхгүй" }
+
+    await (db.order as any).updateMany({
+      where: { id: { in: orderIds } },
+      data: { deliveryFeePaid: isPaid }
+    })
+
+    await logActivity({
+      userId: adminMode.id,
+      userName: adminMode.name || "Админ",
+      userRole: adminMode.role,
+      action: isPaid ? "Хүргэлтийн төлбөр батлав" : "Хүргэлтийн төлбөр цуцлав",
+      target: "Хүргэлт",
+      detail: `${orderIds.length} ширхэг захиалгын карго/хүргэлтийн төлбөрийг ${isPaid ? "төлөгдсөнөөр" : "төлөгдөөгүйгээр"} тэмдэглэлээ.`
+    })
+
+    revalidatePath("/admin/orders/delivery")
+    revalidatePath("/track")
+    return { success: true }
+  } catch (err: any) {
+    return { success: false, error: err.message }
+  }
+}
+
+export async function handoverOrdersToCourier(orderIds: string[], autoConfirmFee: boolean = false) {
   try {
     const adminMode = await getCurrentAdmin()
     if (!adminMode) return { success: false, error: "Хандах эрхгүй" }
@@ -305,9 +338,14 @@ export async function handoverOrdersToCourier(orderIds: string[]) {
     })
     if (!courierStatus) return { success: false, error: "'Хүргэлтийн ажилтанд өгсөн' статус олдсонгүй" }
 
+    const updateData: any = { statusId: courierStatus.id }
+    if (autoConfirmFee) {
+      updateData.deliveryFeePaid = true
+    }
+
     await db.order.updateMany({
       where: { id: { in: orderIds } },
-      data: { statusId: courierStatus.id } as any
+      data: updateData as any
     })
 
     await logActivity({
@@ -320,14 +358,14 @@ export async function handoverOrdersToCourier(orderIds: string[]) {
     })
 
     await logAdminActivity({
-      action: "ХҮРГЭЛТИЙН_АЖИЛТАНД_ӨГСӨН",
+      action: "ХҮРГЭЛТЭД_ГАРГАСАН",
       type: "ORDER",
-      target: `${orderIds.length} ширхэг ачаа`,
-      targetUrl: `/admin/orders/delivery?tab=in_transit`,
-      detail: `${orderIds.length} ширхэг захиалгыг хүргэлтийн ажилтанд хүлээлгэн өгөв (Хүргэлтэд гарсан).`,
+      target: `${orderIds.length} захиалга`,
+      targetUrl: "/admin/orders/delivery?tab=in_transit",
+      detail: `${orderIds.length} ширхэг захиалгыг хүргэлтийн ажилтанд хүлээлгэн өгөв. Төлөв: '${courierStatus.name}'`,
       userId: adminMode.id,
       userName: adminMode.name || "Админ",
-      userRole: adminMode.role
+      userRole: adminMode.role,
     })
 
     revalidatePath("/admin/orders/delivery")
@@ -359,12 +397,12 @@ export async function revertCourierHandover(orderIds: string[]) {
     await logAdminActivity({
       action: "ХҮРГЭЛТЭЭС_БУЦААСАН",
       type: "ORDER",
-      target: `${orderIds.length} ширхэг ачаа`,
-      targetUrl: `/admin/orders/delivery?tab=ready`,
+      target: `${orderIds.length} захиалга`,
+      targetUrl: "/admin/orders/delivery",
       detail: `${orderIds.length} ширхэг захиалгыг хүргэлтээс буцааж 'Улаанбаатарт ирсэн' төлөвт шилжүүлэв.`,
       userId: adminMode.id,
       userName: adminMode.name || "Админ",
-      userRole: adminMode.role
+      userRole: adminMode.role,
     })
 
     revalidatePath("/admin/orders/delivery")
@@ -408,14 +446,14 @@ export async function confirmDeliveryGroup(orderIds: string[]) {
     })
 
     await logAdminActivity({
-      action: "ХҮРГЭЛТ_БАТАЛГААЖУУЛСАН",
+      action: "ХҮРГЭГДСЭН_БАГЦ",
       type: "ORDER",
-      target: `${orderIds.length} ширхэг ачаа`,
-      targetUrl: `/admin/orders/delivered`,
-      detail: `${orderIds.length} ширхэг захиалгыг 'Хүргэгдсэн' болгож батлав.`,
+      target: `${orderIds.length} захиалга`,
+      targetUrl: "/admin/orders/delivered",
+      detail: `${orderIds.length} ширхэг захиалга хэрэглэгчийн гар дээр хүргэгдсэнийг батлав.`,
       userId: adminMode.id,
       userName: adminMode.name || "Админ",
-      userRole: adminMode.role
+      userRole: adminMode.role,
     })
 
     revalidatePath("/admin/orders/delivery")
@@ -460,12 +498,46 @@ export async function markDeliveryAsPickedUp(orderIds: string[]) {
 
     revalidatePath("/admin/orders/delivery")
     revalidatePath("/admin/orders/picked-up")
+    revalidatePath("/admin/orders/overdue-storage")
     revalidatePath("/admin/orders")
     revalidatePath("/track")
 
     return { success: true }
   } catch (err: any) {
     console.error("markDeliveryAsPickedUp error:", err)
+    return { success: false, error: err.message }
+  }
+}
+
+export async function moveOverdueOrderToDelivery(orderId: string, address: string) {
+  try {
+    const admin = await getCurrentAdmin()
+    if (!admin) return { success: false, error: "Хандах эрхгүй" }
+    if (!address || !address.trim()) return { success: false, error: "Хүргэлтийн хаяг оруулна уу" }
+
+    await (db.order as any).update({
+      where: { id: orderId },
+      data: {
+        wantsDelivery: true,
+        deliveryAddress: address.trim(),
+        deliveryRequestedAt: new Date()
+      }
+    })
+
+    await logActivity({
+      userId: admin.id,
+      userName: admin.name || "Админ",
+      userRole: admin.role,
+      action: "Хадгалалтаас → Хүргэлтэд шилжүүлэв",
+      target: "Захиалга",
+      detail: `#${orderId} захиалгыг агуулахаас хүргэлтийн дараалал руу шилжүүлэв (${address.trim()})`,
+    })
+
+    revalidatePath("/admin/orders/overdue-storage")
+    revalidatePath("/admin/orders/delivery")
+    revalidatePath("/track")
+    return { success: true }
+  } catch (err: any) {
     return { success: false, error: err.message }
   }
 }
@@ -495,7 +567,7 @@ export async function getRejectedOrders(days: number = 30, page: number = 1, lim
     let filteredOrders = orders || []
     if (q) {
       const ql = q.toLowerCase()
-      filteredOrders = filteredOrders.filter((o: any) => 
+      filteredOrders = filteredOrders.filter((o: any) =>
         o.customerName?.toLowerCase().includes(ql) ||
         o.customerPhone?.includes(ql) ||
         o.accountNumber?.toLowerCase().includes(ql) ||
@@ -516,8 +588,8 @@ export async function getRejectedOrders(days: number = 30, page: number = 1, lim
     const totalPages = Math.ceil(allGroups.length / limit)
     const paginatedGroups = allGroups.slice((page - 1) * limit, page * limit)
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       groups: JSON.parse(JSON.stringify(paginatedGroups)),
       totalItems: filteredOrders.length,
       totalGroups: allGroups.length,
@@ -546,13 +618,32 @@ export async function getOrdersByAccount(searchQuery: string) {
     const cleanQuery = searchQuery?.trim();
     if (!cleanQuery) return { success: true, orders: [] };
 
+    // Normalize phone number (strip +976, spaces, dashes)
+    const normalizedPhone = cleanQuery.replace(/\+976/g, "").replace(/\s+/g, "").replace(/-/g, "").trim();
+
+    // Check if query is a numeric order number (e.g. #16601 or 16601)
+    const cleanOrderStr = cleanQuery.replace(/^#/, "");
+    const numericOrderNumber = parseInt(cleanOrderStr, 10);
+    const isOrderNumber = !isNaN(numericOrderNumber) && numericOrderNumber > 0 && String(numericOrderNumber) === cleanOrderStr;
+
+    const orConditions: any[] = [
+      { accountNumber: cleanQuery },
+      { customerPhone: cleanQuery },
+      { transactionRef: cleanQuery }
+    ];
+
+    if (normalizedPhone && normalizedPhone !== cleanQuery) {
+      orConditions.push({ customerPhone: normalizedPhone });
+      orConditions.push({ customerPhone: { contains: normalizedPhone } });
+    }
+
+    if (isOrderNumber) {
+      orConditions.push({ orderNumber: numericOrderNumber });
+    }
+
     const orders = await db.order.findMany({
       where: {
-        OR: [
-          { accountNumber: cleanQuery },
-          { customerPhone: cleanQuery },
-          { transactionRef: cleanQuery }
-        ]
+        OR: orConditions
       },
       include: {
         batch: {
@@ -733,6 +824,14 @@ export async function addOrderToBatch(batchId: string, data: {
   selectedOptions?: any
 }) {
   try {
+    const cleanPhone = (data.customerPhone || "").replace(/\+976/g, "").replace(/\s+/g, "").replace(/-/g, "").trim();
+    if (!cleanPhone) {
+      return { success: false, error: "Утасны дугаар заавал оруулна уу." };
+    }
+    if (!data.quantity || data.quantity < 1) {
+      return { success: false, error: "Барааны тоо ширхэг хамгийн багадаа 1 байна." };
+    }
+
     const result = await db.$transaction(async (tx) => {
       const batch = await tx.batch.findUnique({
         where: { id: batchId },
@@ -745,16 +844,19 @@ export async function addOrderToBatch(batchId: string, data: {
 
       const defaultStatus = await tx.orderStatusType.findFirst();
       const statusId = data.statusId || defaultStatus?.id;
+      const unitPrice = Number(batch.price || 0);
+      const totalAmount = unitPrice * Number(data.quantity || 1);
 
       // @ts-ignore
       const order = await tx.order.create({
         data: {
           customerName: data.customerName,
-          customerPhone: data.customerPhone,
+          customerPhone: cleanPhone,
           ...(data.accountNumber && { accountNumber: data.accountNumber }),
           ...(data.deliveryAddress && { deliveryAddress: data.deliveryAddress }),
           wantsDelivery: !!data.deliveryAddress && data.deliveryAddress.trim() !== "",
           quantity: data.quantity,
+          totalAmount: totalAmount,
           batchId: batchId,
           paymentStatus: "CONFIRMED", // Admin-added orders are automatically confirmed
           creationSource: "ADMIN",
@@ -813,7 +915,7 @@ export async function searchOrders(query?: string) {
       ]
     }
     const trimmed = query ? query.trim() : ""
-    
+
     // If empty or single char, return latest 100 active orders quickly without heavy ILIKE scan
     if (!trimmed || trimmed.length < 2) {
       const orders = await db.order.findMany({
@@ -1015,6 +1117,18 @@ export async function updateOrderDetails(orderId: string, data: any) {
   try {
     const admin = await getCurrentAdmin()
     if (!admin) return { success: false, error: "Хандах эрхгүй" }
+
+    if (data.quantity !== undefined) {
+      const q = Number(data.quantity)
+      if (isNaN(q) || q < 1) {
+        return { success: false, error: "Барааны тоо ширхэг 1-ээс бага байж болохгүй." }
+      }
+      data.quantity = q
+    }
+
+    if (data.customerPhone !== undefined) {
+      data.customerPhone = String(data.customerPhone).replace(/\+976/g, "").replace(/\s+/g, "").replace(/-/g, "").trim()
+    }
 
     const oldOrder = await db.order.findUnique({ where: { id: orderId } })
     if (!oldOrder) return { success: false, error: "Захиалга олдсонгүй" }
@@ -1282,8 +1396,8 @@ export async function moveOrdersToBatch(orderIds: string[], targetBatchId: strin
 }
 
 export async function updateBatchOrderStatusesByIds(
-  orderIds: string[], 
-  statusId: string, 
+  orderIds: string[],
+  statusId: string,
   reason?: string,
   options?: { allowOverrideFinal?: boolean }
 ) {
@@ -1801,7 +1915,7 @@ export async function getArchivedConfirmedOrders(page: number = 1, limit: number
 export async function getRefundOrders({ tab = "pending", page = 1, limit = 50 }: { tab?: string, page?: number, limit?: number } = {}) {
   try {
     const isRefunded = tab === "completed";
-    const whereCondition = isRefunded 
+    const whereCondition = isRefunded
       ? { isRefunded: true }
       : { paymentStatus: "REJECTED", isRefunded: false };
 
@@ -1820,11 +1934,11 @@ export async function getRefundOrders({ tab = "pending", page = 1, limit = 50 }:
       (db.order as any).count({ where: { paymentStatus: "REJECTED", isRefunded: false } }),
       (db.order as any).count({ where: { isRefunded: true } })
     ]);
-    
+
     const totalPages = Math.ceil(totalCount / limit);
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       orders: JSON.parse(JSON.stringify(orders)),
       totalCount,
       totalPages,
@@ -2011,7 +2125,7 @@ export async function getOverdueStorageOrders() {
       },
       orderBy: { updatedAt: "asc" }
     });
-    
+
     return { success: true, orders: JSON.parse(JSON.stringify(orders)) };
   } catch (error: any) {
     return { success: false, error: error.message };
@@ -2044,9 +2158,9 @@ export async function getRecentOrderNotifications() {
         batch: { include: { product: true } }
       }
     })
-    
+
     const grouped: any = {}
-    
+
     for (const o of recentOrders) {
       const ref = o.transactionRef || o.id
       if (!grouped[ref]) {
@@ -2070,11 +2184,11 @@ export async function getRecentOrderNotifications() {
         batchId: o.batchId
       })
     }
-    
+
     const sortedNotifications = Object.values(grouped)
       .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, 10)
-    
+
     return { success: true, data: sortedNotifications }
   } catch (error) {
     return { success: false, data: [] }

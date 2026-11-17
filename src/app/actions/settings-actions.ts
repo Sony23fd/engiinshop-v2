@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 import { getCurrentAdmin, logActivity } from "@/lib/auth"
 import { logAdminActivity } from "@/lib/activity-logger"
 import { cache } from "react"
+import { getVariantKey, getVariantStockTotal } from "@/lib/variant-utils"
 
 const DEFAULT_SETTINGS: Record<string, string> = {
   bank_name: "Хаан Банк",
@@ -129,13 +130,7 @@ export async function getPendingOrders() {
   try {
     const orders = await db.order.findMany({
       where: {
-        OR: [
-          { paymentStatus: "PENDING" },
-          { 
-             paymentStatus: "CONFIRMED", 
-             status: { name: "Захиалга баталгаажсан /Вэбээр/" }
-          }
-        ]
+        paymentStatus: "PENDING"
       } as any,
       select: {
         id: true,
@@ -217,7 +212,10 @@ export async function rejectOrderPayment(orderId: string, reason?: string) {
     if (!admin) return { success: false, error: "Нэвтрэнэ үү" }
 
     await db.$transaction(async (tx) => {
-      const order = await (tx.order as any).findUnique({ where: { id: orderId } })
+      const order = await (tx.order as any).findUnique({
+        where: { id: orderId },
+        include: { batch: { include: { product: true } } }
+      })
       if (!order) return
 
       const rejectedStatus = await tx.orderStatusType.findFirst({ where: { name: "Цуцлагдсан" } });
@@ -231,10 +229,28 @@ export async function rejectOrderPayment(orderId: string, reason?: string) {
         }
       })
 
-      await (tx.batch as any).update({
-        where: { id: order.batchId },
-        data: { remainingQuantity: { increment: order.quantity } }
-      })
+      // Restore inventory properly including variantStock
+      if (order.batch) {
+        if (order.batch.variantStock && typeof order.batch.variantStock === "object") {
+          const variantStock = { ...(order.batch.variantStock as Record<string, number>) }
+          const variantKey = getVariantKey(order.batch.product?.options, order.selectedOptions)
+          if (variantKey && variantStock[variantKey] !== undefined) {
+            variantStock[variantKey] += order.quantity
+          }
+          await (tx.batch as any).update({
+            where: { id: order.batchId },
+            data: {
+              variantStock,
+              remainingQuantity: getVariantStockTotal(variantStock)
+            }
+          })
+        } else {
+          await (tx.batch as any).update({
+            where: { id: order.batchId },
+            data: { remainingQuantity: { increment: order.quantity } }
+          })
+        }
+      }
     })
 
     revalidatePath("/admin/orders/pending")
@@ -290,7 +306,8 @@ export async function rejectGroupPayment(orderIds: string[], reason?: string) {
 
     await db.$transaction(async (tx) => {
       const orders = await (tx.order as any).findMany({
-        where: { id: { in: orderIds } }
+        where: { id: { in: orderIds } },
+        include: { batch: { include: { product: true } } }
       })
 
       const rejectedStatus = await tx.orderStatusType.findFirst({ where: { name: "Цуцлагдсан" } });
@@ -305,10 +322,26 @@ export async function rejectGroupPayment(orderIds: string[], reason?: string) {
       })
 
       for (const order of orders) {
-        await (tx.batch as any).update({
-          where: { id: order.batchId },
-          data: { remainingQuantity: { increment: order.quantity } }
-        })
+        if (!order.batch) continue
+        if (order.batch.variantStock && typeof order.batch.variantStock === "object") {
+          const variantStock = { ...(order.batch.variantStock as Record<string, number>) }
+          const variantKey = getVariantKey(order.batch.product?.options, order.selectedOptions)
+          if (variantKey && variantStock[variantKey] !== undefined) {
+            variantStock[variantKey] += order.quantity
+          }
+          await (tx.batch as any).update({
+            where: { id: order.batchId },
+            data: {
+              variantStock,
+              remainingQuantity: getVariantStockTotal(variantStock)
+            }
+          })
+        } else {
+          await (tx.batch as any).update({
+            where: { id: order.batchId },
+            data: { remainingQuantity: { increment: order.quantity } }
+          })
+        }
       }
     })
 

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { User, Truck, Box, Tag } from "lucide-react"
+import { User, Truck, Box, Tag, CheckCircle2, AlertCircle } from "lucide-react"
 import { GroupDeliveryActions } from "./GroupDeliveryActions"
 import { formatSelectedOptions } from "@/lib/variant-utils"
 
@@ -15,6 +15,17 @@ export function DeliveryGroupCard({ groupOrders }: { groupOrders: any[] }) {
     o.status?.name?.toLowerCase().includes("ажилтанд өгсөн") || 
     o.status?.name?.toLowerCase().includes("хүргэлтэд гарсан")
   )
+
+  const isFeePaid = groupOrders.every((o: any) => o.deliveryFeePaid === true)
+
+  let totalCargoFee = 0
+  for (const o of groupOrders) {
+    if (o.batch?.product?.isFreeCargo || o.batch?.isFreeCargo) continue
+    const unitCargo = Number(o.batch?.cargoFeeStatus || 0) * Number(o.batch?.product?.weight || 0)
+    const customCargo = Number(o.cargoFee || 0)
+    const orderFee = customCargo > 0 ? customCargo * Number(o.quantity || 1) : unitCargo * Number(o.quantity || 1)
+    totalCargoFee += orderFee
+  }
 
   const allSelected = selectedIds.length === groupOrders.length
   const someSelected = selectedIds.length > 0 && !allSelected
@@ -60,6 +71,30 @@ export function DeliveryGroupCard({ groupOrders }: { groupOrders: any[] }) {
               <Box className="w-3.5 h-3.5" /> Хүргэлтэд бэлтгэх (Хүлээгдэж буй)
             </span>
           )}
+        </div>
+      </div>
+
+      {/* Payment & Cargo Fee Status Banner */}
+      <div className={`px-5 py-2 flex flex-wrap items-center justify-between gap-2 text-xs border-b ${
+        isFeePaid ? "bg-emerald-50/70 border-emerald-100 text-emerald-900" : "bg-amber-50 border-amber-200 text-amber-900"
+      }`}>
+        <div className="flex items-center gap-2 flex-wrap">
+          {isFeePaid ? (
+            <span className="inline-flex items-center gap-1 text-emerald-700 font-bold bg-emerald-100/80 px-2 py-0.5 rounded-full">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Төлбөр урьдчилан төлөгдсөн (Жолооч мөнгө авахгүй)
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 text-amber-800 font-bold bg-amber-200/70 px-2 py-0.5 rounded-full">
+              <AlertCircle className="w-3.5 h-3.5 text-amber-600" /> Хүргэлт / Карго төлбөр шалгагдаж буй
+            </span>
+          )}
+        </div>
+        <div className="text-slate-500 text-xs flex items-center gap-3">
+          <span>📦 Карго: <strong className="text-slate-800 font-semibold">{totalCargoFee > 0 ? `${totalCargoFee.toLocaleString()} ₮` : "Үнэгүй"}</strong></span>
+          <span>·</span>
+          <span>🚚 Хүргэлт: <strong className="text-slate-800 font-semibold">6,000 ₮</strong></span>
+          <span>·</span>
+          <span>Нийт: <strong className="text-slate-900 font-bold">{(totalCargoFee + 6000).toLocaleString()} ₮</strong></span>
         </div>
       </div>
 
@@ -127,7 +162,7 @@ export function DeliveryGroupCard({ groupOrders }: { groupOrders: any[] }) {
             <>Сонгосон <strong className="text-amber-700 font-bold">{selectedIds.length}</strong> захиалгыг жолоочид баглаж өгсөн бол хүргэлтэд гаргана уу.</>
           )}
         </p>
-        <GroupDeliveryActions orderIds={selectedIds} isOutForDelivery={isOutForDelivery} />
+        <GroupDeliveryActions orderIds={selectedIds} isOutForDelivery={isOutForDelivery} isFeePaid={isFeePaid} />
       </div>
     </div>
   )

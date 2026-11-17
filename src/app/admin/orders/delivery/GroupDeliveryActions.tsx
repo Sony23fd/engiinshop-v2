@@ -6,19 +6,22 @@ import {
   confirmDeliveryGroup, 
   markDeliveryAsPickedUp, 
   handoverOrdersToCourier, 
-  revertCourierHandover 
+  revertCourierHandover,
+  markDeliveryFeePaid
 } from "@/app/actions/order-actions"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
 
 export function GroupDeliveryActions({ 
   orderIds,
-  isOutForDelivery = false
+  isOutForDelivery = false,
+  isFeePaid = false
 }: { 
   orderIds: string[];
   isOutForDelivery?: boolean;
+  isFeePaid?: boolean;
 }) {
-  const [loading, setLoading] = useState<"handover" | "deliver" | "pickup" | "revert" | null>(null)
+  const [loading, setLoading] = useState<"handover" | "deliver" | "pickup" | "revert" | "fee" | null>(null)
   const [done, setDone] = useState<"handover" | "delivered" | "pickedup" | "reverted" | null>(null)
   const { toast } = useToast()
   const router = useRouter()
@@ -26,15 +29,39 @@ export function GroupDeliveryActions({
   // 1. Hand over to courier (Step 1)
   async function handleHandoverToCourier() {
     if (orderIds.length === 0) return
-    if (!confirm(`Эдгээр ${orderIds.length} ширхэг ачааг хүргэлтийн ажилтанд хүлээлгэн өгч хүргэлтэд гаргах уу?`)) return
+
+    let autoConfirmFee = false
+    if (!isFeePaid) {
+      const ok = confirm(
+        `⚠️ АНХААРУУЛГА:\nЭнэ захиалгын карго/хүргэлтийн төлбөр систем дээр БАТЛАГДААГҮЙ байна.\n\nЖолооч хэрэглэгчээс төлбөр авах ёсгүй тул төлбөр урьдчилан бүрэн төлөгдсөн эсэхийг шалгана уу.\n\nТөлбөрийг ТӨЛӨГДСӨН гэж батлаад хүргэлтэд гаргах уу?`
+      )
+      if (!ok) return
+      autoConfirmFee = true
+    } else {
+      if (!confirm(`Эдгээр ${orderIds.length} ширхэг ачааг хүргэлтийн ажилтанд хүлээлгэн өгч хүргэлтэд гаргах уу?`)) return
+    }
     
     setLoading("handover")
-    const res = await handoverOrdersToCourier(orderIds)
+    const res = await handoverOrdersToCourier(orderIds, autoConfirmFee)
     setLoading(null)
 
     if (res.success) {
       setDone("handover")
       toast({ title: "Амжилттай", description: "Хүргэлтийн ажилтанд хүлээлгэн өглөө." })
+      router.refresh()
+    } else {
+      toast({ variant: "destructive", title: "Алдаа", description: res.error || "Алдаа гарлаа" })
+    }
+  }
+
+  // Toggle Fee Paid
+  async function handleToggleFee(paid: boolean) {
+    if (orderIds.length === 0) return
+    setLoading("fee")
+    const res = await markDeliveryFeePaid(orderIds, paid)
+    setLoading(null)
+    if (res.success) {
+      toast({ title: "Амжилттай", description: paid ? "Төлбөр төлөгдсөнөөр тэмдэглэгдлээ." : "Төлбөрийн төлөвийг буцаалаа." })
       router.refresh()
     } else {
       toast({ variant: "destructive", title: "Алдаа", description: res.error || "Алдаа гарлаа" })
@@ -163,6 +190,33 @@ export function GroupDeliveryActions({
   // If order is currently waiting in warehouse (ready for courier)
   return (
     <div className="flex items-center gap-2 flex-wrap">
+      {!isFeePaid ? (
+        <Button 
+          onClick={() => handleToggleFee(true)} 
+          disabled={!!loading || orderIds.length === 0}
+          variant="outline"
+          size="sm" 
+          className="border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 h-8 text-xs font-semibold px-3 transition-colors shadow-xs"
+        >
+          {loading === "fee" ? (
+            <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Баталж байна...</>
+          ) : (
+            <><CheckCircle2 className="w-3.5 h-3.5 mr-1.5 text-emerald-600" /> Төлбөр батлах</>
+          )}
+        </Button>
+      ) : (
+        <Button 
+          onClick={() => handleToggleFee(false)} 
+          disabled={!!loading || orderIds.length === 0}
+          variant="ghost"
+          size="sm" 
+          className="text-slate-400 hover:text-red-600 h-8 text-[11px] px-2"
+          title="Төлбөрийн баталгаажуулалтыг цуцлах"
+        >
+          Төлбөр цуцлах
+        </Button>
+      )}
+
       <Button 
         onClick={handlePickedUp} 
         disabled={!!loading || orderIds.length === 0}

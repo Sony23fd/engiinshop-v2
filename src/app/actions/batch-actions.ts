@@ -191,7 +191,8 @@ export async function deleteBatch(id: string) {
 export async function bulkUpdateBatchStatus(ids: string[], data: { 
   status?: BatchStatus, 
   cargoFeeStatus?: string,
-  isAvailableForSale?: boolean
+  isAvailableForSale?: boolean,
+  cascadeOrderStatusId?: string
 }) {
   try {
     if (!ids || ids.length === 0) return { success: false, error: "No batches selected" }
@@ -211,6 +212,19 @@ export async function bulkUpdateBatchStatus(ids: string[], data: {
       where: { id: { in: ids } },
       data: updateData
     })
+
+    if (data.cascadeOrderStatusId) {
+      await db.order.updateMany({
+        where: {
+          batchId: { in: ids },
+          paymentStatus: "CONFIRMED",
+          status: { isFinal: false }
+        },
+        data: {
+          statusId: data.cascadeOrderStatusId
+        }
+      })
+    }
 
     revalidatePath("/admin/products")
     revalidatePath("/admin/orders")
