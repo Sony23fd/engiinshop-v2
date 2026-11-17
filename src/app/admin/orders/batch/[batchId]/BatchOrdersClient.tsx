@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { GroupAdminDeliveryButton } from "../../search/GroupAdminDeliveryButton"
-import { Loader2, Pencil, Trash2, Tag, Layers, X, Calendar } from "lucide-react"
+import { Loader2, Pencil, Trash2, Tag, Layers, X, Calendar, Clock, CheckCircle2, Lock, ShieldCheck } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { CustomerProfileModal } from "@/components/admin/CustomerProfileModal"
@@ -22,12 +22,28 @@ import { PrintLabelsButton } from "@/components/admin/PrintLabelsButton"
 import { getVariantBreakdown, formatSelectedOptions, normalizeOptions, getVariantKey } from "@/lib/variant-utils"
 import { cn } from "@/lib/utils"
 
-export function BatchOrdersClient({ activeOrders, batch, statuses, role }: { activeOrders: any[], batch: any, statuses: any[], role: string }) {
+export function BatchOrdersClient({ 
+  activeOrders, 
+  dispatchedOrders = [], 
+  batch, 
+  statuses, 
+  role 
+}: { 
+  activeOrders: any[]
+  dispatchedOrders?: any[]
+  batch: any
+  statuses: any[]
+  role: string 
+}) {
+  const [currentTab, setCurrentTab] = useState<"active" | "dispatched">(() => {
+    return activeOrders.length > 0 ? "active" : "dispatched"
+  })
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState("")
   const [editingOrder, setEditingOrder] = useState<any>(null)
   const [searchQuery, setSearchQuery] = useState("")
+  const [dispatchedSearchQuery, setDispatchedSearchQuery] = useState("")
   const [selectedVariantFilter, setSelectedVariantFilter] = useState<string | null>(null)
   const [profilePhone, setProfilePhone] = useState<string | null>(null)
   const { toast } = useToast()
@@ -62,6 +78,22 @@ export function BatchOrdersClient({ activeOrders, batch, statuses, role }: { act
       optText.includes(q)
     )
   })
+
+  const filteredDispatchedOrders = useMemo(() => {
+    if (!dispatchedSearchQuery) return dispatchedOrders
+    const q = dispatchedSearchQuery.toLowerCase().trim()
+    return dispatchedOrders.filter(o => {
+      const optText = formatSelectedOptions(o.selectedOptions).toLowerCase()
+      return (
+        (o.accountNumber && o.accountNumber.toLowerCase().includes(q)) ||
+        (o.customerPhone && o.customerPhone.toLowerCase().includes(q)) ||
+        (o.customerName && o.customerName.toLowerCase().includes(q)) ||
+        (o.orderNumber && String(o.orderNumber).toLowerCase().includes(q)) ||
+        (o.transactionRef && o.transactionRef.toLowerCase().includes(q)) ||
+        optText.includes(q)
+      )
+    })
+  }, [dispatchedOrders, dispatchedSearchQuery])
 
   const allSelected = filteredOrders.length > 0 && filteredOrders.every(o => selectedIds.includes(o.id))
   const someSelected = filteredOrders.some(o => selectedIds.includes(o.id)) && !allSelected
@@ -170,294 +202,517 @@ export function BatchOrdersClient({ activeOrders, batch, statuses, role }: { act
 
   return (
     <div className="bg-white p-6 rounded-xl shadow-sm border space-y-6">
+
+      {/* TABS SWITCHER: ACTIVE ORDERS VS DISPATCHED ORDERS */}
+      <div className="flex border-b border-slate-200 gap-6">
+        <button
+          type="button"
+          onClick={() => setCurrentTab("active")}
+          className={cn(
+            "pb-3 text-sm font-bold flex items-center gap-2 border-b-2 transition-colors cursor-pointer",
+            currentTab === "active"
+              ? "border-indigo-600 text-indigo-600"
+              : "border-transparent text-slate-500 hover:text-slate-700"
+          )}
+        >
+          <Clock className="w-4 h-4" />
+          <span>Идэвхтэй захиалгууд</span>
+          <span className={cn(
+            "px-2 py-0.5 rounded-full text-xs font-extrabold",
+            currentTab === "active" ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-600"
+          )}>
+            {activeOrders.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setCurrentTab("dispatched")}
+          className={cn(
+            "pb-3 text-sm font-bold flex items-center gap-2 border-b-2 transition-colors cursor-pointer",
+            currentTab === "dispatched"
+              ? "border-emerald-600 text-emerald-600"
+              : "border-transparent text-slate-500 hover:text-slate-700"
+          )}
+        >
+          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+          <span>Олгосон бараа</span>
+          <span className={cn(
+            "px-2 py-0.5 rounded-full text-xs font-extrabold",
+            currentTab === "dispatched" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"
+          )}>
+            {dispatchedOrders.length}
+          </span>
+        </button>
+      </div>
       
-      {/* 1. VARIANT SUMMARY & INSTANT FILTER BAR */}
-      {variantBreakdown.hasVariants && variantBreakdown.items.length > 0 && (
-        <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 space-y-2.5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Layers className="w-4 h-4 text-indigo-600" />
-              <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                Сонголтын нэгдсэн тооцоо (Size & Variant Breakdown)
-              </span>
-              <span className="text-xs text-slate-400">
-                • Нийт {variantBreakdown.totalQuantity} ширхэг бараа
-              </span>
-            </div>
-            {selectedVariantFilter && (
-              <button
-                onClick={() => setSelectedVariantFilter(null)}
-                className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1 self-start sm:self-auto"
-              >
-                <X className="w-3.5 h-3.5" /> Шүүлтүүр арилгах
-              </button>
-            )}
-          </div>
+      {currentTab === "active" ? (
+        <>
+          {/* 1. VARIANT SUMMARY & INSTANT FILTER BAR */}
+          {variantBreakdown.hasVariants && variantBreakdown.items.length > 0 && (
+            <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 space-y-2.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-indigo-600" />
+                  <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    Сонголтын нэгдсэн тооцоо (Size & Variant Breakdown)
+                  </span>
+                  <span className="text-xs text-slate-400">
+                    • Нийт {variantBreakdown.totalQuantity} ширхэг бараа
+                  </span>
+                </div>
+                {selectedVariantFilter && (
+                  <button
+                    onClick={() => setSelectedVariantFilter(null)}
+                    className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1 self-start sm:self-auto"
+                  >
+                    <X className="w-3.5 h-3.5" /> Шүүлтүүр арилгах
+                  </button>
+                )}
+              </div>
 
-          <div className="flex flex-wrap gap-2 pt-1">
-            {/* "All" button */}
-            <button
-              onClick={() => setSelectedVariantFilter(null)}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 border shadow-2xs cursor-pointer",
-                selectedVariantFilter === null
-                  ? "bg-slate-900 text-white border-slate-900 ring-2 ring-slate-300"
-                  : "bg-white text-slate-700 hover:bg-slate-100 border-slate-200"
-              )}
-            >
-              <span>Бүгд</span>
-              <span className={cn(
-                "px-1.5 py-0.2 rounded-full text-[10px] font-extrabold",
-                selectedVariantFilter === null ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"
-              )}>
-                {variantBreakdown.totalQuantity} ш
-              </span>
-            </button>
-
-            {/* Per-variant pills */}
-            {variantBreakdown.items.map((item) => {
-              const isSelected = selectedVariantFilter === item.key
-              return (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {/* "All" button */}
                 <button
-                  key={item.key}
-                  onClick={() => setSelectedVariantFilter(isSelected ? null : item.key)}
+                  onClick={() => setSelectedVariantFilter(null)}
                   className={cn(
-                    "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 border shadow-2xs cursor-pointer",
-                    isSelected
-                      ? "bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-200 scale-[1.02]"
-                      : "bg-white text-slate-700 hover:bg-indigo-50/50 hover:border-indigo-200 border-slate-200"
+                    "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 border shadow-2xs cursor-pointer",
+                    selectedVariantFilter === null
+                      ? "bg-slate-900 text-white border-slate-900 ring-2 ring-slate-300"
+                      : "bg-white text-slate-700 hover:bg-slate-100 border-slate-200"
                   )}
                 >
-                  <Tag className={cn("w-3 h-3", isSelected ? "text-indigo-200" : "text-indigo-500")} />
-                  <span>{item.label}</span>
+                  <span>Бүгд</span>
                   <span className={cn(
                     "px-1.5 py-0.2 rounded-full text-[10px] font-extrabold",
-                    isSelected ? "bg-white/20 text-white" : "bg-indigo-50 text-indigo-700 border border-indigo-100"
+                    selectedVariantFilter === null ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"
                   )}>
-                    {item.totalQuantity} ш
-                  </span>
-                  <span className={cn("text-[10px] opacity-75 font-medium", isSelected ? "text-indigo-100" : "text-slate-400")}>
-                    ({item.orderCount} захиалга • {item.percentage}%)
+                    {variantBreakdown.totalQuantity} ш
                   </span>
                 </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
 
-      {/* 2. FILTERS AND BULK ACTIONS */}
-      <div className="flex flex-col md:flex-row justify-between gap-4">
-        <div className="relative md:w-1/3">
-          <Input 
-            placeholder="Хайх (Нэр, утас, данс, Size, огноо)..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-slate-50 border-slate-200"
-          />
-        </div>
-        <div className="flex flex-col md:flex-row gap-4 md:w-2/3 justify-end lg:items-center">
-          <div className="flex flex-wrap items-center gap-2 justify-end">
-            <GroupAdminDeliveryButton 
-              selectedOrderIds={selectedIds} 
-              onUpdated={() => {
-                 setSelectedIds([])
-                 window.location.reload()
-              }} 
-            />
-            <PrintLabelsButton orders={filteredOrders.filter(o => selectedIds.includes(o.id))} />
-            <form onSubmit={handleBulkUpdate} className="flex gap-2 items-center px-4 py-1.5 border border-indigo-100 rounded-md bg-indigo-50/30">
-              <span className="text-sm font-semibold text-indigo-700 whitespace-nowrap">Сонгосон {selectedIds.length}ш:</span>
-              <select 
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                required 
-                className="rounded-md border border-indigo-200 bg-white px-2 py-1.5 text-sm focus:outline-none focus:border-indigo-400"
-              >
-                <option value="">-- Статус руу --</option>
-                {statuses?.map((s: any) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-              <Button type="submit" disabled={loading || selectedIds.length===0 || !selectedStatus} size="sm" className="h-8 bg-indigo-600 hover:bg-indigo-700">
-                {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                Хадгалах
-              </Button>
-            </form>
-          </div>
-        </div>
-      </div>
+                {/* Per-variant pills */}
+                {variantBreakdown.items.map((item) => {
+                  const isSelected = selectedVariantFilter === item.key
+                  return (
+                    <button
+                      key={item.key}
+                      onClick={() => setSelectedVariantFilter(isSelected ? null : item.key)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 border shadow-2xs cursor-pointer",
+                        isSelected
+                          ? "bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-200 scale-[1.02]"
+                          : "bg-white text-slate-700 hover:bg-indigo-50/50 hover:border-indigo-200 border-slate-200"
+                      )}
+                    >
+                      <Tag className={cn("w-3 h-3", isSelected ? "text-indigo-200" : "text-indigo-500")} />
+                      <span>{item.label}</span>
+                      <span className={cn(
+                        "px-1.5 py-0.2 rounded-full text-[10px] font-extrabold",
+                        isSelected ? "bg-white/20 text-white" : "bg-indigo-50 text-indigo-700 border border-indigo-100"
+                      )}>
+                        {item.totalQuantity} ш
+                      </span>
+                      <span className={cn("text-[10px] opacity-75 font-medium", isSelected ? "text-indigo-100" : "text-slate-400")}>
+                        ({item.orderCount} захиалга • {item.percentage}%)
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
-      {/* 3. ORDERS TABLE */}
-      <div className="overflow-x-auto w-full">
-        <table className="w-full text-sm text-left border-collapse">
-          <thead className="bg-[#ffffff] border-b-2 text-[10px] uppercase text-slate-400 font-bold whitespace-nowrap tracking-wider">
-            <tr>
-              <th className="px-4 py-3 text-center">
-                <input 
-                  type="checkbox" 
-                  className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                  checked={allSelected}
-                  ref={input => { if (input) input.indeterminate = someSelected }}
-                  onChange={toggleAll}
+          {/* 2. FILTERS AND BULK ACTIONS */}
+          <div className="flex flex-col md:flex-row justify-between gap-4">
+            <div className="relative md:w-1/3">
+              <Input 
+                placeholder="Хайх (Нэр, утас, данс, Size, огноо)..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="bg-slate-50 border-slate-200"
+              />
+            </div>
+            <div className="flex flex-col md:flex-row gap-4 md:w-2/3 justify-end lg:items-center">
+              <div className="flex flex-wrap items-center gap-2 justify-end">
+                <GroupAdminDeliveryButton 
+                  selectedOrderIds={selectedIds} 
+                  onUpdated={() => {
+                     setSelectedIds([])
+                     window.location.reload()
+                  }} 
                 />
-              </th>
-              <th className="px-4 py-3">Захиалгын дугаар</th>
-              <th className="px-4 py-3">Хэрэглэгч</th>
-              <th className="px-4 py-3 text-center">Сонголт / Size</th>
-              <th className="px-4 py-3 text-center">Тоо</th>
-              <th className="px-4 py-3">Данс</th>
-              <th className="px-4 py-3 text-center">Гүйлгээний утга</th>
-              <th className="px-4 py-3 text-center">Статус</th>
-              <th className="px-4 py-3 text-center">Хаяг</th>
-              <th className="px-4 py-3 text-center">Карго үнэ</th>
-              <th className="px-4 py-3 text-center">Үйлдэл</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y relative">
-            {filteredOrders.length > 0 ? (
-              filteredOrders.map((order: any) => {
-                const unitCargoFee = Number(batch.cargoFeeStatus || 0) * Number(batch.product?.weight || 0);
-                const orderCustomFee = Number(order.cargoFee || 0);
-                const baseTotal = unitCargoFee * Number(order.quantity || 1);
-                const finalCargoFee = orderCustomFee > 0 ? orderCustomFee * Number(order.quantity || 1) : baseTotal;
-                const isChecked = selectedIds.includes(order.id)
-                const hasOptions = order.selectedOptions && Object.keys(order.selectedOptions).length > 0
+                <PrintLabelsButton orders={filteredOrders.filter(o => selectedIds.includes(o.id))} />
+                <form onSubmit={handleBulkUpdate} className="flex gap-2 items-center px-4 py-1.5 border border-indigo-100 rounded-md bg-indigo-50/30">
+                  <span className="text-sm font-semibold text-indigo-700 whitespace-nowrap">Сонгосон {selectedIds.length}ш:</span>
+                  <select 
+                    value={selectedStatus}
+                    onChange={(e) => setSelectedStatus(e.target.value)}
+                    required 
+                    className="rounded-md border border-indigo-200 bg-white px-2 py-1.5 text-sm focus:outline-none focus:border-indigo-400"
+                  >
+                    <option value="">-- Статус руу --</option>
+                    {statuses?.map((s: any) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                  <Button type="submit" disabled={loading || selectedIds.length===0 || !selectedStatus} size="sm" className="h-8 bg-indigo-600 hover:bg-indigo-700">
+                    {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                    Хадгалах
+                  </Button>
+                </form>
+              </div>
+            </div>
+          </div>
 
-                return (
-                <tr key={order.id} className={`border-b border-slate-100 transition-colors ${isChecked ? 'bg-indigo-50/30' : 'hover:bg-slate-50'}`}>
-                  {/* Select Checkbox */}
-                  <td className="px-4 py-4 text-center">
+          {/* 3. ACTIVE ORDERS TABLE */}
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-sm text-left border-collapse">
+              <thead className="bg-[#ffffff] border-b-2 text-[10px] uppercase text-slate-400 font-bold whitespace-nowrap tracking-wider">
+                <tr>
+                  <th className="px-4 py-3 text-center">
                     <input 
                       type="checkbox" 
                       className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                      checked={isChecked}
-                      onChange={() => toggleOne(order.id)}
+                      checked={allSelected}
+                      ref={input => { if (input) input.indeterminate = someSelected }}
+                      onChange={toggleAll}
                     />
-                  </td>
-
-                  {/* Order Number & Source */}
-                  <td className="px-4 py-4 font-semibold text-slate-700 cursor-pointer" onClick={() => toggleOne(order.id)}>
-                    <div>
-                      <span>#{order.orderNumber}</span>
-                      <p className="text-[10px] text-slate-400 font-normal">
-                        {order.creationSource === "ADMIN" ? `Админ: ${order.createdByAdmin || "Тийм"}` : "Вэб захиалга"}
-                      </p>
-                    </div>
-                  </td>
-
-                  {/* Customer Info & Date */}
-                  <td className="px-4 py-4 min-w-[180px] cursor-pointer" onClick={() => toggleOne(order.id)}>
-                    <div className="space-y-0.5">
-                      <p className="text-slate-900 text-sm font-bold uppercase">{order.customerName}</p>
-                      <p 
-                        className="text-indigo-600 font-bold hover:underline cursor-pointer inline-block text-xs" 
-                        onClick={(e) => { e.stopPropagation(); setProfilePhone(order.customerPhone); }}
-                      >
-                        📞 {order.customerPhone}
-                      </p>
-                      <p className="text-[11px] text-slate-400 flex items-center gap-1">
-                        <Calendar className="w-3 h-3 text-slate-400" />
-                        <span>{new Date(order.createdAt).toLocaleDateString("mn-MN")} {new Date(order.createdAt).toLocaleTimeString("mn-MN", { hour: "2-digit", minute: "2-digit" })}</span>
-                      </p>
-                    </div>
-                  </td>
-
-                  {/* Option / Size Badge Column */}
-                  <td className="px-4 py-4 text-center whitespace-nowrap">
-                    {hasOptions ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-2xs">
-                        <Tag className="w-3 h-3 text-indigo-500" />
-                        {formatSelectedOptions(order.selectedOptions)}
-                      </span>
-                    ) : (
-                      <span className="text-slate-400 text-xs italic">-</span>
-                    )}
-                  </td>
-
-                  {/* Quantity */}
-                  <td className="px-4 py-4 font-extrabold text-center text-slate-900 text-sm">
-                    {order.quantity} ш
-                  </td>
-
-                  {/* Account */}
-                  <td className="px-4 py-4 text-slate-500 font-medium text-xs">
-                    {order.accountNumber || "-"}
-                  </td>
-
-                  {/* Ref */}
-                  <td className="px-4 py-4 text-center">
-                    <span className="text-[11px] font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
-                      {order.transactionRef || "-"}
-                    </span>
-                  </td>
-
-                  {/* Status Dropdown */}
-                  <td className="px-4 py-4 min-w-[140px] text-center">
-                    <div className="flex justify-center">
-                      <Select 
-                        defaultValue={order.statusId || "none"} 
-                        onValueChange={(val) => handleSingleStatusChange(order.id, val)}
-                        disabled={loading}
-                      >
-                        <SelectTrigger className="w-full sm:w-[140px] bg-slate-50 border-slate-200 h-8 text-xs">
-                          <SelectValue placeholder="Төлөв">
-                            {order.statusId ? (
-                              <StatusBadge status={statuses.find((s: any) => s.id === order.statusId)?.name || ""} color={statuses.find((s: any) => s.id === order.statusId)?.color} />
-                            ) : "Сонгох..."}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {statuses.map((s: any) => (
-                            <SelectItem key={s.id} value={String(s.id)}>
-                              <StatusBadge status={s.name} color={s.color} />
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </td>
-
-                  {/* Address */}
-                  <td className="px-4 py-4 text-center max-w-[150px] truncate text-xs text-slate-500" title={order.deliveryAddress || ""}>
-                    {order.deliveryAddress || "-"}
-                  </td>
-
-                  {/* Cargo Fee */}
-                  <td className="px-4 py-4 text-center whitespace-nowrap">
-                     <span className="font-semibold text-slate-800 text-xs">{finalCargoFee.toLocaleString()} ₮</span>
-                  </td>
-
-                  {/* Actions */}
-                  <td className="px-4 py-4 text-center space-x-1.5 whitespace-nowrap">
-                    <Button variant="outline" size="icon" className="h-8 w-8 text-indigo-600 border-indigo-200 hover:bg-indigo-50" onClick={(e) => { e.stopPropagation(); setEditingOrder(order); }}>
-                      <Pencil className="w-3.5 h-3.5" />
-                    </Button>
-                    {role === "ADMIN" && (
-                    <Button variant="outline" size="icon" className="h-8 w-8 text-red-600 border-red-200 hover:bg-red-50" onClick={(e) => { e.stopPropagation(); handleDeleteOrder(order.id); }}>
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
-                    )}
-                  </td>
+                  </th>
+                  <th className="px-4 py-3">Захиалгын дугаар</th>
+                  <th className="px-4 py-3">Хэрэглэгч</th>
+                  <th className="px-4 py-3 text-center">Сонголт / Size</th>
+                  <th className="px-4 py-3 text-center">Тоо</th>
+                  <th className="px-4 py-3">Данс</th>
+                  <th className="px-4 py-3 text-center">Гүйлгээний утга</th>
+                  <th className="px-4 py-3 text-center">Статус</th>
+                  <th className="px-4 py-3 text-center">Хаяг</th>
+                  <th className="px-4 py-3 text-center">Карго үнэ</th>
+                  <th className="px-4 py-3 text-center">Үйлдэл</th>
                 </tr>
-              )})
-            ) : (
-              <tr>
-                <td colSpan={11} className="px-4 py-12 text-center text-slate-500">
-                  {selectedVariantFilter ? (
-                    <div className="space-y-1">
-                      <p className="font-semibold text-slate-700">Энэ сонголтод захиалга олдсонгүй.</p>
-                      <button onClick={() => setSelectedVariantFilter(null)} className="text-xs text-indigo-600 underline font-bold">Бүх захиалгыг харах</button>
-                    </div>
-                  ) : (
-                    "Энэ багцад бүртгэгдсэн захиалга олдсонгүй."
-                  )}
-                </td>
-              </tr>
+              </thead>
+              <tbody className="divide-y relative">
+                {filteredOrders.length > 0 ? (
+                  filteredOrders.map((order: any) => {
+                    const unitCargoFee = Number(batch.cargoFeeStatus || 0) * Number(batch.product?.weight || 0);
+                    const orderCustomFee = Number(order.cargoFee || 0);
+                    const baseTotal = unitCargoFee * Number(order.quantity || 1);
+                    const finalCargoFee = orderCustomFee > 0 ? orderCustomFee * Number(order.quantity || 1) : baseTotal;
+                    const isChecked = selectedIds.includes(order.id)
+                    const hasOptions = order.selectedOptions && Object.keys(order.selectedOptions).length > 0
+
+                    return (
+                    <tr key={order.id} className={`border-b border-slate-100 transition-colors ${isChecked ? 'bg-indigo-50/30' : 'hover:bg-slate-50'}`}>
+                      {/* Select Checkbox */}
+                      <td className="px-4 py-4 text-center">
+                        <input 
+                          type="checkbox" 
+                          className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                          checked={isChecked}
+                          onChange={() => toggleOne(order.id)}
+                        />
+                      </td>
+
+                      {/* Order Number & Source */}
+                      <td className="px-4 py-4 font-semibold text-slate-700 cursor-pointer" onClick={() => toggleOne(order.id)}>
+                        <div>
+                          <span>#{order.orderNumber}</span>
+                          <p className="text-[10px] text-slate-400 font-normal">
+                            {order.creationSource === "ADMIN" ? `Админ: ${order.createdByAdmin || "Тийм"}` : "Вэб захиалга"}
+                          </p>
+                        </div>
+                      </td>
+
+                      {/* Customer Info & Date */}
+                      <td className="px-4 py-4 min-w-[180px] cursor-pointer" onClick={() => toggleOne(order.id)}>
+                        <div className="space-y-0.5">
+                          <p className="text-slate-900 text-sm font-bold uppercase">{order.customerName}</p>
+                          <p 
+                            className="text-indigo-600 font-bold hover:underline cursor-pointer inline-block text-xs" 
+                            onClick={(e) => { e.stopPropagation(); setProfilePhone(order.customerPhone); }}
+                          >
+                            📞 {order.customerPhone}
+                          </p>
+                          <p className="text-[11px] text-slate-400 flex items-center gap-1">
+                            <Calendar className="w-3 h-3 text-slate-400" />
+                            <span>{new Date(order.createdAt).toLocaleDateString("mn-MN")} {new Date(order.createdAt).toLocaleTimeString("mn-MN", { hour: "2-digit", minute: "2-digit" })}</span>
+                          </p>
+                        </div>
+                      </td>
+
+                      {/* Option / Size Badge Column */}
+                      <td className="px-4 py-4 text-center whitespace-nowrap">
+                        {hasOptions ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-2xs">
+                            <Tag className="w-3 h-3 text-indigo-500" />
+                            {formatSelectedOptions(order.selectedOptions)}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-xs italic">-</span>
+                        )}
+                      </td>
+
+                      {/* Quantity */}
+                      <td className="px-4 py-4 font-extrabold text-center text-slate-900 text-sm">
+                        {order.quantity} ш
+                      </td>
+
+                      {/* Account */}
+                      <td className="px-4 py-4 text-slate-500 font-medium text-xs">
+                        {order.accountNumber || "-"}
+                      </td>
+
+                      {/* Ref */}
+                      <td className="px-4 py-4 text-center">
+                        <span className="text-[11px] font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+                          {order.transactionRef || "-"}
+                        </span>
+                      </td>
+
+                      {/* Status Dropdown */}
+                      <td className="px-4 py-4 min-w-[140px] text-center">
+                        <div className="flex justify-center">
+                          <Select 
+                            defaultValue={order.statusId || "none"} 
+                            onValueChange={(val) => handleSingleStatusChange(order.id, val)}
+                            disabled={loading}
+                          >
+                            <SelectTrigger className="w-full sm:w-[140px] bg-slate-50 border-slate-200 h-8 text-xs">
+                              <SelectValue placeholder="Төлөв">
+                                {order.statusId ? (
+                                  <StatusBadge status={statuses.find((s: any) => s.id === order.statusId)?.name || ""} color={statuses.find((s: any) => s.id === order.statusId)?.color} />
+                                ) : "Сонгох..."}
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              {statuses.map((s: any) => (
+                                <SelectItem key={s.id} value={String(s.id)}>
+                                  <StatusBadge status={s.name} color={s.color} />
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </td>
+
+                      {/* Address */}
+                      <td className="px-4 py-4 text-center max-w-[150px] truncate text-xs text-slate-500" title={order.deliveryAddress || ""}>
+                        {order.deliveryAddress || "-"}
+                      </td>
+
+                      {/* Cargo Fee */}
+                      <td className="px-4 py-4 text-center whitespace-nowrap">
+                         <span className="font-semibold text-slate-800 text-xs">{finalCargoFee.toLocaleString()} ₮</span>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="px-4 py-4 text-center space-x-1.5 whitespace-nowrap">
+                        <Button variant="outline" size="icon" className="h-8 w-8 text-indigo-600 border-indigo-200 hover:bg-indigo-50" onClick={(e) => { e.stopPropagation(); setEditingOrder(order); }}>
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        {role === "ADMIN" && (
+                        <Button variant="outline" size="icon" className="h-8 w-8 text-red-600 border-red-200 hover:bg-red-50" onClick={(e) => { e.stopPropagation(); handleDeleteOrder(order.id); }}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                        )}
+                      </td>
+                    </tr>
+                  )})
+                ) : (
+                  <tr>
+                    <td colSpan={11} className="px-4 py-12 text-center text-slate-500">
+                      {selectedVariantFilter ? (
+                        <div className="space-y-1">
+                          <p className="font-semibold text-slate-700">Энэ сонголтод захиалга олдсонгүй.</p>
+                          <button onClick={() => setSelectedVariantFilter(null)} className="text-xs text-indigo-600 underline font-bold">Бүх захиалгыг харах</button>
+                        </div>
+                      ) : (
+                        "Энэ багцад идэвхтэй захиалга олдсонгүй."
+                      )}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      ) : (
+        /* DISPATCHED ORDERS SECTION (READ-ONLY) */
+        <div className="space-y-4">
+          {/* Header Banner */}
+          <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0 text-emerald-700">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="font-bold text-emerald-950 flex items-center gap-2">
+                  <span>Олгосон барааны жагсаалт (Түүх)</span>
+                  <span className="text-[11px] font-semibold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <Lock className="w-3 h-3" /> Идэвхгүй / Read-only
+                  </span>
+                </p>
+                <p className="text-xs text-emerald-700 mt-0.5">
+                  Салбараас олгогдсон болон хүргэгдсэн захиалгууд энд хамгаалалттай горимоор түүх болон хадгалагдана. Үйлдэл хийх боломжгүй.
+                </p>
+              </div>
+            </div>
+            <div className="bg-white/80 px-3.5 py-1.5 rounded-lg border border-emerald-100 text-right shrink-0">
+              <span className="text-[11px] text-slate-500 block">Нийт олгосон:</span>
+              <span className="font-extrabold text-emerald-700 text-sm">
+                {dispatchedOrders.reduce((sum, o) => sum + (o.quantity || 1), 0)}ш ({dispatchedOrders.length} захиалга)
+              </span>
+            </div>
+          </div>
+
+          {/* Search bar for dispatched orders */}
+          <div className="flex justify-between items-center gap-4">
+            <div className="relative w-full sm:w-80">
+              <Input 
+                placeholder="Олгосон захиалгаас хайх..." 
+                value={dispatchedSearchQuery}
+                onChange={(e) => setDispatchedSearchQuery(e.target.value)}
+                className="bg-slate-50 border-slate-200 text-sm"
+              />
+            </div>
+            {dispatchedSearchQuery && (
+              <span className="text-xs text-slate-500">
+                Илэрц: {filteredDispatchedOrders.length} захиалга
+              </span>
             )}
-          </tbody>
-        </table>
-      </div>
+          </div>
+
+          {/* Read-only Table */}
+          <div className="overflow-x-auto w-full border border-slate-200 rounded-lg bg-slate-50/20">
+            <table className="w-full text-sm text-left border-collapse">
+              <thead className="bg-slate-100/70 border-b text-[10px] uppercase text-slate-500 font-bold whitespace-nowrap tracking-wider">
+                <tr>
+                  <th className="px-4 py-3">Захиалгын дугаар</th>
+                  <th className="px-4 py-3">Хэрэглэгч</th>
+                  <th className="px-4 py-3 text-center">Сонголт / Size</th>
+                  <th className="px-4 py-3 text-center">Тоо</th>
+                  <th className="px-4 py-3">Данс</th>
+                  <th className="px-4 py-3 text-center">Гүйлгээний утга</th>
+                  <th className="px-4 py-3 text-center">Статус</th>
+                  <th className="px-4 py-3 text-center">Хаяг</th>
+                  <th className="px-4 py-3 text-center">Карго үнэ</th>
+                  <th className="px-4 py-3 text-center">Олгосон огноо</th>
+                  <th className="px-4 py-3 text-center">Төлөв</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {filteredDispatchedOrders.length > 0 ? (
+                  filteredDispatchedOrders.map((order: any) => {
+                    const unitCargoFee = Number(batch.cargoFeeStatus || 0) * Number(batch.product?.weight || 0);
+                    const orderCustomFee = Number(order.cargoFee || 0);
+                    const baseTotal = unitCargoFee * Number(order.quantity || 1);
+                    const finalCargoFee = orderCustomFee > 0 ? orderCustomFee * Number(order.quantity || 1) : baseTotal;
+                    const hasOptions = order.selectedOptions && Object.keys(order.selectedOptions).length > 0
+
+                    return (
+                      <tr key={order.id} className="hover:bg-slate-50/60 transition-colors opacity-95">
+                        {/* Order Number */}
+                        <td className="px-4 py-3.5 font-semibold text-slate-700">
+                          <div>
+                            <span className="font-mono text-slate-900">#{order.orderNumber}</span>
+                            <p className="text-[10px] text-slate-400 font-normal">
+                              {order.creationSource === "ADMIN" ? `Админ: ${order.createdByAdmin || "Тийм"}` : "Вэб захиалга"}
+                            </p>
+                          </div>
+                        </td>
+
+                        {/* Customer */}
+                        <td className="px-4 py-3.5 min-w-[170px]">
+                          <div className="space-y-0.5">
+                            <p className="text-slate-900 text-sm font-bold uppercase">{order.customerName}</p>
+                            <p 
+                              className="text-indigo-600 font-bold hover:underline cursor-pointer inline-block text-xs" 
+                              onClick={() => setProfilePhone(order.customerPhone)}
+                            >
+                              📞 {order.customerPhone}
+                            </p>
+                          </div>
+                        </td>
+
+                        {/* Option / Size */}
+                        <td className="px-4 py-3.5 text-center whitespace-nowrap">
+                          {hasOptions ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                              <Tag className="w-3 h-3 text-slate-400" />
+                              {formatSelectedOptions(order.selectedOptions)}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 text-xs italic">-</span>
+                          )}
+                        </td>
+
+                        {/* Quantity */}
+                        <td className="px-4 py-3.5 font-extrabold text-center text-slate-900 text-sm">
+                          {order.quantity} ш
+                        </td>
+
+                        {/* Account */}
+                        <td className="px-4 py-3.5 text-slate-500 font-medium text-xs">
+                          {order.accountNumber || "-"}
+                        </td>
+
+                        {/* Ref */}
+                        <td className="px-4 py-3.5 text-center">
+                          <span className="text-[11px] font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                            {order.transactionRef || "-"}
+                          </span>
+                        </td>
+
+                        {/* Status (Read-Only Badge) */}
+                        <td className="px-4 py-3.5 text-center whitespace-nowrap">
+                          <StatusBadge 
+                            status={order.status?.name || statuses.find((s: any) => s.id === order.statusId)?.name || "Олгосон"} 
+                            color={order.status?.color || statuses.find((s: any) => s.id === order.statusId)?.color || "#10b981"} 
+                          />
+                        </td>
+
+                        {/* Address */}
+                        <td className="px-4 py-3.5 text-center max-w-[150px] truncate text-xs text-slate-500" title={order.deliveryAddress || ""}>
+                          {order.deliveryAddress || "-"}
+                        </td>
+
+                        {/* Cargo Fee */}
+                        <td className="px-4 py-3.5 text-center whitespace-nowrap">
+                          <span className="font-semibold text-slate-700 text-xs">{finalCargoFee.toLocaleString()} ₮</span>
+                        </td>
+
+                        {/* Dispatched Date */}
+                        <td className="px-4 py-3.5 text-center whitespace-nowrap text-xs text-slate-500">
+                          <div className="flex items-center justify-center gap-1">
+                            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                            <span>
+                              {order.updatedAt ? new Date(order.updatedAt).toLocaleDateString("mn-MN") : "-"}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Disabled Lock Indicator */}
+                        <td className="px-4 py-3.5 text-center whitespace-nowrap">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <Lock className="w-3 h-3 text-emerald-500" />
+                            Олгогдсон
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={11} className="px-4 py-12 text-center text-slate-400">
+                      {dispatchedSearchQuery ? "Хайлтад тохирох олгосон бараа олдсонгүй." : "Энэ багцад одоогоор олгосон бараа бүртгэгдээгүй байна."}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <CustomerProfileModal phone={profilePhone} isOpen={!!profilePhone} onClose={() => setProfilePhone(null)} />
 

@@ -28,6 +28,13 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ ba
   
   const activeOrders = validOrders.filter((o: any) => !o.status?.isFinal)
   const activeQuantity = activeOrders.reduce((sum: number, o: any) => sum + o.quantity, 0)
+
+  const dispatchedOrders = validOrders.filter((o: any) => 
+    o.status?.name === 'Өөрөө ирж авсан' || 
+    o.status?.name === 'Хүргэгдсэн' || 
+    (o.status?.isFinal && o.status?.name !== 'Цуцлагдсан' && o.status?.name !== 'Буцаагдсан')
+  )
+  const dispatchedQuantity = dispatchedOrders.reduce((sum: number, o: any) => sum + o.quantity, 0)
   const normOptions = normalizeOptions(batch.product?.options)
 
   return (
@@ -43,12 +50,16 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ ba
         
         <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
           <div className="bg-blue-50/50 px-3 py-1.5 rounded-md border border-blue-100 flex items-center gap-2">
-            <Package className="w-4 h-4 text-blue-400" />
-            <span>Ширхэг: <strong className="text-blue-700">{activeQuantity}</strong> <span className="text-blue-400 font-normal">/ {totalQuantity}</span></span>
+            <Package className="w-4 h-4 text-blue-500" />
+            <span>Идэвхтэй: <strong className="text-blue-700">{activeQuantity}ш</strong> <span className="text-blue-400 font-normal">({activeOrders.length})</span></span>
           </div>
-          <div className="bg-green-50/50 px-3 py-1.5 rounded-md border border-green-100 flex items-center gap-2">
-            <ClipboardList className="w-4 h-4 text-green-400" />
-            <span>Захиалга: <strong className="text-green-700">{activeOrders.length}</strong> <span className="text-green-400 font-normal">/ {totalOrders}</span></span>
+          <div className="bg-emerald-50/50 px-3 py-1.5 rounded-md border border-emerald-100 flex items-center gap-2">
+            <ClipboardList className="w-4 h-4 text-emerald-500" />
+            <span>Олгосон: <strong className="text-emerald-700">{dispatchedQuantity}ш</strong> <span className="text-emerald-400 font-normal">({dispatchedOrders.length})</span></span>
+          </div>
+          <div className="bg-slate-50 px-3 py-1.5 rounded-md border flex items-center gap-2">
+            <span className="text-slate-500">Нийт:</span>
+            <span className="font-semibold text-slate-900">{totalQuantity}ш ({totalOrders})</span>
           </div>
           <div className="bg-slate-50 px-3 py-1.5 rounded-md border flex items-center gap-2">
             <span className="text-slate-500">Огноо:</span>
@@ -74,8 +85,14 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ ba
 
 
 
-      {/* Client Component with Checkboxes */}
-      <BatchOrdersClient activeOrders={activeOrders} batch={batch} statuses={statuses || []} role={admin?.role || "CARGO_ADMIN"} />
+      {/* Client Component with Tabs: Active Orders vs Dispatched Orders */}
+      <BatchOrdersClient 
+        activeOrders={activeOrders} 
+        dispatchedOrders={dispatchedOrders} 
+        batch={batch} 
+        statuses={statuses || []} 
+        role={admin?.role || "CARGO_ADMIN"} 
+      />
     </div>
   )
 }
