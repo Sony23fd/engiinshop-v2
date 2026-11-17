@@ -22,7 +22,13 @@ import {
   Info, 
   Bot,
   ExternalLink,
-  Printer
+  Printer,
+  ClipboardList,
+  Smartphone,
+  CheckCheck,
+  CreditCard,
+  MapPin,
+  Phone
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -120,6 +126,24 @@ const GUIDE_MODULES: GuideModule[] = [
     icon: Bot,
     desc: "Данс, үйлчилгээний нөхцөл, Telegram шуурхай мэдэгдлийн тохиргоо.",
     keywords: ["тохиргоо", "telegram", "bot", "мэдэгдэл", "нөхцөл", "данс"]
+  },
+  {
+    id: "manual_orders",
+    number: "11",
+    title: "Гараар Захиалга Бүртгэх & Сонголт (Size)",
+    badge: "Шинэ",
+    icon: ClipboardList,
+    desc: "Утас заавал шаардах дүрэм, Size-ийн үлдэгдэл нөөцөөс хасагдах, карго ба нийт үнэ автоматаар бодогдох.",
+    keywords: ["гараар", "захиалга нэмэх", "шинэ захиалга", "хэмжээ", "size", "нөөц", "үлдэгдэл", "утас", "карго үнэ", "хүргэх хаяг", "facebook захиалга"]
+  },
+  {
+    id: "delivery_courier",
+    number: "12",
+    title: "Хүргэлтийн Шинэ Цикл & Жолоочийн Систем (/courier)",
+    badge: "Шинэ",
+    icon: Smartphone,
+    desc: "2 шатлалт хүргэлт, жолоочийн мобайл хуудас (/courier?pin=2026), карго төлбөрийн дүрэм, бөөнөөр батлах.",
+    keywords: ["хүргэлт", "жолооч", "courier", "2026", "пин код", "карго төлбөр", "мөнгө авахгүй", "бөөнөөр батлах", "overdue", "удсан бараа"]
   },
 ];
 
@@ -256,6 +280,8 @@ export default function AdminGuidePage() {
             {activeModule === "search_profile" && <SearchProfileContent />}
             {activeModule === "excel" && <ExcelContent />}
             {activeModule === "settings_telegram" && <SettingsTelegramContent />}
+            {activeModule === "manual_orders" && <ManualOrdersContent />}
+            {activeModule === "delivery_courier" && <DeliveryCourierContent />}
           </Card>
         </div>
       </div>
@@ -877,6 +903,251 @@ function SettingsTelegramContent() {
               </p>
             </div>
           </div>
+        </div>
+      </CardContent>
+    </>
+  );
+}
+
+// =============================================================================
+// 11. Manual Orders & Variants Content (NEW)
+// =============================================================================
+function ManualOrdersContent() {
+  return (
+    <>
+      <CardHeader className="border-b bg-slate-50/70 pb-5">
+        <div className="flex items-center gap-2 text-xs font-bold text-indigo-600 uppercase tracking-wider mb-1">
+          Бүлэг 11 · Шинэ дүрэм
+        </div>
+        <CardTitle className="text-xl flex items-center gap-2 font-extrabold text-slate-900">
+          <ClipboardList className="w-5 h-5 text-indigo-600" /> Гараар Захиалга Бүртгэх & Сонголт (Size)-той Ажиллах
+        </CardTitle>
+        <CardDescription>
+          Фэйсбүүк, инстаграм болон утсаар ирсэн захиалгыг зөв бүртгэх, нөөцийн автомат зохицуулалт ба тооцооллын заавар
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="pt-6 space-y-6 text-slate-700 text-sm leading-relaxed">
+        {/* Intro */}
+        <div className="p-4 bg-indigo-50/60 rounded-xl border border-indigo-100 space-y-2">
+          <h4 className="font-bold text-indigo-950 text-sm flex items-center gap-2">
+            <Info className="w-4 h-4 text-indigo-600 shrink-0" />
+            Гараар захиалга оруулахын ач холбогдол
+          </h4>
+          <p className="text-xs text-indigo-900 leading-relaxed">
+            Вэбээр бус чатаар, утсаар хандсан үйлчлүүлэгчдийн захиалгыг багц дотор <strong>"[+ Нэмэх]"</strong> товчоор бүртгэнэ. Ингэснээр барааны нийт тоо, каргоны жин, хүргэлтийн жагсаалт болон хэрэглэгчийн <code>/track</code> хайлтын системд автоматаар нэгдэн алдаагүй бүртгэгдэнэ.
+          </p>
+        </div>
+
+        {/* 4 Pillars */}
+        <div className="space-y-4">
+          <h3 className="font-bold text-base text-slate-900">Анхаарах 4 гол талбар & Ажиллах дүрэм</h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Rule 1 */}
+            <div className="p-4 bg-white rounded-xl border border-slate-200 space-y-2 shadow-xs">
+              <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
+                <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center text-xs">
+                  📞
+                </div>
+                1. Утасны дугаар (Заавал 8 оронтой)
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Захиалагч бараагаа замдаа хаана явааг <code>/track</code> хуудсаар утасны дугаараараа шалгана. Мөн бараа УБ-д ирэхэд хүргэлтийн жолооч мобайл хуудаснаасаа 1 товшилтоор залгахад ашиглагдана.
+              </p>
+              <div className="p-2 bg-slate-50 rounded text-[11px] font-mono text-slate-600 border">
+                Зөв: 99112233 | Буруу: 9911-2233, +976...
+              </div>
+            </div>
+
+            {/* Rule 2 */}
+            <div className="p-4 bg-white rounded-xl border border-slate-200 space-y-2 shadow-xs">
+              <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
+                <div className="w-7 h-7 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center text-xs">
+                  🏷️
+                </div>
+                2. Сонголт (Size / Өнгө) & Нөөц
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Сонголттой бүтээгдэхүүн дээр хэмжээг сонгоход <code>(Үлдэгдэл: 5ш)</code> гэж харагдана. Захиалга хадгалагдмагц тухайн сонголтын нөөцөөс тоо ширхэгээр автоматаар хасагдана.
+              </p>
+              <div className="p-2 bg-purple-50 rounded text-[11px] text-purple-800 border border-purple-100">
+                Нөөц 0 болсон сонголтыг оруулбал систем урьдчилан анхааруулна.
+              </div>
+            </div>
+
+            {/* Rule 3 */}
+            <div className="p-4 bg-white rounded-xl border border-slate-200 space-y-2 shadow-xs">
+              <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
+                <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center text-xs">
+                  🚚
+                </div>
+                3. Хүргэх хаяг vs Өөрөө авах
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                <strong>Хаяг бичвэл</strong>: Систем "Хүргэлтээр авах" гэж үзэж, бараа УБ-д ирмэгц хүргэлтийн удирдлага руу шилжүүлнэ.<br/>
+                <strong>Хоосон үлдээвэл</strong>: "Салбараас өөрөө авах" болно.
+              </p>
+              <div className="p-2 bg-amber-50 rounded text-[11px] text-amber-800 border border-amber-100">
+                Өөрөө авах бол хаягийн талбарт юу ч бичихгүй хоосон үлдээнэ үү.
+              </div>
+            </div>
+
+            {/* Rule 4 */}
+            <div className="p-4 bg-white rounded-xl border border-slate-200 space-y-2 shadow-xs">
+              <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
+                <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs">
+                  💰
+                </div>
+                4. Нийт дүн ба Каргоны үнэ
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Админ гараар тоо бодох шаардлагагүй. Багцын нэгжийн үнэ × тоо ширхэгээр нийт дүн бодогдоно. Барааны жингээр (кг × 15,000₮) карго үнэ автоматаар үүснэ.
+              </p>
+              <div className="p-2 bg-emerald-50 rounded text-[11px] text-emerald-800 border border-emerald-100">
+                Төлбөрийн төлөв автоматаар "CONFIRMED" болж орно.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Step-by-Step Flow */}
+        <div className="space-y-3 border-t pt-5">
+          <h3 className="font-bold text-base text-slate-900">Бүртгэх алхамчилсан зааварчилгаа</h3>
+          <ol className="list-decimal list-inside space-y-2 text-xs text-slate-700 ml-1">
+            <li><strong>Барааны багц руу орох</strong>: Бүх захиалга ➡️ Багц дээр дарж орно.</li>
+            <li><strong>[+ Нэмэх] товч дарах</strong>: Баруун дээр байрлах цагаан товчийг дарахад хажуугаас маягт гарч ирнэ.</li>
+            <li><strong>Мэдээллийг бөглөх</strong>: Хэрэглэгчийн нэр, утасны 8 оронтой тоо, сонголт (Size), тоо ширхэг, хүргэлтийн хаягийг оруулна.</li>
+            <li><strong>Хадгалах</strong>: Товч дарахад ногоон мэдээлэл гарч, захиалгын дугаар үүсэж багцын жагсаалтад шууд нэмэгдэнэ.</li>
+          </ol>
+        </div>
+      </CardContent>
+    </>
+  );
+}
+
+// =============================================================================
+// 12. Delivery & Courier Mobile System Content (NEW)
+// =============================================================================
+function DeliveryCourierContent() {
+  return (
+    <>
+      <CardHeader className="border-b bg-slate-50/70 pb-5">
+        <div className="flex items-center gap-2 text-xs font-bold text-indigo-600 uppercase tracking-wider mb-1">
+          Бүлэг 12 · Шинэ систем
+        </div>
+        <CardTitle className="text-xl flex items-center gap-2 font-extrabold text-slate-900">
+          <Smartphone className="w-5 h-5 text-indigo-600" /> Хүргэлтийн Шинэ Цикл & Жолоочийн Систем (/courier)
+        </CardTitle>
+        <CardDescription>
+          2 шатлалт хүргэлтийн удирдлага, төлбөрийн журам, жолоочийн мобайл систем ба оройн бөөнөөр батлах үйл явц
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="pt-6 space-y-6 text-slate-700 text-sm leading-relaxed">
+        {/* Core Rule Callout */}
+        <div className="p-4 bg-red-50 rounded-xl border border-red-200 space-y-2">
+          <div className="flex items-center gap-2 text-red-900 font-extrabold text-sm">
+            <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
+            ХАМГИЙН ЧУХАЛ ДҮРЭМ: Төлбөр урьдчилан төлөгдсөн байх ёстой
+          </div>
+          <p className="text-xs text-red-800 leading-relaxed">
+            Хүргэлт гарахын өмнө захиалагч карго болон хүргэлтийн төлбөрөө бүрэн төлсөн байх ёстой. <strong>Жолооч үйлчлүүлэгчээс бэлэн мөнгө авах ёсгүй!</strong> Хүргэлтийн карт болон хэвлэгдэх наалтан дээр <code>✓ ТӨЛБӨР ТӨЛӨГДСӨН (МӨНГӨ АВАХГҮЙ)</code> пайз автоматаар ногооноор гарна.
+          </p>
+        </div>
+
+        {/* 2-Stage Lifecycle */}
+        <div className="space-y-3">
+          <h3 className="font-bold text-base text-slate-900">Хүргэлтийн 2 шатлалт удирдлага</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="p-3.5 bg-slate-50 rounded-xl border space-y-1.5 text-xs">
+              <span className="font-bold text-indigo-700">Шат 1: Хүргэлтэд бэлтгэх (УБ-д ирсэн)</span>
+              <p className="text-slate-600">
+                Бараанууд ангилагдаж, нэг хүний олон захиалга нэг хайрцагт нэгтгэгдэн баглагдана. Карго админ хаягуудыг шалган наалт хэвлэнэ.
+              </p>
+            </div>
+            <div className="p-3.5 bg-blue-50 rounded-xl border border-blue-200 space-y-1.5 text-xs">
+              <span className="font-bold text-blue-700">Шат 2: Жолоочид хүлээлгэн өгсөн</span>
+              <p className="text-blue-900">
+                Админ бэлэн болсон ачаануудыг сонгоод <strong>"[🚚 Сонгосон бүгдийг жолоочид өгөх]"</strong> товч дарснаар төлөв нь шилжиж, жолоочийн мобайл систем дээр харагдана.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Courier Mobile Portal */}
+        <div className="space-y-3 border-t pt-5">
+          <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
+            <Smartphone className="w-5 h-5 text-emerald-600" />
+            Жолоочийн Мобайл Систем (Хялбар хуудас)
+          </h3>
+          <p className="text-xs text-slate-600">
+            Жолооч компьютер дээр админаар нэвтрэх шаардлагагүй, зөвхөн өөрийн гар утсан дээрээ доорх холбоосоор орно:
+          </p>
+
+          <div className="p-4 bg-slate-900 text-slate-100 rounded-xl space-y-3 text-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <span className="font-mono text-emerald-400 font-bold text-sm">
+                https://anarkoreashop.mn/courier?pin=2026
+              </span>
+              <span className="text-[11px] bg-emerald-950 text-emerald-300 border border-emerald-800 px-2.5 py-1 rounded-full w-max">
+                ПИН код: 2026
+              </span>
+            </div>
+            <p className="text-slate-300 text-[11.5px] leading-relaxed">
+              Карго админ <strong>"Хүргэлтийн захиалга"</strong> хуудасны баруун дээд талд байх <strong>"[📱 Жолоочийн линк хуулах]"</strong> товчийг дараад жолоочийн чат руу явуулахад хангалттай.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+            <div className="p-3 bg-white rounded-lg border text-xs space-y-1">
+              <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                📞 1 Товшилтоор Залгах
+              </div>
+              <p className="text-slate-500 text-[11px]">
+                Жолооч утсаараа хэрэглэгч рүү шууд залгаж хаалгаа тайлуулах, байршлаа лавлах боломжтой.
+              </p>
+            </div>
+            <div className="p-3 bg-white rounded-lg border text-xs space-y-1">
+              <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                🗺️ Газрын зураг
+              </div>
+              <p className="text-slate-500 text-[11px]">
+                Хаягийн доорх товчийг дарахад Google Maps дээр байршил шууд нээгдэнэ.
+              </p>
+            </div>
+            <div className="p-3 bg-white rounded-lg border text-xs space-y-1">
+              <div className="font-bold text-emerald-700 flex items-center gap-1.5">
+                ✅ Хүргэсэн гэж батлах
+              </div>
+              <p className="text-slate-500 text-[11px]">
+                Ачааг өгсөн даруйдаа ногоон товч дарж тухайн хаягийг амжилттай болгон хаана.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Evening Bulk Confirmation */}
+        <div className="space-y-3 border-t pt-5">
+          <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
+            <CheckCheck className="w-5 h-5 text-indigo-600" />
+            Оройн Бөөнөөр Батлах (Карго админы үйлдэл)
+          </h3>
+          <p className="text-xs text-slate-600 leading-relaxed">
+            Хэрэв жолооч замын турш мобайл хуудсаар дараагүй, орой нь бүх ачааг амжилттай өгсөн тухайгаа админд хэлбэл:
+          </p>
+          <ol className="list-decimal list-inside space-y-1.5 text-xs text-slate-700 ml-1">
+            <li><strong>Хүргэлтийн захиалга ➡️ Жолоочтой яваа</strong> таб руу орно.</li>
+            <li>Хүснэгтийн зүүн дээд талын <strong>"Бүгдийг сонгох"</strong> чекбоксыг чагтална (эсвэл тус тусад нь сонгоно).</li>
+            <li>Дээд талын ногоон <strong>"[✅ Сонгосон бүгдийг хүргэгдсэнээр батлах]"</strong> товчийг 1 удаа дарна.</li>
+            <li>Сонгогдсон 10, 20 хаяг нэг дор бүрэн "Хүргэгдсэн" төлөвт шилжиж хаагдана.</li>
+          </ol>
+        </div>
+
+        {/* Overdue Storage Management */}
+        <div className="space-y-3 border-t pt-5">
+          <h3 className="font-bold text-base text-slate-900">Агуулахын удсан барааг цэгцлэх</h3>
+          <p className="text-xs text-slate-600 leading-relaxed">
+            Салбараас өөрөө ирж аваагүй 60-90 хоносон бараануудыг <strong>"/admin/orders/overdue-storage"</strong> хуудсаар орж нэг товшилтоор "Өөрөө ирж авсан" болгох эсвэл бөөнөөр хаах боломжтой болсон.
+          </p>
         </div>
       </CardContent>
     </>

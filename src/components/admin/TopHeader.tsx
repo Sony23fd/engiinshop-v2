@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { OrderNotificationListener } from "@/components/admin/OrderNotificationListener"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { AdminSidebar } from "@/components/admin/AdminSidebar"
+import { WhatsNewDrawer } from "@/components/admin/WhatsNewDrawer"
 
 interface AdminUser {
   id: string
@@ -38,6 +39,8 @@ export function TopHeader({ admin }: { admin?: AdminUser | null }) {
       </div>
 
       <div className="flex items-center gap-3">
+        <WhatsNewDrawer />
+
         {admin && (
           <OrderNotificationListener />
         )}

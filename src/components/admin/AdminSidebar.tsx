@@ -64,7 +64,7 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
       { name: "Нөхцөлийн тохиргоо", url: "/admin/settings/terms", icon: FileText, roles: ["ADMIN"] },
       { name: "Үйлдлийн лог", url: "/admin/activity", icon: FileText, roles: ["ADMIN", "DATAADMIN"] },
       { name: "Чатбот Заавар", url: "/admin/faqs", icon: Bot, roles: ["ADMIN"] },
-      { name: "Гарын авлага", url: "/admin/guide", icon: BookOpen, roles: ["ADMIN", "CARGO_ADMIN"] },
+      { name: "Гарын авлага", url: "/admin/guide", icon: BookOpen, highlight: true, roles: ["ADMIN", "CARGO_ADMIN"] },
     ]
   }
 ]
