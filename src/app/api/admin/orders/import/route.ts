@@ -55,11 +55,20 @@ export async function POST(req: NextRequest) {
       const rowNum = i + 2
 
       const customerName = String(row["Нэр"] ?? "").trim()
-      const customerPhone = String(row["Утас"] ?? "").trim()
+      const rawPhone = String(row["Утас"] ?? "").trim()
 
       if (!customerName) {
         errors.push(`Мөр ${rowNum}: Нэр хоосон байна`)
         continue
+      }
+
+      // Smart phone resolution: check phone column first, then try extraction from customerName
+      let cleanPhone = rawPhone.replace(/\+976/g, "").replace(/\s+/g, "").replace(/-/g, "").trim()
+      if (!cleanPhone || !/^[897]\d{7}$/.test(cleanPhone)) {
+        const phoneMatch = customerName.match(/(?:^|[^\d])([897]\d{7})(?:[^\d]|$)/)
+        if (phoneMatch) {
+          cleanPhone = phoneMatch[1]
+        }
       }
 
       const statusName = String(row["Статус"] ?? "").trim().toLowerCase()
@@ -76,7 +85,7 @@ export async function POST(req: NextRequest) {
         await (db.order as any).create({
           data: {
             customerName,
-            customerPhone: customerPhone || "00000000",
+            customerPhone: cleanPhone || "",
             accountNumber,
             quantity,
             batchId,
