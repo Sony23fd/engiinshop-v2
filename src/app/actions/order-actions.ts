@@ -1915,9 +1915,22 @@ export async function getArchivedConfirmedOrders(page: number = 1, limit: number
 export async function getRefundOrders({ tab = "pending", page = 1, limit = 50 }: { tab?: string, page?: number, limit?: number } = {}) {
   try {
     const isRefunded = tab === "completed";
+
+    // Зөвхөн бодитоор төлбөр төлөгдсөн бөгөөд "Буцаагдсан" эсвэл цуцлагдсан бодит буцаалтуудыг шүүнэ.
+    // Төлбөр төлөөгүй, автоматаар хугацаа хэтэрч цуцлагдсан сагснуудыг хасна.
+    const refundTargetCondition = {
+      OR: [
+        { status: { name: { contains: "Буцаагдсан" } } },
+        {
+          status: { name: "Цуцлагдсан" },
+          paymentStatus: "CONFIRMED"
+        }
+      ]
+    };
+
     const whereCondition = isRefunded
-      ? { isRefunded: true }
-      : { paymentStatus: "REJECTED", isRefunded: false };
+      ? { isRefunded: true, ...refundTargetCondition }
+      : { isRefunded: false, ...refundTargetCondition };
 
     const [orders, totalCount, pendingCount, completedCount] = await Promise.all([
       (db.order as any).findMany({
@@ -1931,8 +1944,8 @@ export async function getRefundOrders({ tab = "pending", page = 1, limit = 50 }:
         take: limit
       }),
       (db.order as any).count({ where: whereCondition }),
-      (db.order as any).count({ where: { paymentStatus: "REJECTED", isRefunded: false } }),
-      (db.order as any).count({ where: { isRefunded: true } })
+      (db.order as any).count({ where: { isRefunded: false, ...refundTargetCondition } }),
+      (db.order as any).count({ where: { isRefunded: true, ...refundTargetCondition } })
     ]);
 
     const totalPages = Math.ceil(totalCount / limit);

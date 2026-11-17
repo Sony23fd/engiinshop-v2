@@ -69,7 +69,12 @@ export function RefundList({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {data.map((order) => (
+              {data.map((order) => {
+                const effectiveAmount = Number(order.totalAmount) > 0 
+                  ? Number(order.totalAmount) 
+                  : (Number(order.batch?.price || 0) * (Number(order.quantity) || 1));
+
+                return (
                 <tr key={order.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
@@ -89,22 +94,32 @@ export function RefundList({
                         <User className="w-4 h-4 text-slate-400" />
                         {order.customerName}
                       </div>
-                      <div className="flex items-center gap-1.5 text-slate-500 text-xs text-rose-500 font-medium">
-                        <Phone className="w-3.5 h-3.5 text-rose-400" />
-                        {order.customerPhone} 
-                        <span className="text-slate-400 ml-1">гэж залгаж дансаа асууна уу</span>
+                      <div className="flex items-center gap-1.5 text-slate-500 text-xs font-medium">
+                        <Phone className="w-3.5 h-3.5 text-slate-400" />
+                        {order.customerPhone ? (
+                          <span className="text-indigo-600 font-bold">{order.customerPhone}</span>
+                        ) : (
+                          <span className="text-slate-400 italic">Утасгүй</span>
+                        )}
+                        {!order.accountNumber && (
+                          <span className="text-amber-600 font-normal ml-1">(Данс лавлах)</span>
+                        )}
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-col gap-1.5">
                       <div className="flex items-center gap-1.5 text-slate-900 font-bold">
-                        <Banknote className="w-4 h-4 text-emerald-500" />
-                        ₮{Number(order.totalAmount).toLocaleString()}
+                        <Banknote className="w-4 h-4 text-emerald-600" />
+                        {effectiveAmount > 0 ? `₮${effectiveAmount.toLocaleString()}` : "Дүн тодорхойгүй"}
                       </div>
                       <div className="flex items-center gap-1.5 text-slate-500 text-xs">
                         <CreditCard className="w-3.5 h-3.5" />
-                        {order.accountNumber ? `Данснаас: ${order.accountNumber}` : "Данс: Тодорхойгүй (Асуух)"}
+                        {order.accountNumber ? (
+                          <span>Данс: <strong className="text-slate-800">{order.accountNumber}</strong></span>
+                        ) : (
+                          <span className="text-rose-500 font-medium">Данс тодорхойгүй</span>
+                        )}
                       </div>
                     </div>
                   </td>
@@ -134,7 +149,8 @@ export function RefundList({
                     )}
                   </td>
                 </tr>
-              ))}
+                )
+              })}
             </tbody>
           </table>
           
