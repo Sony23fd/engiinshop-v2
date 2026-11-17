@@ -11,6 +11,7 @@ const commands = [
   'npm install',
   'npx prisma db push',
   'npx prisma generate',
+  'node scripts/migrate-delivery-status.js',
   'npm run build',
   'pm2 restart all'
 ];

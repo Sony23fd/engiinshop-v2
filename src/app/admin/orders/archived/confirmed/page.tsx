@@ -123,6 +123,8 @@ export default async function ConfirmedOrdersArchivePage({
                             <OrderStatusTimeline 
                               status={order.status?.name || ""} 
                               isFinal={order.status?.isFinal} 
+                              wantsDelivery={order.wantsDelivery}
+                              deliveryDate={order.deliveryDate}
                             />
                           </div>
 

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { User, Truck } from "lucide-react"
+import { User, Truck, Box } from "lucide-react"
 import { GroupDeliveryActions } from "./GroupDeliveryActions"
 
 export function DeliveryGroupCard({ groupOrders }: { groupOrders: any[] }) {
@@ -9,6 +9,11 @@ export function DeliveryGroupCard({ groupOrders }: { groupOrders: any[] }) {
 
   const first = groupOrders[0]
   const deliveryAddress = groupOrders.find((o: any) => o.deliveryAddress)?.deliveryAddress
+
+  const isOutForDelivery = groupOrders.some((o: any) => 
+    o.status?.name?.toLowerCase().includes("ажилтанд өгсөн") || 
+    o.status?.name?.toLowerCase().includes("хүргэлтэд гарсан")
+  )
 
   const allSelected = selectedIds.length === groupOrders.length
   const someSelected = selectedIds.length > 0 && !allSelected
@@ -23,12 +28,12 @@ export function DeliveryGroupCard({ groupOrders }: { groupOrders: any[] }) {
   }
 
   return (
-    <div className={`bg-white rounded-xl border shadow-sm overflow-hidden border-l-4 border-l-amber-400`}>
+    <div className={`bg-white rounded-xl border shadow-sm overflow-hidden border-l-4 ${isOutForDelivery ? "border-l-indigo-500" : "border-l-amber-400"}`}>
       {/* Customer Header */}
       <div className="bg-slate-50 border-b px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-            <User className="w-4 h-4 text-amber-600" />
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isOutForDelivery ? "bg-indigo-100 text-indigo-600" : "bg-amber-100 text-amber-600"}`}>
+            <User className="w-4 h-4" />
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -45,9 +50,15 @@ export function DeliveryGroupCard({ groupOrders }: { groupOrders: any[] }) {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-            <Truck className="w-3 h-3" /> Хүргэлтэнд бэлтгэх
-          </span>
+          {isOutForDelivery ? (
+            <span className="bg-indigo-100 text-indigo-800 text-xs px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1.5 shadow-xs">
+              <Truck className="w-3.5 h-3.5" /> Жолоочтой яваа (Хүргэлтэд гарсан)
+            </span>
+          ) : (
+            <span className="bg-amber-100 text-amber-800 text-xs px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1.5 shadow-xs">
+              <Box className="w-3.5 h-3.5" /> Хүргэлтэд бэлтгэх (Хүлээгдэж буй)
+            </span>
+          )}
         </div>
       </div>
 
@@ -56,7 +67,7 @@ export function DeliveryGroupCard({ groupOrders }: { groupOrders: any[] }) {
         <div className="px-5 py-2 bg-slate-50/50 flex items-center gap-3 border-b">
            <input 
               type="checkbox" 
-              className="w-4 h-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
+              className={`w-4 h-4 rounded border-slate-300 ${isOutForDelivery ? "text-indigo-600 focus:ring-indigo-500" : "text-amber-600 focus:ring-amber-500"} cursor-pointer`}
               checked={allSelected}
               ref={input => { if (input) input.indeterminate = someSelected }}
               onChange={toggleAll}
@@ -66,12 +77,12 @@ export function DeliveryGroupCard({ groupOrders }: { groupOrders: any[] }) {
         {groupOrders.map((order: any) => {
           const isChecked = selectedIds.includes(order.id)
           return (
-          <div key={order.id} className={`px-5 py-4 transition-colors ${isChecked ? 'bg-amber-50/20' : 'hover:bg-slate-50/50'}`}>
+          <div key={order.id} className={`px-5 py-4 transition-colors ${isChecked ? (isOutForDelivery ? 'bg-indigo-50/20' : 'bg-amber-50/20') : 'hover:bg-slate-50/50'}`}>
             <div className="flex items-start gap-4 flex-wrap">
               <div className="mt-1">
                 <input 
                   type="checkbox" 
-                  className="w-4 h-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
+                  className={`w-4 h-4 rounded border-slate-300 ${isOutForDelivery ? "text-indigo-600 focus:ring-indigo-500" : "text-amber-600 focus:ring-amber-500"} cursor-pointer`}
                   checked={isChecked}
                   onChange={() => toggleOne(order.id)}
                 />
@@ -80,6 +91,9 @@ export function DeliveryGroupCard({ groupOrders }: { groupOrders: any[] }) {
                 <div className="flex items-center gap-3 flex-wrap">
                   <span className="font-semibold text-slate-800">{order.batch?.product?.name}</span>
                   <span className="text-slate-400 text-sm">#{order.orderNumber}</span>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${isOutForDelivery ? "bg-indigo-50 text-indigo-700 border-indigo-200" : "bg-amber-50 text-amber-700 border-amber-200"}`}>
+                    {order.status?.name}
+                  </span>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-1 text-sm">
                   <div>
@@ -97,12 +111,16 @@ export function DeliveryGroupCard({ groupOrders }: { groupOrders: any[] }) {
         )})}
       </div>
 
-      {/* Confirm Delivery button */}
-      <div className="border-t px-5 py-4 flex items-center justify-between gap-4 bg-slate-50/60">
-        <p className="text-xs text-slate-400">
-          Сонгосон <strong className="text-slate-600">{selectedIds.length}</strong> захиалгыг хүргэлтэнд гаргаж, эзэнд нь хүлээлгэн өгсөн бол баталгаажуулна уу
+      {/* Delivery actions */}
+      <div className="border-t px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/60">
+        <p className="text-xs text-slate-500">
+          {isOutForDelivery ? (
+            <>Сонгосон <strong className="text-indigo-700 font-bold">{selectedIds.length}</strong> захиалга жолоочтой замдаа яваа. Хэрэглэгчийн гар дээр очсон бол батална уу.</>
+          ) : (
+            <>Сонгосон <strong className="text-amber-700 font-bold">{selectedIds.length}</strong> захиалгыг жолоочид баглаж өгсөн бол хүргэлтэд гаргана уу.</>
+          )}
         </p>
-        <GroupDeliveryActions orderIds={selectedIds} />
+        <GroupDeliveryActions orderIds={selectedIds} isOutForDelivery={isOutForDelivery} />
       </div>
     </div>
   )

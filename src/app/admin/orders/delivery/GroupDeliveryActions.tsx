@@ -1,19 +1,50 @@
 "use client"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { CheckCircle2, Loader2, PackageCheck, Handshake } from "lucide-react"
-import { confirmDeliveryGroup, markDeliveryAsPickedUp } from "@/app/actions/order-actions"
+import { CheckCircle2, Loader2, PackageCheck, Handshake, Truck, RotateCcw } from "lucide-react"
+import { 
+  confirmDeliveryGroup, 
+  markDeliveryAsPickedUp, 
+  handoverOrdersToCourier, 
+  revertCourierHandover 
+} from "@/app/actions/order-actions"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
 
-export function GroupDeliveryActions({ orderIds }: { orderIds: string[] }) {
-  const [loading, setLoading] = useState<"deliver" | "pickup" | null>(null)
-  const [done, setDone] = useState<"delivered" | "pickedup" | null>(null)
+export function GroupDeliveryActions({ 
+  orderIds,
+  isOutForDelivery = false
+}: { 
+  orderIds: string[];
+  isOutForDelivery?: boolean;
+}) {
+  const [loading, setLoading] = useState<"handover" | "deliver" | "pickup" | "revert" | null>(null)
+  const [done, setDone] = useState<"handover" | "delivered" | "pickedup" | "reverted" | null>(null)
   const { toast } = useToast()
   const router = useRouter()
 
+  // 1. Hand over to courier (Step 1)
+  async function handleHandoverToCourier() {
+    if (orderIds.length === 0) return
+    if (!confirm(`Эдгээр ${orderIds.length} ширхэг ачааг хүргэлтийн ажилтанд хүлээлгэн өгч хүргэлтэд гаргах уу?`)) return
+    
+    setLoading("handover")
+    const res = await handoverOrdersToCourier(orderIds)
+    setLoading(null)
+
+    if (res.success) {
+      setDone("handover")
+      toast({ title: "Амжилттай", description: "Хүргэлтийн ажилтанд хүлээлгэн өглөө." })
+      router.refresh()
+    } else {
+      toast({ variant: "destructive", title: "Алдаа", description: res.error || "Алдаа гарлаа" })
+    }
+  }
+
+  // 2. Confirm delivered to customer (Step 2)
   async function handleConfirmDelivery() {
-    if (!confirm(`Эдгээр ${orderIds.length} ширхэг ачааг хүргэгдсэн гэж хүлээн зөвшөөрөх үү?`)) return
+    if (orderIds.length === 0) return
+    if (!confirm(`Эдгээр ${orderIds.length} ширхэг ачаа хэрэглэгчийн гар дээр очсон гэж батлах уу?`)) return
     
     setLoading("deliver")
     const res = await confirmDeliveryGroup(orderIds)
@@ -21,15 +52,17 @@ export function GroupDeliveryActions({ orderIds }: { orderIds: string[] }) {
 
     if (res.success) {
       setDone("delivered")
-      toast({ title: "Амжилттай", description: "Хүргэлт баталгаажлаа." })
+      toast({ title: "Амжилттай", description: "Хүргэлт амжилттай баталгаажлаа." })
       router.refresh()
     } else {
       toast({ variant: "destructive", title: "Алдаа", description: res.error || "Алдаа гарлаа" })
     }
   }
 
+  // 3. Mark picked up by customer themselves
   async function handlePickedUp() {
-    if (!confirm(`Эдгээр ${orderIds.length} ширхэг бараа захиалагч өөрөө ирж авсан уу? Ингэснээр хүргэлтийн жагсаалтаас хасагдана.`)) return
+    if (orderIds.length === 0) return
+    if (!confirm(`Эдгээр ${orderIds.length} ширхэг барааг захиалагч өөрөө ирж авсан уу? Ингэснээр хүргэлтийн жагсаалтаас хасагдана.`)) return
     
     setLoading("pickup")
     const res = await markDeliveryAsPickedUp(orderIds)
@@ -44,10 +77,36 @@ export function GroupDeliveryActions({ orderIds }: { orderIds: string[] }) {
     }
   }
 
+  // 4. Revert courier handover back to ready
+  async function handleRevert() {
+    if (orderIds.length === 0) return
+    if (!confirm(`Эдгээр ${orderIds.length} ширхэг ачааг хүргэлтээс буцааж агуулахын бэлтгэх жагсаалт руу шилжүүлэх үү?`)) return
+
+    setLoading("revert")
+    const res = await revertCourierHandover(orderIds)
+    setLoading(null)
+
+    if (res.success) {
+      setDone("reverted")
+      toast({ title: "Амжилттай", description: "Хүргэлтээс буцааж агуулахын жагсаалт руу шилжүүллээ." })
+      router.refresh()
+    } else {
+      toast({ variant: "destructive", title: "Алдаа", description: res.error || "Алдаа гарлаа" })
+    }
+  }
+
   if (done === "delivered") {
     return (
-      <Button variant="outline" size="sm" disabled className="text-green-600 border-green-200 bg-green-50 h-8 text-xs font-semibold px-4">
+      <Button variant="outline" size="sm" disabled className="text-emerald-600 border-emerald-200 bg-emerald-50 h-8 text-xs font-semibold px-4">
         <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> Хүргэгдсэн
+      </Button>
+    )
+  }
+
+  if (done === "handover") {
+    return (
+      <Button variant="outline" size="sm" disabled className="text-indigo-600 border-indigo-200 bg-indigo-50 h-8 text-xs font-semibold px-4">
+        <Truck className="w-3.5 h-3.5 mr-1.5" /> Жолоочид өгсөн
       </Button>
     )
   }
@@ -60,11 +119,53 @@ export function GroupDeliveryActions({ orderIds }: { orderIds: string[] }) {
     )
   }
 
+  if (done === "reverted") {
+    return (
+      <Button variant="outline" size="sm" disabled className="text-slate-500 border-slate-200 bg-slate-50 h-8 text-xs font-semibold px-4">
+        <RotateCcw className="w-3.5 h-3.5 mr-1.5" /> Буцаагдсан
+      </Button>
+    )
+  }
+
+  // If order is currently out for delivery (with courier)
+  if (isOutForDelivery) {
+    return (
+      <div className="flex items-center gap-2 flex-wrap">
+        <Button 
+          onClick={handleRevert} 
+          disabled={!!loading || orderIds.length === 0}
+          variant="outline"
+          size="sm" 
+          className="border-slate-200 text-slate-600 hover:bg-slate-100 h-8 text-xs font-semibold px-3 transition-colors"
+        >
+          {loading === "revert" ? (
+            <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Буцааж байна...</>
+          ) : (
+            <><RotateCcw className="w-3.5 h-3.5 mr-1.5" /> Буцаах</>
+          )}
+        </Button>
+        <Button 
+          onClick={handleConfirmDelivery} 
+          disabled={!!loading || orderIds.length === 0}
+          size="sm" 
+          className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-8 text-xs font-semibold px-4 transition-colors"
+        >
+          {loading === "deliver" ? (
+            <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Баталж байна...</>
+          ) : (
+            <><PackageCheck className="w-3.5 h-3.5 mr-1.5" /> Хүргэгдсэн гэж батлах</>
+          )}
+        </Button>
+      </div>
+    )
+  }
+
+  // If order is currently waiting in warehouse (ready for courier)
   return (
     <div className="flex items-center gap-2 flex-wrap">
       <Button 
         onClick={handlePickedUp} 
-        disabled={!!loading}
+        disabled={!!loading || orderIds.length === 0}
         variant="outline"
         size="sm" 
         className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 h-8 text-xs font-semibold px-3 transition-colors"
@@ -76,15 +177,15 @@ export function GroupDeliveryActions({ orderIds }: { orderIds: string[] }) {
         )}
       </Button>
       <Button 
-        onClick={handleConfirmDelivery} 
-        disabled={!!loading}
+        onClick={handleHandoverToCourier} 
+        disabled={!!loading || orderIds.length === 0}
         size="sm" 
         className="bg-amber-500 hover:bg-amber-600 text-white shadow-sm h-8 text-xs font-semibold px-4 transition-colors"
       >
-        {loading === "deliver" ? (
-          <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Уншиж байна...</>
+        {loading === "handover" ? (
+          <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Шилжүүлж байна...</>
         ) : (
-          <><PackageCheck className="w-3.5 h-3.5 mr-1.5" /> Хүргэгдсэн гэж батлах</>
+          <><Truck className="w-3.5 h-3.5 mr-1.5" /> Жолоочид хүлээлгэн өгөх</>
         )}
       </Button>
     </div>

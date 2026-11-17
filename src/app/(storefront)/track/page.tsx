@@ -291,6 +291,8 @@ function OrderGroup({ orders, completed = false, deliveryScheduleDays = "3,6", s
   const allDelivered = allFinal && !anyRejected
   const allDeliveryRequested = orders.every((o: any) => o.wantsDelivery)
   const someDeliveryRequested = orders.some((o: any) => o.wantsDelivery)
+  const wantsDelivery = allDeliveryRequested || someDeliveryRequested || !!first.wantsDelivery
+  const deliveryDate = orders.find((o: any) => o.deliveryDate)?.deliveryDate || first.deliveryDate
 
   // Determine styles (Neutralize if completed)
   let borderClass = "border-slate-200/60 shadow-slate-200/50"
@@ -358,6 +360,8 @@ function OrderGroup({ orders, completed = false, deliveryScheduleDays = "3,6", s
         <OrderStatusTimeline 
           status={allRejected ? "Цуцлагдсан" : (first.status?.name || "")} 
           isFinal={first.status?.isFinal} 
+          wantsDelivery={wantsDelivery}
+          deliveryDate={deliveryDate}
           deliveryScheduleDays={deliveryScheduleDays}
           noticeInTransitTitle={settings?.notice_in_transit_title}
           noticeInTransitText={settings?.notice_in_transit_text}

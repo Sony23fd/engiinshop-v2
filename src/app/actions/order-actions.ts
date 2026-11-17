@@ -223,7 +223,7 @@ export async function getDeliveredOrders(days: number = 30, page: number = 1, li
   }
 }
 
-export async function getDeliveryOrders(date?: string) {
+export async function getDeliveryOrders(date?: string, tab: string = "ready") {
   try {
     const whereClause: any = {
       paymentStatus: "CONFIRMED", // Must be confirmed by Main Admin first
@@ -257,7 +257,7 @@ export async function getDeliveryOrders(date?: string) {
       ]
     }
 
-    const orders = await (db.order as any).findMany({
+    const allOrders = await (db.order as any).findMany({
       where: whereClause,
       include: {
         batch: { include: { product: true, category: true } },
@@ -265,9 +265,114 @@ export async function getDeliveryOrders(date?: string) {
       },
       orderBy: { updatedAt: "desc" }
     })
-    return { success: true, orders: JSON.parse(JSON.stringify(orders)) }
+
+    const readyOrders = allOrders.filter((o: any) => 
+      !o.status?.name?.toLowerCase().includes("ажилтанд өгсөн") && 
+      !o.status?.name?.toLowerCase().includes("хүргэлтэд гарсан")
+    )
+    const inTransitOrders = allOrders.filter((o: any) => 
+      o.status?.name?.toLowerCase().includes("ажилтанд өгсөн") || 
+      o.status?.name?.toLowerCase().includes("хүргэлтэд гарсан")
+    )
+
+    let filteredOrders = allOrders
+    if (tab === "ready") {
+      filteredOrders = readyOrders
+    } else if (tab === "in_transit") {
+      filteredOrders = inTransitOrders
+    }
+
+    return { 
+      success: true, 
+      orders: JSON.parse(JSON.stringify(filteredOrders)),
+      readyCount: readyOrders.length,
+      inTransitCount: inTransitOrders.length
+    }
   } catch (error: any) {
-    return { success: false, error: error.message, orders: [] }
+    return { success: false, error: error.message, orders: [], readyCount: 0, inTransitCount: 0 }
+  }
+}
+
+export async function handoverOrdersToCourier(orderIds: string[]) {
+  try {
+    const adminMode = await getCurrentAdmin()
+    if (!adminMode) return { success: false, error: "Хандах эрхгүй" }
+
+    const courierStatus = await db.orderStatusType.findFirst({
+      where: {
+        name: { in: ["Хүргэлтийн ажилтанд өгсөн", "Хүргэлтэд гарсан"] }
+      }
+    })
+    if (!courierStatus) return { success: false, error: "'Хүргэлтийн ажилтанд өгсөн' статус олдсонгүй" }
+
+    await db.order.updateMany({
+      where: { id: { in: orderIds } },
+      data: { statusId: courierStatus.id } as any
+    })
+
+    await logActivity({
+      userId: adminMode.id,
+      userName: adminMode.name || "Карго Админ",
+      userRole: adminMode.role,
+      action: "Хүргэлтийн ажилтанд өгөв",
+      target: "Захиалгууд",
+      detail: `${orderIds.length} ширхэг ачааг хүргэлтийн ажилтанд хүлээлгэн өгөв.`,
+    })
+
+    await logAdminActivity({
+      action: "ХҮРГЭЛТИЙН_АЖИЛТАНД_ӨГСӨН",
+      type: "ORDER",
+      target: `${orderIds.length} ширхэг ачаа`,
+      targetUrl: `/admin/orders/delivery?tab=in_transit`,
+      detail: `${orderIds.length} ширхэг захиалгыг хүргэлтийн ажилтанд хүлээлгэн өгөв (Хүргэлтэд гарсан).`,
+      userId: adminMode.id,
+      userName: adminMode.name || "Админ",
+      userRole: adminMode.role
+    })
+
+    revalidatePath("/admin/orders/delivery")
+    revalidatePath("/track")
+    return { success: true }
+  } catch (err: any) {
+    console.error("handoverOrdersToCourier error:", err)
+    return { success: false, error: err.message }
+  }
+}
+
+export async function revertCourierHandover(orderIds: string[]) {
+  try {
+    const adminMode = await getCurrentAdmin()
+    if (!adminMode) return { success: false, error: "Хандах эрхгүй" }
+
+    const ubStatus = await db.orderStatusType.findFirst({
+      where: {
+        name: { in: ["Улаанбаатарт ирсэн"] }
+      }
+    })
+    if (!ubStatus) return { success: false, error: "'Улаанбаатарт ирсэн' статус олдсонгүй" }
+
+    await db.order.updateMany({
+      where: { id: { in: orderIds } },
+      data: { statusId: ubStatus.id } as any
+    })
+
+    await logAdminActivity({
+      action: "ХҮРГЭЛТЭЭС_БУЦААСАН",
+      type: "ORDER",
+      target: `${orderIds.length} ширхэг ачаа`,
+      targetUrl: `/admin/orders/delivery?tab=ready`,
+      detail: `${orderIds.length} ширхэг захиалгыг хүргэлтээс буцааж 'Улаанбаатарт ирсэн' төлөвт шилжүүлэв.`,
+      userId: adminMode.id,
+      userName: adminMode.name || "Админ",
+      userRole: adminMode.role
+    })
+
+    revalidatePath("/admin/orders/delivery")
+    revalidatePath("/track")
+    return { success: true }
+  } catch (err: any) {
+    console.error("revertCourierHandover error:", err)
+    return { success: false, error: err.message }
   }
 }
 
@@ -278,12 +383,12 @@ export async function confirmDeliveryGroup(orderIds: string[]) {
 
     const deliveredStatus = await db.orderStatusType.findFirst({
       where: {
-        name: { in: ["Хүргэлтээр гарсан", "Хүргэлтээр авсан", "Хүргэгдсэн"] },
+        name: { in: ["Хүргэгдсэн", "Хүргэлтээр гарсан", "Хүргэлтээр авсан"] },
         isFinal: true
       }
     }) || await db.orderStatusType.findFirst({
       where: {
-        name: { in: ["Хүргэлтээр гарсан", "Хүргэлтээр авсан", "Хүргэгдсэн"] }
+        name: { in: ["Хүргэгдсэн", "Хүргэлтээр гарсан", "Хүргэлтээр авсан"] }
       }
     })
     if (!deliveredStatus) return { success: false, error: "Хүргэлтийн төлөв олдсонгүй" }
@@ -300,6 +405,17 @@ export async function confirmDeliveryGroup(orderIds: string[]) {
       action: "Хүргэлт баталгаажуулав",
       target: "Захиалгууд",
       detail: `${orderIds.length} ширхэг захиалгыг хүргэгдсэн гэж хүлээн авлаа`,
+    })
+
+    await logAdminActivity({
+      action: "ХҮРГЭЛТ_БАТАЛГААЖУУЛСАН",
+      type: "ORDER",
+      target: `${orderIds.length} ширхэг ачаа`,
+      targetUrl: `/admin/orders/delivered`,
+      detail: `${orderIds.length} ширхэг захиалгыг 'Хүргэгдсэн' болгож батлав.`,
+      userId: adminMode.id,
+      userName: adminMode.name || "Админ",
+      userRole: adminMode.role
     })
 
     revalidatePath("/admin/orders/delivery")
