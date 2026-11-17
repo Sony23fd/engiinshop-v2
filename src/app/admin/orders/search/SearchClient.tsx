@@ -1,10 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Search, Loader2, Package } from "lucide-react"
+import { Search, Loader2, Package, Tag } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { searchOrders, updateOrderStatus } from "@/app/actions/order-actions"
+import { formatSelectedOptions } from "@/lib/variant-utils"
 import {
   Table,
   TableBody,
@@ -314,9 +315,15 @@ export default function SearchClient({ statuses }: { statuses: any[] }) {
                         <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
                           {/* Product Info */}
                           <div className="md:col-span-5 flex flex-col cursor-pointer" onClick={() => toggleOrderSelection(groupKey, order.id)}>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-semibold text-slate-800 line-clamp-1">{order.batch?.product?.name}</span>
                               <span className="text-slate-400 text-xs font-mono bg-slate-100 px-1 rounded">#{order.orderNumber}</span>
+                              {order.selectedOptions && Object.keys(order.selectedOptions).length > 0 && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                  <Tag className="w-3 h-3 text-indigo-500" />
+                                  {formatSelectedOptions(order.selectedOptions)}
+                                </span>
+                              )}
                             </div>
                             <span className="text-xs font-semibold text-slate-500 mt-1 uppercase tracking-wider">{order.quantity} ширхэг</span>
                           </div>

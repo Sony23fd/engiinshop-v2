@@ -220,3 +220,97 @@ export function getVariantImageUrl(
   return defaultImageUrl ?? null
 }
 
+/**
+ * Formats a selectedOptions object into a human-readable string.
+ * Example: { "Size": "L", "Өнгө": "Хар" } => "Size: L, Өнгө: Хар"
+ */
+export function formatSelectedOptions(selectedOptions: any): string {
+  if (!selectedOptions) return ""
+  if (typeof selectedOptions === "string") return selectedOptions
+  if (typeof selectedOptions !== "object") return String(selectedOptions)
+
+  const entries = Object.entries(selectedOptions)
+    .filter(([_, v]) => v !== undefined && v !== null && String(v).trim() !== "")
+  
+  if (entries.length === 0) return ""
+  
+  // If only 1 option and its name is generic (e.g. "Size", "Хэмжээ", "Сонголт"), show "Size: XL" or just the value
+  return entries.map(([k, v]) => `${k}: ${v}`).join(", ")
+}
+
+export interface VariantSummaryItem {
+  key: string
+  label: string
+  orderCount: number
+  totalQuantity: number
+  percentage: number
+}
+
+export interface VariantBreakdown {
+  items: VariantSummaryItem[]
+  totalOrders: number
+  totalQuantity: number
+  hasVariants: boolean
+}
+
+/**
+ * Analyzes orders for a batch/product and aggregates quantity and count for each variant/size.
+ */
+export function getVariantBreakdown(orders: any[], productOptions?: any): VariantBreakdown {
+  if (!Array.isArray(orders) || orders.length === 0) {
+    return { items: [], totalOrders: 0, totalQuantity: 0, hasVariants: false }
+  }
+
+  const normOptions = normalizeOptions(productOptions)
+  const map: Record<string, { label: string; orderCount: number; totalQuantity: number }> = {}
+  let totalOrders = 0
+  let totalQuantity = 0
+  let hasVariants = false
+
+  for (const order of orders) {
+    const qty = Number(order.quantity || 1)
+    totalOrders += 1
+    totalQuantity += qty
+
+    const selected = order.selectedOptions
+    let key = "standard"
+    let label = "Энгийн (Сонголтгүй)"
+
+    if (selected && typeof selected === "object" && Object.keys(selected).length > 0) {
+      hasVariants = true
+      const canonicalKey = getVariantKey(normOptions, selected) || formatSelectedOptions(selected)
+      key = canonicalKey || "standard"
+      label = formatSelectedOptions(selected) || canonicalKey
+    }
+
+    if (!map[key]) {
+      map[key] = { label, orderCount: 0, totalQuantity: 0 }
+    }
+    map[key].orderCount += 1
+    map[key].totalQuantity += qty
+  }
+
+  const items: VariantSummaryItem[] = Object.entries(map).map(([k, val]) => ({
+    key: k,
+    label: val.label,
+    orderCount: val.orderCount,
+    totalQuantity: val.totalQuantity,
+    percentage: totalQuantity > 0 ? Math.round((val.totalQuantity / totalQuantity) * 100) : 0
+  }))
+
+  // Sort: highest quantity first, or standard last
+  items.sort((a, b) => {
+    if (a.key === "standard") return 1
+    if (b.key === "standard") return -1
+    return b.totalQuantity - a.totalQuantity
+  })
+
+  return {
+    items,
+    totalOrders,
+    totalQuantity,
+    hasVariants: hasVariants || normOptions.length > 0
+  }
+}
+
+

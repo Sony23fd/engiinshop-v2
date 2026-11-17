@@ -1,12 +1,13 @@
 import { db } from "@/lib/db"
 import { notFound } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Search, Plus, Package, ClipboardList } from "lucide-react"
+import { Search, Plus, Package, ClipboardList, Tag } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { getBatchById } from "@/app/actions/batch-actions"
 import { getOrderStatuses } from "@/app/actions/order-actions"
 import { StatusBadge } from "@/components/admin/StatusBadge"
 import { getCurrentAdmin } from "@/lib/auth"
+import { normalizeOptions } from "@/lib/variant-utils"
 import { 
   Sheet, 
   SheetContent, 
@@ -37,6 +38,7 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ ba
   
   const activeOrders = validOrders.filter((o: any) => !o.status?.isFinal)
   const activeQuantity = activeOrders.reduce((sum: number, o: any) => sum + o.quantity, 0)
+  const normOptions = normalizeOptions(batch.product?.options)
 
   return (
     <div className="w-full bg-[#fafafa] min-h-screen p-4 md:p-8 space-y-6">
@@ -82,6 +84,12 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ ba
               <form action={async (formData) => {
                 "use server"
                 const { addOrderToBatch } = await import("@/app/actions/order-actions")
+                const selectedOptions: Record<string, string> = {}
+                for (const opt of normOptions) {
+                  const val = formData.get(`option_${opt.name}`) as string
+                  if (val) selectedOptions[opt.name] = val
+                }
+
                 const res = await addOrderToBatch(batch.id, {
                   customerName: formData.get("customerName") as string,
                   customerPhone: formData.get("customerPhone") as string,
@@ -91,6 +99,7 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ ba
                   deliveryDate: formData.get("deliveryDate") as string,
                   deliveryAddress: formData.get("deliveryAddress") as string,
                   statusId: formData.get("statusId") as string,
+                  selectedOptions: Object.keys(selectedOptions).length > 0 ? selectedOptions : undefined
                 })
                 
                 if (!res.success) {
@@ -109,6 +118,29 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ ba
                   <label htmlFor="customerPhone" className="text-sm font-medium block">Утасны дугаар</label>
                   <Input id="customerPhone" name="customerPhone" required placeholder="Утас..." />
                 </div>
+
+                {normOptions.length > 0 && (
+                  <div className="p-3 bg-indigo-50/50 rounded-lg border border-indigo-100 space-y-3">
+                    <p className="text-xs font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <Tag className="w-3.5 h-3.5 text-indigo-600" />
+                      Сонголт / Size сонгох
+                    </p>
+                    {normOptions.map((opt) => (
+                      <div key={opt.name} className="space-y-1">
+                        <label className="text-xs font-semibold text-slate-700 block">{opt.name}</label>
+                        <select
+                          name={`option_${opt.name}`}
+                          className="flex h-9 w-full rounded-md border border-slate-200 bg-white px-3 py-1 text-sm focus:outline-none focus:border-indigo-500"
+                          required
+                        >
+                          {opt.values.map((val) => (
+                            <option key={val} value={val}>{val}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">

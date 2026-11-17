@@ -1,8 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { User, Truck, Box } from "lucide-react"
+import { User, Truck, Box, Tag } from "lucide-react"
 import { GroupDeliveryActions } from "./GroupDeliveryActions"
+import { formatSelectedOptions } from "@/lib/variant-utils"
 
 export function DeliveryGroupCard({ groupOrders }: { groupOrders: any[] }) {
   const [selectedIds, setSelectedIds] = useState<string[]>(groupOrders.map(o => o.id))
@@ -91,6 +92,12 @@ export function DeliveryGroupCard({ groupOrders }: { groupOrders: any[] }) {
                 <div className="flex items-center gap-3 flex-wrap">
                   <span className="font-semibold text-slate-800">{order.batch?.product?.name}</span>
                   <span className="text-slate-400 text-sm">#{order.orderNumber}</span>
+                  {order.selectedOptions && Object.keys(order.selectedOptions).length > 0 && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      <Tag className="w-3 h-3 text-indigo-500" />
+                      {formatSelectedOptions(order.selectedOptions)}
+                    </span>
+                  )}
                   <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${isOutForDelivery ? "bg-indigo-50 text-indigo-700 border-indigo-200" : "bg-amber-50 text-amber-700 border-amber-200"}`}>
                     {order.status?.name}
                   </span>

@@ -730,11 +730,13 @@ export async function addOrderToBatch(batchId: string, data: {
   deliveryAddress?: string
   statusId?: string
   cargoFee?: number
+  selectedOptions?: any
 }) {
   try {
     const result = await db.$transaction(async (tx) => {
       const batch = await tx.batch.findUnique({
-        where: { id: batchId }
+        where: { id: batchId },
+        include: { product: true }
       });
       if (!batch) throw new Error("Batch not found");
 
@@ -761,15 +763,31 @@ export async function addOrderToBatch(batchId: string, data: {
           ...(data.cargoFee !== undefined && { cargoFee: data.cargoFee }),
           ...(data.arrivalDate && { arrivalDate: new Date(data.arrivalDate) }),
           ...(data.deliveryDate && { deliveryDate: new Date(data.deliveryDate) }),
+          ...(data.selectedOptions && { selectedOptions: data.selectedOptions }),
         } as any
       });
 
       // Update remaining quantity in batch
+      const newRemaining = Math.max(0, batch.remainingQuantity - data.quantity);
+      let newVariantStock = batch.variantStock;
+
+      if (batch.variantStock && typeof batch.variantStock === "object" && data.selectedOptions) {
+        const variantKey = getVariantKey(batch.product?.options, data.selectedOptions);
+        if (variantKey) {
+          const vStock = { ...(batch.variantStock as Record<string, number>) };
+          if (vStock[variantKey] !== undefined) {
+            vStock[variantKey] = Math.max(0, vStock[variantKey] - data.quantity);
+            newVariantStock = vStock;
+          }
+        }
+      }
+
       await tx.batch.update({
         where: { id: batchId },
         data: {
-          remainingQuantity: Math.max(0, batch.remainingQuantity - data.quantity)
-        }
+          remainingQuantity: newRemaining,
+          ...(newVariantStock && { variantStock: newVariantStock })
+        } as any
       });
 
       return { order, categoryId: batch.categoryId };
@@ -1039,7 +1057,8 @@ export async function updateOrderDetails(orderId: string, data: any) {
           quantity: data.quantity,
           totalAmount: data.totalAmount,
           accountNumber: data.accountNumber,
-          cargoFee: data.cargoFee
+          cargoFee: data.cargoFee,
+          ...(data.selectedOptions !== undefined && { selectedOptions: data.selectedOptions })
         } as any
       })
     })

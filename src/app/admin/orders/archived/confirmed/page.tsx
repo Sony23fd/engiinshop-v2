@@ -1,9 +1,10 @@
 import { getArchivedConfirmedOrders } from "@/app/actions/order-actions"
-import { CheckCircle, Package, Truck, User, ChevronLeft, ChevronRight } from "lucide-react"
+import { CheckCircle, Package, Truck, User, ChevronLeft, ChevronRight, Tag } from "lucide-react"
 import { ListSearchFilter } from "@/components/admin/ListSearchFilter"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { OrderStatusTimeline } from "@/components/OrderStatusTimeline"
+import { formatSelectedOptions } from "@/lib/variant-utils"
 
 export const dynamic = "force-dynamic"
 
@@ -111,6 +112,12 @@ export default async function ConfirmedOrdersArchivePage({
                               {order.batch?.product?.name}
                             </Link>
                             <span className="text-slate-400 text-sm">#{order.orderNumber}</span>
+                            {order.selectedOptions && Object.keys(order.selectedOptions).length > 0 && (
+                              <span className="text-[11px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md border border-indigo-200 font-bold flex items-center gap-1">
+                                <Tag className="w-2.5 h-2.5 text-indigo-500" />
+                                {formatSelectedOptions(order.selectedOptions)}
+                              </span>
+                            )}
                             {order.status && (
                               <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">
                                 {order.status.name}

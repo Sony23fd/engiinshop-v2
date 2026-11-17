@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import * as XLSX from "xlsx"
 import { getCurrentAdmin } from "@/lib/auth"
+import { formatSelectedOptions } from "@/lib/variant-utils"
 
 export async function GET(req: NextRequest) {
   try {
@@ -45,11 +46,13 @@ export async function GET(req: NextRequest) {
 
     const rows = orders.map((o) => ({
       "Барааны нэр": o.batch?.product?.name ?? "",
+      "Сонголт / Size": formatSelectedOptions(o.selectedOptions),
       "Захиалгын дугаар": o.orderNumber,
       "Нэр": o.customerName,
       "Утасны дугаар": o.customerPhone ?? "",
       "Дансны дугаар": o.accountNumber ?? "",
       "Тоо": o.quantity,
+      "Захиалсан огноо": new Date(o.createdAt).toLocaleDateString("mn-MN"),
       "Ирэх өдөр": o.arrivalDate ? new Date(o.arrivalDate).toISOString().split("T")[0] : "",
       "Хүргүүлэх өдөр": o.deliveryDate ? new Date(o.deliveryDate).toISOString().split("T")[0] : "",
       "Статус": o.status?.name ?? "",
@@ -61,12 +64,14 @@ export async function GET(req: NextRequest) {
     const ws = XLSX.utils.json_to_sheet(rows)
 
     ws["!cols"] = [
-      { wch: 20 }, // Барааны нэр
+      { wch: 22 }, // Барааны нэр
+      { wch: 20 }, // Сонголт / Size
       { wch: 16 }, // Захиалгын дугаар
       { wch: 18 }, // Нэр
       { wch: 14 }, // Утас
       { wch: 16 }, // Дансны дугаар
       { wch: 6  }, // Тоо
+      { wch: 14 }, // Захиалсан огноо
       { wch: 12 }, // Ирэх өдөр
       { wch: 14 }, // Хүргүүлэх өдөр
       { wch: 22 }, // Статус

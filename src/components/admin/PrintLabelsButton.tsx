@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Printer } from "lucide-react"
+import { formatSelectedOptions } from "@/lib/variant-utils"
 
 export function PrintLabelsButton({ orders }: { orders: any[] }) {
   const handlePrint = () => {
@@ -51,6 +52,8 @@ export function PrintLabelsButton({ orders }: { orders: any[] }) {
       const customCargoFee = Number(order.cargoFee || 0)
       const finalCargoFee = customCargoFee > 0 ? customCargoFee * Number(order.quantity || 1) : unitCargoFee * Number(order.quantity || 1)
       
+      const optionsText = formatSelectedOptions(order.selectedOptions);
+      
       return `
         <div class="label">
           <div class="header">
@@ -59,7 +62,8 @@ export function PrintLabelsButton({ orders }: { orders: any[] }) {
           </div>
           <div class="content">
             <div class="bold" style="font-size: 18px; margin-bottom: 5px;">📞 ${order.customerPhone}</div>
-            <div style="font-size: 12px; color: #333; max-height: 36px; overflow: hidden;">${order.batch?.product?.name || ""}</div>
+            <div style="font-size: 12px; color: #333; max-height: 28px; overflow: hidden; font-weight: 500;">${order.batch?.product?.name || ""}</div>
+            ${optionsText ? `<div style="font-size: 12px; font-weight: bold; color: #1e1b4b; background: #e0e7ff; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 4px;">🏷️ ${optionsText}</div>` : ''}
           </div>
           <div class="footer">
             <div class="cargo">Карго: ₮${finalCargoFee.toLocaleString()}</div>
