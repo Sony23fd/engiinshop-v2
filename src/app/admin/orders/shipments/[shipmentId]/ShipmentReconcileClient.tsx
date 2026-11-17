@@ -76,6 +76,13 @@ interface ShipmentDetail {
   dispatchedAt: Date | string
   arrivedAt: Date | string | null
   createdBy: string | null
+  carrierName?: string | null
+  waybillNumber?: string | null
+  boxCount?: number | null
+  totalWeight?: any | null
+  shippingCost?: any | null
+  costCurrency?: string | null
+  receiptImageUrl?: string | null
   orders: ShipmentDetailOrder[]
 }
 
@@ -96,6 +103,9 @@ export function ShipmentReconcileClient({
   const [scanInput, setScanInput] = useState("")
   const [lastScannedOrder, setLastScannedOrder] = useState<number | null>(null)
   const scanInputRef = useRef<HTMLInputElement>(null)
+
+  // Preview lightbox for cargo receipt photo
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
 
   // Search filter
   const [searchFilter, setSearchFilter] = useState("")
@@ -398,8 +408,48 @@ export function ShipmentReconcileClient({
 
   return (
     <div className="space-y-6">
+      {/* Printable Packing Slip Header (Only visible when printing) */}
+      <div className="hidden print:block mb-6 border-b-2 border-black pb-4">
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-xl font-black text-black tracking-tight">
+              КАРГО АЧИЛТЫН ДАГАЛДАХ ХУУДАС (PACKING SLIP)
+            </h1>
+            <p className="text-sm font-bold text-gray-800 mt-1">
+              {shipment.name} • Код: <span className="font-mono">{shipment.code}</span>
+            </p>
+          </div>
+          <div className="text-right text-xs text-gray-700">
+            <p>Илгээсэн: <b>{new Date(shipment.dispatchedAt).toLocaleDateString("mn-MN")}</b></p>
+            <p>Бүртгэсэн: <b>{shipment.createdBy || "Admin"}</b></p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-4 gap-3 mt-4 pt-3 border-t border-gray-300 text-xs">
+          <div>
+            <span className="text-gray-500 block">Карго тээвэр:</span>
+            <b className="text-sm text-black">{shipment.carrierName || "Тодорхойгүй"}</b>
+          </div>
+          <div>
+            <span className="text-gray-500 block">Waybill / Tracking:</span>
+            <b className="text-sm font-mono text-black">{shipment.waybillNumber || "—"}</b>
+          </div>
+          <div>
+            <span className="text-gray-500 block">Хайрцгийн тоо:</span>
+            <b className="text-sm text-black">{shipment.boxCount || 1} хайрцаг</b>
+          </div>
+          <div>
+            <span className="text-gray-500 block">Жин / Зардал:</span>
+            <b className="text-sm text-black">
+              {shipment.totalWeight ? `${Number(shipment.totalWeight).toFixed(1)} кг` : "—"} /{" "}
+              {shipment.shippingCost ? `${Number(shipment.shippingCost).toLocaleString()} ${shipment.costCurrency || "KRW"}` : "—"}
+            </b>
+          </div>
+        </div>
+      </div>
+
       {/* Top Breadcrumb & Print */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 print:hidden">
         <Link
           href="/admin/orders/shipments"
           className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors"
@@ -434,7 +484,7 @@ export function ShipmentReconcileClient({
       </div>
 
       {/* Shipment Summary Card */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs space-y-5">
+      <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs space-y-5 print:border-none print:shadow-none print:p-0">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
@@ -488,8 +538,69 @@ export function ShipmentReconcileClient({
           </div>
         </div>
 
+        {/* Carrier & Waybill Audit Details */}
+        {(shipment.carrierName || shipment.waybillNumber || shipment.receiptImageUrl || shipment.totalWeight || shipment.shippingCost) && (
+          <div className="pt-3 border-t border-slate-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              {shipment.carrierName && (
+                <div className="flex items-center gap-1.5 bg-indigo-50 border border-indigo-200/80 px-2.5 py-1 rounded-lg">
+                  <Truck className="w-3.5 h-3.5 text-indigo-600" />
+                  <span className="text-xs font-black text-indigo-950">{shipment.carrierName}</span>
+                </div>
+              )}
+              {shipment.waybillNumber && (
+                <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 py-1 rounded-lg">
+                  <span className="text-[10px] text-slate-400 font-bold">Waybill:</span>
+                  <span className="font-mono text-xs font-black text-slate-900 select-all">{shipment.waybillNumber}</span>
+                </div>
+              )}
+              {shipment.boxCount && (
+                <div className="flex items-center gap-1 text-xs text-slate-700 bg-white border border-slate-200 px-2.5 py-1 rounded-lg font-medium">
+                  <Package className="w-3.5 h-3.5 text-slate-400" />
+                  <span><b>{shipment.boxCount}</b> хайрцаг</span>
+                </div>
+              )}
+              {shipment.totalWeight && (
+                <div className="text-xs text-slate-700 bg-white border border-slate-200 px-2.5 py-1 rounded-lg font-medium">
+                  Жин: <b>{Number(shipment.totalWeight).toFixed(1)} кг</b>
+                </div>
+              )}
+              {shipment.shippingCost && (
+                <div className="text-xs text-slate-700 bg-white border border-slate-200 px-2.5 py-1 rounded-lg font-medium">
+                  Карго зардал: <b>{Number(shipment.shippingCost).toLocaleString()} {shipment.costCurrency || "KRW"}</b>
+                </div>
+              )}
+            </div>
+
+            {shipment.receiptImageUrl && (
+              <button
+                type="button"
+                onClick={() => setPreviewImage(shipment.receiptImageUrl!)}
+                className="group relative flex items-center gap-2 px-2.5 py-1.5 bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-lg transition-all shrink-0 cursor-pointer text-left shadow-2xs"
+                title="Баримтын зургийг томоор үзэх"
+              >
+                <div className="relative w-8 h-8 rounded overflow-hidden border bg-slate-100 shrink-0">
+                  <Image
+                    src={shipment.receiptImageUrl}
+                    alt="Cargo Receipt"
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform"
+                  />
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold text-slate-800 group-hover:text-indigo-600 flex items-center gap-1">
+                    Карго баримт
+                    <ExternalLink className="w-3 h-3 text-slate-400" />
+                  </p>
+                  <p className="text-[9px] text-slate-400">Томоор үзэх</p>
+                </div>
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Progress Bar */}
-        <div className="space-y-1.5 pt-2 border-t border-slate-100">
+        <div className="space-y-1.5 pt-2 border-t border-slate-100 print:hidden">
           <div className="flex items-center justify-between text-xs">
             <span className="font-bold text-slate-700">
               Хүлээн авалтын явц: <b>{arrivedCount}</b> / {totalCount} бараа ({percent}%)
@@ -509,10 +620,45 @@ export function ShipmentReconcileClient({
         </div>
       </div>
 
+      {/* Lightbox Dialog for Cargo Receipt Photo */}
+      {previewImage && (
+        <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
+          <DialogContent className="w-[96vw] max-w-4xl max-h-[92vh] flex flex-col p-4 bg-white rounded-2xl overflow-hidden">
+            <div className="flex items-center justify-between pb-3 border-b">
+              <DialogTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Truck className="w-4 h-4 text-indigo-600" />
+                Каргоны Баримтын Зураг / Waybill
+              </DialogTitle>
+            </div>
+            <div className="relative flex-1 min-h-[300px] max-h-[75vh] w-full mt-3 rounded-xl overflow-hidden bg-slate-900/5 border flex items-center justify-center">
+              <Image
+                src={previewImage}
+                alt="Waybill / Receipt"
+                fill
+                className="object-contain"
+                sizes="(max-width: 1200px) 100vw, 1200px"
+              />
+            </div>
+            <div className="pt-3 flex justify-between items-center text-xs text-slate-500">
+              <span>{shipment.carrierName} {shipment.waybillNumber ? `• Waybill: ${shipment.waybillNumber}` : ""}</span>
+              <a
+                href={previewImage}
+                target="_blank"
+                rel="noreferrer"
+                className="text-indigo-600 hover:underline font-semibold flex items-center gap-1"
+              >
+                Анхны файл татах
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
       {/* Notification Banner */}
       {notification && (
         <div
-          className={`p-4 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-between gap-3 animate-in fade-in ${
+          className={`p-4 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-between gap-3 animate-in fade-in print:hidden ${
             notification.type === "success"
               ? "bg-emerald-50 border border-emerald-200 text-emerald-900"
               : "bg-rose-50 border border-rose-200 text-rose-900"
@@ -537,7 +683,7 @@ export function ShipmentReconcileClient({
       )}
 
       {/* ACTION BAR: One-Click Receive & Barcode Scanner */}
-      <div className="bg-gradient-to-r from-indigo-900 to-indigo-800 p-5 rounded-2xl text-white shadow-md space-y-4">
+      <div className="bg-gradient-to-r from-indigo-900 to-indigo-800 p-5 rounded-2xl text-white shadow-md space-y-4 print:hidden">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h3 className="text-base font-black flex items-center gap-2">
@@ -619,7 +765,7 @@ export function ShipmentReconcileClient({
 
       {/* Multi-select Action Bar (when rows are checked) */}
       {selectedCount > 0 && (
-        <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl flex items-center justify-between gap-3 animate-in fade-in">
+        <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl flex items-center justify-between gap-3 animate-in fade-in print:hidden">
           <div className="flex items-center gap-2">
             <Badge className="bg-indigo-600 text-white font-bold text-xs">
               {selectedCount} сонгогдсон
@@ -662,15 +808,15 @@ export function ShipmentReconcileClient({
         <div className="p-4 border-b bg-slate-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-              <Package className="w-3.5 h-3.5 text-indigo-600" />
+              <Package className="w-3.5 h-3.5 text-indigo-600 print:text-black" />
               Ачилтанд Багтсан Барааны Жагсаалт
             </h3>
-            <p className="text-[11px] text-slate-500 mt-0.5">
+            <p className="text-[11px] text-slate-500 mt-0.5 print:hidden">
               Бараа бүр тус тусдаа төлөвтэй бөгөөд хэрэглэгчийн гар утсан дээр шууд харагдана
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 print:hidden">
             <Button
               type="button"
               variant="outline"
@@ -709,24 +855,31 @@ export function ShipmentReconcileClient({
                 >
                   {/* Left: Checkbox & Info */}
                   <div className="flex items-start gap-3.5 min-w-0 flex-1">
-                    {!isArrived ? (
-                      <button
-                        type="button"
-                        onClick={() => toggleRowSelect(o.id)}
-                        className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 mt-1 transition-colors ${
-                          isSelected
-                            ? "bg-indigo-600 border-indigo-600 text-white"
-                            : "border-slate-300 hover:border-indigo-500 bg-white"
-                        }`}
-                        title={isSelected ? "Сонгогдсон" : "Сонгох"}
-                      >
-                        {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                      </button>
-                    ) : (
-                      <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 mt-1">
-                        <Check className="w-3.5 h-3.5 stroke-[3]" />
-                      </div>
-                    )}
+                    {/* Print-only Check Square */}
+                    <div className="hidden print:flex w-5 h-5 border-2 border-black rounded shrink-0 mt-1 items-center justify-center font-bold text-xs text-black">
+                      {isArrived ? "✓" : ""}
+                    </div>
+
+                    <div className="print:hidden">
+                      {!isArrived ? (
+                        <button
+                          type="button"
+                          onClick={() => toggleRowSelect(o.id)}
+                          className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 mt-1 transition-colors ${
+                            isSelected
+                              ? "bg-indigo-600 border-indigo-600 text-white"
+                              : "border-slate-300 hover:border-indigo-500 bg-white"
+                          }`}
+                          title={isSelected ? "Сонгогдсон" : "Сонгох"}
+                        >
+                          {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                        </button>
+                      ) : (
+                        <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 mt-1">
+                          <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        </div>
+                      )}
+                    </div>
 
                     {/* Product Thumbnail */}
                     {o.batch?.product?.imageUrl ? (
@@ -812,7 +965,7 @@ export function ShipmentReconcileClient({
                         size="sm"
                         onClick={() => handleReceiveSingle(o.id)}
                         disabled={isPending}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-8 px-3 rounded-lg flex items-center gap-1 shadow-2xs"
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-8 px-3 rounded-lg flex items-center gap-1 shadow-2xs print:hidden"
                       >
                         <Check className="w-3.5 h-3.5" />
                         Хүлээн авах

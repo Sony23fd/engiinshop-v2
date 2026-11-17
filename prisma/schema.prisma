@@ -149,22 +149,30 @@ model Order {
 }
 
 model Shipment {
-  id            String    @id @default(cuid())
-  code          String    @unique
-  name          String
-  status        String    @default("IN_TRANSIT")
-  notes         String?
-  totalOrders   Int       @default(0)
-  arrivedOrders Int       @default(0)
-  dispatchedAt  DateTime  @default(now())
-  arrivedAt     DateTime?
-  createdBy     String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  orders        Order[]
+  id              String    @id @default(cuid())
+  code            String    @unique
+  name            String
+  status          String    @default("IN_TRANSIT")
+  notes           String?
+  carrierName     String?
+  waybillNumber   String?
+  boxCount        Int       @default(1)
+  totalWeight     Decimal?  @default(0.0)
+  shippingCost    Decimal?  @default(0)
+  costCurrency    String    @default("KRW")
+  receiptImageUrl String?
+  totalOrders     Int       @default(0)
+  arrivedOrders   Int       @default(0)
+  dispatchedAt    DateTime  @default(now())
+  arrivedAt       DateTime?
+  createdBy       String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  orders          Order[]
 
   @@index([status])
   @@index([createdAt])
+  @@index([waybillNumber])
 }
 
 model ShopSettings {

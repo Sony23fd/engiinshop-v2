@@ -20,15 +20,24 @@ function generateShipmentCode(): string {
   return `SHP-${yyyy}${mm}${dd}-${rand}`
 }
 
-/**
- * Creates a cargo shipment manifest and sets included orders to "Солонгосоос хөдөлсөн".
- */
-export async function createShipmentManifest(data: {
+export interface CreateShipmentManifestInput {
   name: string
   code?: string
   orderIds: string[]
   notes?: string
-}) {
+  carrierName?: string
+  waybillNumber?: string
+  boxCount?: number
+  totalWeight?: number
+  shippingCost?: number
+  costCurrency?: string
+  receiptImageUrl?: string
+}
+
+/**
+ * Creates a cargo shipment manifest and sets included orders to "Солонгосоос хөдөлсөн".
+ */
+export async function createShipmentManifest(data: CreateShipmentManifestInput) {
   try {
     const admin = await getCurrentAdmin()
     if (!admin) {
@@ -72,13 +81,20 @@ export async function createShipmentManifest(data: {
     const shipmentCode = (data.code || "").trim() || generateShipmentCode()
 
     const result = await db.$transaction(async (tx) => {
-      // Create shipment
+      // Create shipment with carrier & audit info
       const shipment = await tx.shipment.create({
         data: {
           code: shipmentCode,
           name: trimmedName,
           status: "IN_TRANSIT",
           notes: data.notes?.trim() || null,
+          carrierName: data.carrierName?.trim() || null,
+          waybillNumber: data.waybillNumber?.trim() || null,
+          boxCount: typeof data.boxCount === "number" && data.boxCount > 0 ? data.boxCount : 1,
+          totalWeight: data.totalWeight ? Number(data.totalWeight) : null,
+          shippingCost: data.shippingCost ? Number(data.shippingCost) : null,
+          costCurrency: data.costCurrency || "KRW",
+          receiptImageUrl: data.receiptImageUrl?.trim() || null,
           totalOrders: orders.length,
           arrivedOrders: 0,
           dispatchedAt: new Date(),
@@ -100,7 +116,7 @@ export async function createShipmentManifest(data: {
         userId: admin.id,
         userName: admin.name || "Admin",
         userRole: admin.role,
-        action: `Карго ачилт үүсгэлээ: ${shipment.name} (${shipment.code}) - Нийт ${orders.length} бараа "Солонгосоос хөдөлсөн" төлөвт шилжив`,
+        action: `Карго ачилт үүсгэлээ: ${shipment.name} (${shipment.code}) - ${data.carrierName ? `[${data.carrierName}] ` : ""}${orders.length} бараа "Солонгосоос хөдөлсөн" төлөвт шилжив`,
         type: "ORDER",
         target: shipment.id,
         targetUrl: `/admin/orders/shipments/${shipment.id}`,
@@ -210,6 +226,50 @@ export async function getShipmentDetails(shipmentId: string) {
   } catch (error: any) {
     console.error("Error fetching shipment details:", error)
     return { success: false, error: error.message }
+  }
+}
+
+/**
+ * Updates carrier and logistic audit info for an existing shipment.
+ */
+export async function updateShipmentCarrierInfo(data: {
+  shipmentId: string
+  carrierName?: string
+  waybillNumber?: string
+  boxCount?: number
+  totalWeight?: number
+  shippingCost?: number
+  costCurrency?: string
+  receiptImageUrl?: string
+  notes?: string
+}) {
+  try {
+    const admin = await getCurrentAdmin()
+    if (!admin) {
+      return { success: false, error: "Зөвхөн админ хэрэглэгч ачилтын мэдээлэл шинэчлэх эрхтэй." }
+    }
+
+    const updated = await db.shipment.update({
+      where: { id: data.shipmentId },
+      data: {
+        ...(data.carrierName !== undefined ? { carrierName: data.carrierName.trim() || null } : {}),
+        ...(data.waybillNumber !== undefined ? { waybillNumber: data.waybillNumber.trim() || null } : {}),
+        ...(data.boxCount !== undefined ? { boxCount: Math.max(1, Number(data.boxCount) || 1) } : {}),
+        ...(data.totalWeight !== undefined ? { totalWeight: data.totalWeight ? Number(data.totalWeight) : null } : {}),
+        ...(data.shippingCost !== undefined ? { shippingCost: data.shippingCost ? Number(data.shippingCost) : null } : {}),
+        ...(data.costCurrency !== undefined ? { costCurrency: data.costCurrency } : {}),
+        ...(data.receiptImageUrl !== undefined ? { receiptImageUrl: data.receiptImageUrl.trim() || null } : {}),
+        ...(data.notes !== undefined ? { notes: data.notes.trim() || null } : {}),
+      }
+    })
+
+    revalidatePath("/admin/orders/shipments")
+    revalidatePath(`/admin/orders/shipments/${data.shipmentId}`)
+
+    return { success: true, shipment: updated }
+  } catch (error: any) {
+    console.error("Error updating shipment carrier info:", error)
+    return { success: false, error: error.message || "Ачилтын мэдээлэл шинэчлэхэд алдаа гарлаа." }
   }
 }
 

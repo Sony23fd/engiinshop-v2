@@ -285,7 +285,7 @@ export function GlobalAddOrderModal({
 
           <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
             {/* Scrollable Form Body */}
-            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden p-5 sm:p-6 space-y-5">
           {/* Section 1: Customer Details */}
           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/80 space-y-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">

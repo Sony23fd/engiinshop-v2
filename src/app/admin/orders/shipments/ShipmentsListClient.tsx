@@ -13,8 +13,10 @@ import {
   Calendar,
   Filter,
   Plus,
-  Truck
+  Truck,
+  Download
 } from "lucide-react"
+import * as XLSX from "xlsx"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -30,6 +32,13 @@ interface ShipmentItem {
   dispatchedAt: Date | string
   arrivedAt: Date | string | null
   createdBy: string | null
+  carrierName?: string | null
+  waybillNumber?: string | null
+  boxCount?: number | null
+  totalWeight?: any | null
+  shippingCost?: any | null
+  costCurrency?: string | null
+  receiptImageUrl?: string | null
   _count?: {
     orders: number
   }
@@ -57,7 +66,16 @@ export function ShipmentsListClient({ initialShipments }: ShipmentsListClientPro
         const matchesName = s.name.toLowerCase().includes(q)
         const matchesNotes = (s.notes || "").toLowerCase().includes(q)
         const matchesCreator = (s.createdBy || "").toLowerCase().includes(q)
-        return matchesCode || matchesName || matchesNotes || matchesCreator
+        const matchesCarrier = (s.carrierName || "").toLowerCase().includes(q)
+        const matchesWaybill = (s.waybillNumber || "").toLowerCase().includes(q)
+        return (
+          matchesCode ||
+          matchesName ||
+          matchesNotes ||
+          matchesCreator ||
+          matchesCarrier ||
+          matchesWaybill
+        )
       }
       return true
     })
@@ -67,6 +85,38 @@ export function ShipmentsListClient({ initialShipments }: ShipmentsListClientPro
   const inTransitCount = shipments.filter((s) => s.status === "IN_TRANSIT").length
   const partialCount = shipments.filter((s) => s.status === "PARTIAL").length
   const arrivedCount = shipments.filter((s) => s.status === "ARRIVED").length
+
+  // Export to Excel handler
+  const handleExportShipments = () => {
+    const rows = filteredShipments.map((s) => ({
+      "Илгээмжийн код": s.code,
+      "Илгээмжийн нэр": s.name,
+      "Төлөв":
+        s.status === "ARRIVED"
+          ? "Бүрэн ирсэн"
+          : s.status === "PARTIAL"
+          ? "Хэсэгчлэн ирсэн"
+          : "Замдаа яваа",
+      "Карго компани": s.carrierName || "—",
+      "Waybill дугаар": s.waybillNumber || "—",
+      "Хайрцгийн тоо": s.boxCount || 1,
+      "Нийт жин (кг)": s.totalWeight ? Number(s.totalWeight) : "—",
+      "Карго зардал": s.shippingCost ? Number(s.shippingCost) : "—",
+      "Валют": s.costCurrency || "KRW",
+      "Нийт бараа (ш)": s.totalOrders,
+      "Ирсэн бараа (ш)": s.arrivedOrders,
+      "Дутуу бараа (ш)": s.totalOrders - s.arrivedOrders,
+      "Илгээсэн огноо": new Date(s.dispatchedAt).toLocaleDateString("mn-MN"),
+      "Хүлээн авсан огноо": s.arrivedAt ? new Date(s.arrivedAt).toLocaleDateString("mn-MN") : "—",
+      "Үүсгэсэн админ": s.createdBy || "Admin",
+      "Тэмдэглэл": s.notes || "",
+    }))
+
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "Карго ачилтууд")
+    XLSX.writeFile(wb, `Cargo_Shipments_${new Date().toISOString().split("T")[0]}.xlsx`)
+  }
 
   return (
     <div className="space-y-6">
@@ -85,6 +135,18 @@ export function ShipmentsListClient({ initialShipments }: ShipmentsListClientPro
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleExportShipments}
+            className="text-xs font-bold gap-1.5 h-9 border-slate-200 hover:bg-slate-50 text-slate-700 shadow-2xs"
+            title="Бүх карго ачилтын түүхийг Excel файлаар татах"
+          >
+            <Download className="w-3.5 h-3.5 text-emerald-600" />
+            Тайлан татах (Excel)
+          </Button>
+
           <Link href="/admin/orders/daily">
             <Button
               variant="outline"
@@ -277,6 +339,38 @@ export function ShipmentsListClient({ initialShipments }: ShipmentsListClientPro
                     <p className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-100 line-clamp-2">
                       {s.notes}
                     </p>
+                  )}
+
+                  {/* Carrier & Logistics Metadata */}
+                  {(s.carrierName || s.waybillNumber || s.boxCount || s.totalWeight || s.shippingCost) && (
+                    <div className="flex items-center gap-1.5 flex-wrap text-xs pt-1">
+                      {s.carrierName && (
+                        <span className="font-bold text-indigo-900 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded flex items-center gap-1 text-[11px]">
+                          <Truck className="w-3 h-3 text-indigo-600" />
+                          {s.carrierName}
+                        </span>
+                      )}
+                      {s.waybillNumber && (
+                        <span className="font-mono font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
+                          #{s.waybillNumber}
+                        </span>
+                      )}
+                      {s.boxCount && s.boxCount > 0 && (
+                        <span className="text-[11px] text-slate-600 font-medium bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded">
+                          {s.boxCount} хайрцаг
+                        </span>
+                      )}
+                      {s.totalWeight && (
+                        <span className="text-[11px] text-slate-600 font-medium bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded">
+                          {Number(s.totalWeight).toFixed(1)} кг
+                        </span>
+                      )}
+                      {s.shippingCost && (
+                        <span className="text-[11px] text-emerald-800 font-bold bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                          {Number(s.shippingCost).toLocaleString()} {s.costCurrency || "KRW"}
+                        </span>
+                      )}
+                    </div>
                   )}
 
                   {/* Progress bar */}
