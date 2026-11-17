@@ -23,6 +23,7 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   delivery_delay_active: "false",
   delivery_delay_message: "Хүргэлтийн захиалга хэт олон байгаагаас шалтгаалан таны захиалга бага зэрэг саатаж очих магадлалтайг анхаарна уу.",
   delivery_schedule_days: "3,6",
+  courier_pin_code: "2026",
   shop_phone: "+976 8853 9667",
   shop_secondary_phone: "+976 8853 9887",
   shop_email: "info@anarkorea.mn",

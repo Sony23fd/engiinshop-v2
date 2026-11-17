@@ -1,6 +1,7 @@
 import { getDeliveryOrders } from "@/app/actions/order-actions"
+import { getShopSettings } from "@/app/actions/settings-actions"
 import { Truck, Box } from "lucide-react"
-import { DeliveryGroupCard } from "./DeliveryGroupCard"
+import { DeliveryGroupsManager } from "./DeliveryGroupsManager"
 import { DeliveryFilter } from "./DeliveryFilter"
 import { ListSearchFilter } from "@/components/admin/ListSearchFilter"
 import Link from "next/link"
@@ -20,7 +21,11 @@ export default async function DeliveryQueuePage({
   const currentTab = resolvedParams.tab === "in_transit" ? "in_transit" : "ready"
   const itemsPerPage = 50
 
-  const { orders, readyCount = 0, inTransitCount = 0 } = await getDeliveryOrders(dateFilter, currentTab)
+  const [deliveryData, settings] = await Promise.all([
+    getDeliveryOrders(dateFilter, currentTab),
+    getShopSettings()
+  ])
+  const { orders, readyCount = 0, inTransitCount = 0 } = deliveryData
   
   let filteredOrders = orders || []
   if (q) {
@@ -129,9 +134,11 @@ export default async function DeliveryQueuePage({
         </div>
       ) : (
         <div className="space-y-4">
-          {groups.map((groupOrders) => {
-            return <DeliveryGroupCard key={groupOrders[0].customerPhone || groupOrders[0].id} groupOrders={groupOrders} />
-          })}
+          <DeliveryGroupsManager 
+            groups={groups} 
+            currentTab={currentTab} 
+            courierPin={settings.courier_pin_code || "2026"} 
+          />
 
           {totalPages > 1 && (
             <div className="flex justify-center items-center gap-2 mt-8">
