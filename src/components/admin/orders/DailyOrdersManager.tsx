@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition, useMemo } from "react"
+import { useState, useTransition, useMemo, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import {
@@ -23,7 +23,9 @@ import {
   Plus,
   Loader2,
   AlertCircle,
-  Plane
+  Plane,
+  AlertTriangle,
+  History
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -34,7 +36,9 @@ import {
   DailySummaryItem,
   DailyOrderDetailsResult,
   getDailyOrderDetails,
-  PurchasingItem
+  PurchasingItem,
+  getUnshippedBacklogOrders,
+  BacklogOrderItem
 } from "@/app/actions/daily-order-actions"
 
 interface DailyOrdersManagerProps {
@@ -53,8 +57,12 @@ export function DailyOrdersManager({
   const [details, setDetails] = useState<DailyOrderDetailsResult | null>(initialDetails)
   const [isPending, startTransition] = useTransition()
 
-  // Sub-tab: "purchasing" vs "orders"
-  const [activeTab, setActiveTab] = useState<"purchasing" | "orders">("purchasing")
+  // Sub-tab: "purchasing" vs "orders" vs "backlog"
+  const [activeTab, setActiveTab] = useState<"purchasing" | "orders" | "backlog">("purchasing")
+
+  // Backlog orders from previous days (carryover / unshipped)
+  const [backlogOrders, setBacklogOrders] = useState<BacklogOrderItem[]>([])
+  const [selectedBacklogIds, setSelectedBacklogIds] = useState<Record<string, boolean>>({})
 
   // Search filter inside selected date
   const [searchFilter, setSearchFilter] = useState("")
@@ -68,6 +76,19 @@ export function DailyOrdersManager({
   // Shipment creation modal state
   const [isShipmentModalOpen, setIsShipmentModalOpen] = useState(false)
   const [ordersForShipment, setOrdersForShipment] = useState<SelectedOrderItem[]>([])
+
+  // Fetch backlog orders when selectedDate changes
+  useEffect(() => {
+    let isMounted = true
+    getUnshippedBacklogOrders(selectedDate).then((res) => {
+      if (isMounted && res.success) {
+        setBacklogOrders(res.orders)
+      }
+    })
+    return () => {
+      isMounted = false
+    }
+  }, [selectedDate])
 
   // Date list filter
   const [dateSearch, setDateSearch] = useState("")
@@ -210,11 +231,73 @@ export function DailyOrdersManager({
     }
   }
 
+  // Filtered backlog orders
+  const filteredBacklogOrders = useMemo(() => {
+    if (!backlogOrders.length) return []
+    if (!searchFilter.trim()) return backlogOrders
+    const q = searchFilter.toLowerCase()
+    return backlogOrders.filter(
+      (o) =>
+        o.customerName?.toLowerCase().includes(q) ||
+        o.customerPhone?.includes(q) ||
+        o.orderNumber?.toString().includes(q) ||
+        o.productName?.toLowerCase().includes(q) ||
+        o.displayDate?.includes(q)
+    )
+  }, [backlogOrders, searchFilter])
+
+  // Selected backlog orders list
+  const selectedBacklogOrdersList = useMemo(() => {
+    return backlogOrders
+      .filter((o) => selectedBacklogIds[o.id])
+      .map((o) => ({
+        id: o.id,
+        orderNumber: o.orderNumber,
+        customerName: o.customerName,
+        customerPhone: o.customerPhone,
+        productName: o.productName,
+        quantity: o.quantity,
+        variantDesc: o.variantDesc,
+        displayDate: o.displayDate,
+      }))
+  }, [backlogOrders, selectedBacklogIds])
+
+  // Open shipment modal from selected backlog
+  const handleDispatchSelectedBacklog = () => {
+    if (!selectedBacklogOrdersList.length) return
+    setOrdersForShipment(selectedBacklogOrdersList)
+    setIsShipmentModalOpen(true)
+  }
+
+  // Toggle backlog selection
+  const toggleBacklogSelection = (id: string) => {
+    setSelectedBacklogIds((prev) => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  // Toggle select all backlog
+  const toggleSelectAllBacklog = () => {
+    if (!filteredBacklogOrders.length) return
+    const allSelected = filteredBacklogOrders.every((o) => selectedBacklogIds[o.id])
+    if (allSelected) {
+      setSelectedBacklogIds({})
+    } else {
+      const newSel: Record<string, boolean> = {}
+      filteredBacklogOrders.forEach((o) => {
+        newSel[o.id] = true
+      })
+      setSelectedBacklogIds(newSel)
+    }
+  }
+
   // On shipment creation success, refresh details
   const handleShipmentCreated = () => {
     setSelectedOrderIds({})
+    setSelectedBacklogIds({})
     setCheckedItems({})
     handleSelectDate(selectedDate)
+    getUnshippedBacklogOrders(selectedDate).then((res) => {
+      if (res.success) setBacklogOrders(res.orders)
+    })
   }
 
   // Export CSV of purchasing items
@@ -491,15 +574,42 @@ export function DailyOrdersManager({
                     </p>
                   </div>
                 </div>
+
+                {/* Backlog Alert Banner */}
+                {backlogOrders.length > 0 && activeTab !== "backlog" && (
+                  <div className="mt-4 bg-amber-50/90 border border-amber-200/90 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs animate-in fade-in">
+                    <div className="flex items-start sm:items-center gap-2.5">
+                      <span className="p-1.5 rounded-lg bg-amber-100 text-amber-800 shrink-0 mt-0.5 sm:mt-0">
+                        <AlertTriangle className="w-4 h-4" />
+                      </span>
+                      <div>
+                        <span className="font-bold text-amber-950 block sm:inline">
+                          Өмнөх өдрүүдээс каргонд ачигдаагүй үлдсэн {backlogOrders.length} бараа байна!
+                        </span>
+                        <p className="text-[11px] text-amber-800 mt-0.5">
+                          Хэрэв эдгээр бараа Солонгосын дэлгүүрээс ирсэн бол өнөөдрийн ачилтандаа хамтатган илгээх боломжтой.
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => setActiveTab("backlog")}
+                      className="h-8 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shrink-0 self-end sm:self-auto"
+                    >
+                      Үлдэгдлийг үзэх & Хамт ачих
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Sub-tabs & Search Bar */}
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-2 border-b sm:border-b-0 w-full sm:w-auto">
+                <div className="flex items-center gap-2 border-b sm:border-b-0 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
                   <button
                     type="button"
                     onClick={() => setActiveTab("purchasing")}
-                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
                       activeTab === "purchasing"
                         ? "bg-indigo-600 text-white shadow-xs"
                         : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
@@ -511,7 +621,7 @@ export function DailyOrdersManager({
                   <button
                     type="button"
                     onClick={() => setActiveTab("orders")}
-                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
                       activeTab === "orders"
                         ? "bg-indigo-600 text-white shadow-xs"
                         : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
@@ -519,6 +629,18 @@ export function DailyOrdersManager({
                   >
                     <User className="w-3.5 h-3.5" />
                     Захиалагчдын бүртгэл ({details.orders.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("backlog")}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+                      activeTab === "backlog"
+                        ? "bg-amber-600 text-white shadow-xs"
+                        : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+                    }`}
+                  >
+                    <History className="w-3.5 h-3.5" />
+                    Өмнөх үлдэгдэл ({backlogOrders.length})
                   </button>
                 </div>
 
@@ -799,6 +921,135 @@ export function DailyOrdersManager({
                   ) : (
                     <div className="py-12 text-center text-xs text-slate-400">
                       Хайлтад тохирох захиалга олдсонгүй
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 3: BACKLOG / CARRYOVER ORDERS FROM PREVIOUS DAYS */}
+              {activeTab === "backlog" && (
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                  <div className="p-4 border-b bg-amber-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-amber-950 flex items-center gap-1.5">
+                        <History className="w-3.5 h-3.5 text-amber-700" />
+                        Өмнөх Өдрүүдээс Ачигдаагүй Үлдсэн Бараанууд
+                      </h3>
+                      <p className="text-[11px] text-amber-800 mt-0.5">
+                        Өмнөх өдрүүдэд захиалагдсан, Солонгосоос ачигдаагүй хүлээгдэж буй захиалгууд
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={toggleSelectAllBacklog}
+                        className="text-xs font-bold h-8 border-amber-300 bg-white hover:bg-amber-50 text-amber-900"
+                      >
+                        {filteredBacklogOrders.length > 0 &&
+                        filteredBacklogOrders.every((o) => selectedBacklogIds[o.id])
+                          ? "Бүх сонголтыг цуцлах"
+                          : "Бүгдийг сонгох"}
+                      </Button>
+
+                      {selectedBacklogOrdersList.length > 0 && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={handleDispatchSelectedBacklog}
+                          className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm"
+                        >
+                          <Plane className="w-3.5 h-3.5" />
+                          Сонгосон {selectedBacklogOrdersList.length} барааг Каргонд ачих
+                        </Button>
+                      )}
+
+                      <span className="text-xs font-bold text-amber-900">
+                        Нийт: <b>{filteredBacklogOrders.length}</b> үлдэгдэл
+                      </span>
+                    </div>
+                  </div>
+
+                  {filteredBacklogOrders.length > 0 ? (
+                    <div className="divide-y divide-slate-100">
+                      {filteredBacklogOrders.map((o) => {
+                        const isSelected = Boolean(selectedBacklogIds[o.id])
+                        return (
+                          <div
+                            key={o.id}
+                            className={`p-4 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                              isSelected ? "bg-amber-50/50" : "hover:bg-slate-50"
+                            }`}
+                          >
+                            <div className="flex items-start gap-3 min-w-0">
+                              <button
+                                type="button"
+                                onClick={() => toggleBacklogSelection(o.id)}
+                                className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 mt-1 transition-colors ${
+                                  isSelected
+                                    ? "bg-amber-600 border-amber-600 text-white"
+                                    : "border-slate-300 hover:border-amber-400 bg-white"
+                                }`}
+                                title={isSelected ? "Сонгогдсон" : "Сонгох"}
+                              >
+                                {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                              </button>
+
+                              <div className="space-y-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-xs font-black px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">
+                                    #{o.orderNumber}
+                                  </span>
+                                  <span className="text-xs font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full border border-amber-200">
+                                    📅 {o.displayDate}
+                                  </span>
+                                  <span className="text-sm font-bold text-slate-900">
+                                    {o.customerName}
+                                  </span>
+                                  <span className="text-xs text-slate-500 flex items-center gap-1 font-medium">
+                                    <Phone className="w-3 h-3 text-slate-400" />
+                                    {o.customerPhone}
+                                  </span>
+                                  <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">
+                                    {o.statusName}
+                                  </span>
+                                </div>
+
+                                <p className="text-xs text-slate-600 truncate">
+                                  Бараа: <b>{o.productName}</b>{" "}
+                                  {o.variantDesc && (
+                                    <span className="text-amber-700 font-semibold">
+                                      ({o.variantDesc})
+                                    </span>
+                                  )}{" "}
+                                  • <b>{o.quantity}ш</b>
+                                </p>
+
+                                {o.adminNotes && (
+                                  <p className="text-[11px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200/60 w-max">
+                                    Тэмдэглэл: {o.adminNotes}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="text-right shrink-0">
+                              <p className="text-sm font-black text-slate-900">
+                                ₮{Number(o.totalAmount || 0).toLocaleString()}
+                              </p>
+                              <span className="text-[11px] text-slate-400 block">
+                                {o.displayDate}
+                              </span>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <div className="py-12 text-center text-xs text-slate-400">
+                      Өмнөх өдрүүдээс ачигдаагүй үлдсэн бараа алга байна (Бүгд ачигдсан!)
                     </div>
                   )}
                 </div>

@@ -263,3 +263,109 @@ export async function getDailyOrderDetails(dateStr: string): Promise<DailyOrderD
     }
   }
 }
+
+export interface BacklogOrderItem {
+  id: string
+  orderNumber: number
+  customerName: string
+  customerPhone: string
+  productName: string
+  imageUrl: string | null
+  variantDesc?: string
+  quantity: number
+  totalAmount: number
+  paymentStatus: string
+  statusName: string
+  statusColor: string
+  dateStr: string
+  displayDate: string
+  createdAt: string
+  adminNotes: string | null
+}
+
+/**
+ * Returns unshipped confirmed orders from previous days (carryover / backlog).
+ */
+export async function getUnshippedBacklogOrders(currentDateStr?: string): Promise<{
+  success: boolean
+  orders: BacklogOrderItem[]
+  totalCount: number
+  error?: string
+}> {
+  try {
+    const where: any = {
+      isRefunded: false,
+      shipmentId: null,
+      paymentStatus: { notIn: ["REJECTED"] },
+      status: {
+        isFinal: false,
+        name: { notIn: ["Цуцлагдсан", "Буцаагдсан", "Улаанбаатарт ирсэн", "Хүргэгдсэн", "Өөрөө ирж авсан"] }
+      }
+    }
+
+    if (currentDateStr) {
+      const { startUTC } = getUBAbsoluteDateRange(currentDateStr)
+      where.createdAt = { lt: startUTC }
+    }
+
+    const rawOrders = await db.order.findMany({
+      where,
+      orderBy: { createdAt: "asc" },
+      take: 200,
+      include: {
+        batch: {
+          include: {
+            product: true
+          }
+        },
+        status: true
+      }
+    })
+
+    const orders: BacklogOrderItem[] = rawOrders.map((o) => {
+      const createdUB = new Date(o.createdAt.getTime() + 8 * 3600 * 1000)
+      const dateStr = createdUB.toISOString().split("T")[0]
+      const [y, m, d] = dateStr.split("-")
+      const displayDate = `${y}.${m}.${d}`
+
+      let variantDesc = ""
+      if (o.selectedOptions && typeof o.selectedOptions === "object") {
+        variantDesc = Object.values(o.selectedOptions).join(", ")
+      }
+
+      return {
+        id: o.id,
+        orderNumber: o.orderNumber,
+        customerName: o.customerName,
+        customerPhone: o.customerPhone,
+        productName: o.batch?.product?.name || "Бараа",
+        imageUrl: o.batch?.product?.imageUrl || null,
+        variantDesc: variantDesc || undefined,
+        quantity: o.quantity,
+        totalAmount: Number(o.totalAmount || 0),
+        paymentStatus: o.paymentStatus,
+        statusName: o.status?.name || "Хүлээгдэж буй",
+        statusColor: o.status?.color || "slate",
+        dateStr,
+        displayDate,
+        createdAt: o.createdAt.toISOString(),
+        adminNotes: o.adminNotes || null
+      }
+    })
+
+    return {
+      success: true,
+      orders,
+      totalCount: orders.length
+    }
+  } catch (error: any) {
+    console.error("Failed to fetch unshipped backlog orders:", error)
+    return {
+      success: false,
+      orders: [],
+      totalCount: 0,
+      error: error.message
+    }
+  }
+}
+

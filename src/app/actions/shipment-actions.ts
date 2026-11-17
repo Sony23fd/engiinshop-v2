@@ -343,6 +343,11 @@ export async function getEligibleOrdersForShipment(params?: {
     const where: any = {
       isRefunded: false,
       shipmentId: null, // Not yet in any shipment
+      paymentStatus: { notIn: ["REJECTED"] },
+      status: {
+        isFinal: false,
+        name: { notIn: ["Цуцлагдсан", "Буцаагдсан", "Улаанбаатарт ирсэн", "Хүргэгдсэн", "Өөрөө ирж авсан"] }
+      }
     }
 
     if (params?.search?.trim()) {
@@ -372,23 +377,122 @@ export async function getEligibleOrdersForShipment(params?: {
 
     return {
       success: true,
-      orders: orders.map(o => ({
-        id: o.id,
-        orderNumber: o.orderNumber,
-        customerName: o.customerName,
-        customerPhone: o.customerPhone,
-        productName: o.batch?.product?.name || "Бараа",
-        imageUrl: o.batch?.product?.imageUrl || null,
-        quantity: o.quantity,
-        totalAmount: Number(o.totalAmount || 0),
-        statusName: o.status?.name || "Тодорхойгүй",
-        statusColor: o.status?.color || "slate",
-        selectedOptions: o.selectedOptions,
-        createdAt: o.createdAt.toISOString(),
-      }))
+      orders: orders.map(o => {
+        const createdUB = new Date(o.createdAt.getTime() + 8 * 3600 * 1000)
+        const dateStr = createdUB.toISOString().split("T")[0]
+        const [y, m, d] = dateStr.split("-")
+        const displayDate = `${y}.${m}.${d}`
+
+        let variantDesc = ""
+        if (o.selectedOptions && typeof o.selectedOptions === "object") {
+          variantDesc = Object.values(o.selectedOptions).join(", ")
+        }
+
+        return {
+          id: o.id,
+          orderNumber: o.orderNumber,
+          customerName: o.customerName,
+          customerPhone: o.customerPhone,
+          productName: o.batch?.product?.name || "Бараа",
+          imageUrl: o.batch?.product?.imageUrl || null,
+          variantDesc: variantDesc || undefined,
+          quantity: o.quantity,
+          totalAmount: Number(o.totalAmount || 0),
+          statusName: o.status?.name || "Хүлээгдэж буй",
+          statusColor: o.status?.color || "slate",
+          selectedOptions: o.selectedOptions,
+          dateStr,
+          displayDate,
+          createdAt: o.createdAt.toISOString(),
+        }
+      })
     }
   } catch (error: any) {
     console.error("Error fetching eligible orders:", error)
     return { success: false, orders: [], error: error.message }
+  }
+}
+
+/**
+ * Appends additional orders to an already existing shipment.
+ */
+export async function addOrdersToShipment(data: {
+  shipmentId: string
+  orderIds: string[]
+}) {
+  try {
+    const admin = await getCurrentAdmin()
+    if (!admin) {
+      return { success: false, error: "Зөвхөн админ хэрэглэгч ачилтанд бараа нэмэх эрхтэй." }
+    }
+
+    if (!data.orderIds || data.orderIds.length === 0) {
+      return { success: false, error: "Нэмэх захиалга сонгогдоогүй байна." }
+    }
+
+    const shipment = await db.shipment.findUnique({
+      where: { id: data.shipmentId }
+    })
+    if (!shipment) {
+      return { success: false, error: "Илгээмж олдсонгүй." }
+    }
+
+    // Resolve Dispatched status
+    let dispatchedStatus = await db.orderStatusType.findFirst({
+      where: { name: "Солонгосоос хөдөлсөн" }
+    })
+    const dispatchedStatusId = dispatchedStatus?.id || DISPATCHED_STATUS_ID
+
+    const result = await db.$transaction(async (tx) => {
+      // Update orders
+      await tx.order.updateMany({
+        where: { id: { in: data.orderIds } },
+        data: {
+          shipmentId: shipment.id,
+          statusId: dispatchedStatusId,
+        }
+      })
+
+      // Recalculate shipment totals
+      const totalCount = await tx.order.count({ where: { shipmentId: shipment.id } })
+      const arrivedCount = await tx.order.count({
+        where: { shipmentId: shipment.id, statusId: ARRIVED_STATUS_ID }
+      })
+
+      const isComplete = arrivedCount >= totalCount && totalCount > 0
+      const newStatus = isComplete ? "ARRIVED" : arrivedCount > 0 ? "PARTIAL" : "IN_TRANSIT"
+
+      const updatedShipment = await tx.shipment.update({
+        where: { id: shipment.id },
+        data: {
+          totalOrders: totalCount,
+          arrivedOrders: arrivedCount,
+          status: newStatus,
+        }
+      })
+
+      // Log activity
+      await logAdminActivity({
+        userId: admin.id,
+        userName: admin.name || "Admin",
+        userRole: admin.role,
+        action: `Карго илгээмжинд ${data.orderIds.length} бараа нэмлээ: ${shipment.name} (${shipment.code})`,
+        type: "ORDER",
+        target: shipment.id,
+        targetUrl: `/admin/orders/shipments/${shipment.id}`,
+      })
+
+      return updatedShipment
+    })
+
+    revalidatePath("/admin/orders/shipments")
+    revalidatePath(`/admin/orders/shipments/${data.shipmentId}`)
+    revalidatePath("/admin/orders/daily")
+    revalidatePath("/track")
+
+    return { success: true, shipment: result }
+  } catch (error: any) {
+    console.error("Error adding orders to shipment:", error)
+    return { success: false, error: error.message || "Илгээмжинд бараа нэмэхэд алдаа гарлаа." }
   }
 }

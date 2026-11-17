@@ -19,12 +19,25 @@ import {
   Truck,
   Phone,
   User,
-  ExternalLink
+  ExternalLink,
+  Plus,
+  X
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { receiveShipmentItems } from "@/app/actions/shipment-actions"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
+import {
+  receiveShipmentItems,
+  addOrdersToShipment,
+  getEligibleOrdersForShipment,
+} from "@/app/actions/shipment-actions"
 
 interface ShipmentDetailOrder {
   id: string
@@ -89,6 +102,78 @@ export function ShipmentReconcileClient({
 
   // Row selection for partial receive
   const [selectedOrderIds, setSelectedOrderIds] = useState<Record<string, boolean>>({})
+
+  // Add more orders modal
+  const [showAddMoreModal, setShowAddMoreModal] = useState(false)
+  const [addMoreQuery, setAddMoreQuery] = useState("")
+  const [addMoreResults, setAddMoreResults] = useState<any[]>([])
+  const [isSearchingAddMore, setIsSearchingAddMore] = useState(false)
+
+  // Search orders to add to this shipment
+  const handleSearchAddMore = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    if (!addMoreQuery.trim()) return
+
+    setIsSearchingAddMore(true)
+    const res = await getEligibleOrdersForShipment({ search: addMoreQuery.trim() })
+    setIsSearchingAddMore(false)
+    if (res.success) {
+      const currentIds = new Set(shipment.orders.map((o) => o.id))
+      setAddMoreResults(res.orders.filter((o) => !currentIds.has(o.id)))
+    }
+  }
+
+  // Add order to current shipment
+  const handleAddOrderToShipment = (item: any) => {
+    startTransition(async () => {
+      const res = await addOrdersToShipment({
+        shipmentId: shipment.id,
+        orderIds: [item.id],
+      })
+
+      if (res.success) {
+        setShipment((prev) => ({
+          ...prev,
+          totalOrders: prev.totalOrders + 1,
+          orders: [
+            ...prev.orders,
+            {
+              id: item.id,
+              orderNumber: item.orderNumber,
+              customerName: item.customerName,
+              customerPhone: item.customerPhone,
+              quantity: item.quantity,
+              statusId: "cmndey7um0004r0s79bya29yt",
+              arrivalDate: null,
+              totalAmount: item.totalAmount,
+              selectedOptions: item.selectedOptions,
+              deliveryAddress: null,
+              wantsDelivery: false,
+              adminNotes: null,
+              batch: {
+                batchNumber: 0,
+                product: {
+                  name: item.productName,
+                  imageUrl: item.imageUrl,
+                },
+              },
+              status: {
+                name: "Солонгосоос хөдөлсөн",
+                color: "sky",
+              },
+            },
+          ],
+        }))
+        setAddMoreResults((prev) => prev.filter((o) => o.id !== item.id))
+        setNotification({
+          type: "success",
+          text: `Захиалга #${item.orderNumber} (${item.customerName}) амжилттай энэ ачилтанд нэмэгдлээ!`,
+        })
+      } else {
+        setNotification({ type: "error", text: res.error || "Алдаа гарлаа." })
+      }
+    })
+  }
 
   // Filtered orders
   const filteredOrders = useMemo(() => {
@@ -324,6 +409,16 @@ export function ShipmentReconcileClient({
         </Link>
 
         <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAddMoreModal(true)}
+            className="text-xs font-bold gap-1.5 h-8 border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Захиалга нэмж оруулах
+          </Button>
           <Button
             type="button"
             variant="outline"
@@ -734,6 +829,112 @@ export function ShipmentReconcileClient({
           </div>
         )}
       </div>
+
+      {/* Add More Orders Modal */}
+      <Dialog open={showAddMoreModal} onOpenChange={setShowAddMoreModal}>
+        <DialogContent className="w-[96vw] sm:max-w-xl max-h-[85vh] flex flex-col p-0 overflow-hidden">
+          <div className="p-4 border-b border-slate-100 bg-slate-50">
+            <DialogHeader>
+              <DialogTitle className="text-base font-black text-slate-900 flex items-center gap-2">
+                <Plus className="w-4 h-4 text-indigo-600" />
+                Илгээмжинд нэмэлт захиалга хавсаргах
+              </DialogTitle>
+              <DialogDescription className="text-xs text-slate-500">
+                Өмнөх өдрүүдээс эсвэл хоцорч бэлэн болсон захиалгыг энэ ачилтанд нэгтгэн оруулна.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="p-4 space-y-4 flex-1 overflow-y-auto">
+            {/* Search input */}
+            <form onSubmit={handleSearchAddMore} className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Input
+                  value={addMoreQuery}
+                  onChange={(e) => setAddMoreQuery(e.target.value)}
+                  placeholder="Захиалгын #1042, утас, нэрээр хайх..."
+                  className="pl-9 h-9 text-xs font-medium"
+                />
+              </div>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isSearchingAddMore || !addMoreQuery.trim()}
+                className="bg-indigo-600 text-white font-bold text-xs h-9 px-4 shrink-0"
+              >
+                {isSearchingAddMore ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Хайх"}
+              </Button>
+            </form>
+
+            {/* Results */}
+            {addMoreResults.length > 0 ? (
+              <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 max-h-64 overflow-y-auto bg-slate-50/50">
+                {addMoreResults.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-3 flex items-center justify-between gap-3 text-xs hover:bg-white transition-colors"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-mono font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded text-[11px]">
+                          #{item.orderNumber}
+                        </span>
+                        {item.displayDate && (
+                          <span className="text-[10px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded font-semibold border border-indigo-100">
+                            {item.displayDate}
+                          </span>
+                        )}
+                        <span className="font-bold text-slate-900 truncate">
+                          {item.productName}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5 truncate">
+                        {item.customerName} ({item.customerPhone}){" "}
+                        {item.variantDesc && (
+                          <span className="text-indigo-600 font-medium">[{item.variantDesc}]</span>
+                        )}
+                        {" "}• <b>{item.quantity}ш</b>
+                      </p>
+                    </div>
+
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => handleAddOrderToShipment(item)}
+                      disabled={isPending}
+                      className="h-7 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] shrink-0 flex items-center gap-1"
+                    >
+                      <Plus className="w-3 h-3" />
+                      Нэмж ачих
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : addMoreQuery && !isSearchingAddMore ? (
+              <div className="p-8 text-center text-xs text-slate-400 bg-slate-50 rounded-xl border border-dashed">
+                Ачигдаагүй тохирох захиалга олдсонгүй
+              </div>
+            ) : (
+              <div className="p-8 text-center text-xs text-slate-400 bg-slate-50 rounded-xl border border-dashed">
+                Захиалгын дугаар эсвэл утасны дугаараар хайж сонгоно уу
+              </div>
+            )}
+          </div>
+
+          <div className="p-3 border-t border-slate-100 bg-slate-50 flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAddMoreModal(false)}
+              className="text-xs font-semibold"
+            >
+              Хаах
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
