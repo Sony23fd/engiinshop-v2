@@ -1,6 +1,6 @@
 import { getCategories } from "@/app/actions/category-actions"
 import Link from "next/link"
-import { FolderOpen, Archive } from "lucide-react"
+import { FolderOpen, Archive, Calendar } from "lucide-react"
 
 export const dynamic = "force-dynamic"
 import { DateRangeFilter } from "@/components/admin/DateRangeFilter"
@@ -21,8 +21,28 @@ export default async function AdminOrdersCategoriesPage({ searchParams }: { sear
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-lg shadow-sm w-full border">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
-          <h1 className="text-2xl font-bold text-slate-900">Идэвхтэй Ангиллууд</h1>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Захиалгын Ангиллууд (Сараар)</h1>
+            <p className="text-xs text-slate-500 mt-1">
+              Та захиалгыг өдөр өдрөөр нь эсвэл сар багцаар нь шүүж харах боломжтой.
+            </p>
+          </div>
           <div className="flex items-center gap-3 flex-wrap">
+            {/* View Mode Switcher */}
+            <div className="flex items-center p-1 bg-slate-100 rounded-lg border border-slate-200">
+              <Link
+                href="/admin/orders/daily"
+                className="px-3 py-1.5 rounded-md text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors flex items-center gap-1.5"
+              >
+                <Calendar className="w-3.5 h-3.5 text-indigo-600" />
+                Өдрөөр
+              </Link>
+              <span className="px-3 py-1.5 rounded-md text-xs font-bold bg-white text-indigo-700 shadow-xs flex items-center gap-1.5">
+                <FolderOpen className="w-3.5 h-3.5 text-indigo-600" />
+                Сарын Ангиллаар
+              </span>
+            </div>
+
             <GlobalAddOrderModal />
             <DateRangeFilter days={days} />
             <Link href="/admin/orders/archived"
