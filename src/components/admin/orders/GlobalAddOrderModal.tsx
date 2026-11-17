@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
   DialogTrigger
 } from "@/components/ui/dialog"
@@ -272,18 +271,21 @@ export function GlobalAddOrderModal({
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto p-4 sm:p-6">
-          <DialogHeader className="border-b pb-3">
-          <DialogTitle className="text-lg sm:text-xl font-black text-slate-900 flex items-center gap-2">
-            <Package className="w-5 h-5 text-indigo-600" />
-            Админаас Захиалга Гараар Бүртгэх
-          </DialogTitle>
-          <p className="text-xs text-slate-500">
-            Дэлгүүрийн каталог дахь бараа болон тусгай захиалгыг нэгтгэн шууд баталгаажуулна.
-          </p>
-        </DialogHeader>
+        <DialogContent className="w-[96vw] sm:max-w-3xl md:max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden bg-white rounded-2xl border border-slate-200 shadow-2xl">
+          {/* Fixed Header */}
+          <div className="px-6 py-4 border-b bg-slate-50/80 shrink-0 pr-12">
+            <DialogTitle className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+              <Package className="w-5 h-5 text-indigo-600" />
+              Админаас Захиалга Гараар Бүртгэх
+            </DialogTitle>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Дэлгүүрийн каталог дахь бараа болон тусгай захиалгыг нэгтгэн шууд баталгаажуулна.
+            </p>
+          </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6 pt-3">
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+            {/* Scrollable Form Body */}
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
           {/* Section 1: Customer Details */}
           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/80 space-y-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
@@ -661,38 +663,40 @@ export function GlobalAddOrderModal({
             </div>
           </div>
 
-          {/* Footer Actions */}
-          <div className="flex items-center justify-end gap-2 pt-2 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              disabled={loading}
-              className="text-xs"
-            >
-              Болих
-            </Button>
-            <Button
-              type="submit"
-              disabled={loading}
-              className="bg-[#4F46E5] hover:bg-[#4338CA] text-white font-bold text-xs sm:text-sm px-6 gap-2"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Хадгалж байна...
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-4 h-4" />
-                  Захиалга Баталгаажуулж Бүртгэх
-                </>
-              )}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+            </div>
+
+            {/* Sticky Footer */}
+            <div className="px-6 py-3.5 border-t bg-slate-50/90 flex items-center justify-between shrink-0 gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+                disabled={loading}
+                className="text-xs font-semibold"
+              >
+                Болих
+              </Button>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="bg-[#4F46E5] hover:bg-[#4338CA] text-white font-bold text-xs sm:text-sm px-6 gap-2 shadow-xs"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Хадгалж байна...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    Захиалга Баталгаажуулж Бүртгэх
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
