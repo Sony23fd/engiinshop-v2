@@ -618,6 +618,16 @@ export async function getOrdersByAccount(searchQuery: string) {
     const cleanQuery = searchQuery?.trim();
     if (!cleanQuery) return { success: true, orders: [] };
 
+    // Security guard: Reject dummy queries, all zeroes, or short invalid strings
+    const digitsOnly = cleanQuery.replace(/\D/g, "");
+    const isAllZeros = /^0+$/.test(cleanQuery) || (digitsOnly.length > 0 && /^0+$/.test(digitsOnly));
+    const isDummyPhone = cleanQuery === "00000000" || digitsOnly === "00000000";
+    const isTooShort = cleanQuery.length < 4 && !cleanQuery.startsWith("#");
+
+    if (isAllZeros || isDummyPhone || isTooShort || cleanQuery === "0") {
+      return { success: true, orders: [] };
+    }
+
     // Normalize phone number (strip +976, spaces, dashes)
     const normalizedPhone = cleanQuery.replace(/\+976/g, "").replace(/\s+/g, "").replace(/-/g, "").trim();
 
@@ -628,13 +638,18 @@ export async function getOrdersByAccount(searchQuery: string) {
 
     const orConditions: any[] = [
       { accountNumber: cleanQuery },
-      { customerPhone: cleanQuery },
       { transactionRef: cleanQuery }
     ];
 
-    if (normalizedPhone && normalizedPhone !== cleanQuery) {
+    if (cleanQuery !== "00000000" && !/^0+$/.test(cleanQuery)) {
+      orConditions.push({ customerPhone: cleanQuery });
+    }
+
+    if (normalizedPhone && normalizedPhone !== cleanQuery && !/^0+$/.test(normalizedPhone)) {
       orConditions.push({ customerPhone: normalizedPhone });
-      orConditions.push({ customerPhone: { contains: normalizedPhone } });
+      if (normalizedPhone.length >= 8) {
+        orConditions.push({ customerPhone: { contains: normalizedPhone } });
+      }
     }
 
     if (isOrderNumber) {
@@ -643,7 +658,10 @@ export async function getOrdersByAccount(searchQuery: string) {
 
     const orders = await db.order.findMany({
       where: {
-        OR: orConditions
+        AND: [
+          { OR: orConditions },
+          { customerPhone: { notIn: ["00000000", "0"] } }
+        ]
       },
       include: {
         batch: {
@@ -1576,6 +1594,19 @@ export async function requestDelivery(orderIds: string[], deliveryAddress: strin
     })
     if (!orders || orders.length === 0) return { success: false, error: "Захиалга олдсонгүй" }
 
+    // Security check: Must have a valid phone number (at least 8 digits, not all zeros, not dummy placeholder)
+    const invalidPhoneOrders = orders.filter((o: any) => {
+      const p = (o.customerPhone || "").replace(/\+976/g, "").replace(/\s+/g, "").replace(/-/g, "").trim();
+      return !p || p === "00000000" || /^0+$/.test(p) || p.length < 8;
+    });
+
+    if (invalidPhoneOrders.length > 0) {
+      return {
+        success: false,
+        error: "Утасны дугаар дутуу эсвэл баталгаажаагүй захиалгыг хүргэлтэд өгөх боломжгүй. Та салбараас өөрийн биеэр авах эсвэл дэлгүүрийн админтай холбогдож утасны дугаараа баталгаажуулна уу."
+      };
+    }
+
     // Only target orders that are deliverable and haven't requested delivery yet
     const eligibleOrders = orders.filter((o: any) => !o.wantsDelivery && o.status?.isDeliverable)
     if (eligibleOrders.length === 0) return { success: false, error: "Хүргэлт захиалах боломжтой бараа олдсонгүй" }
@@ -1650,11 +1681,25 @@ export async function requestDelivery(orderIds: string[], deliveryAddress: strin
 
 export async function confirmManualDeliveryRequest(orderIds: string[], address: string, deliveryDate?: string) {
   try {
-    // Fetch orders first to get customer info for notification
+    // Fetch orders first to get customer info for notification and verification
     const orders = await (db.order as any).findMany({
       where: { id: { in: orderIds } },
-      select: { customerName: true, customerPhone: true }
+      select: { id: true, customerName: true, customerPhone: true }
     })
+    if (!orders || orders.length === 0) return { success: false, error: "Захиалга олдсонгүй" }
+
+    // Security check: Must have a valid phone number
+    const invalidPhoneOrders = orders.filter((o: any) => {
+      const p = (o.customerPhone || "").replace(/\+976/g, "").replace(/\s+/g, "").replace(/-/g, "").trim();
+      return !p || p === "00000000" || /^0+$/.test(p) || p.length < 8;
+    });
+
+    if (invalidPhoneOrders.length > 0) {
+      return {
+        success: false,
+        error: "Утасны дугаар дутуу эсвэл баталгаажаагүй захиалгыг хүргэлтэд өгөх боломжгүй. Та салбараас өөрийн биеэр авах эсвэл дэлгүүрийн админтай холбогдож утасны дугаараа баталгаажуулна уу."
+      };
+    }
 
     await (db.order as any).updateMany({
       where: { id: { in: orderIds } },
@@ -1691,6 +1736,21 @@ export async function checkDeliveryPayment(orderIds: string[], invoiceId: string
     const settings = await getShopSettings()
     if (settings.qpay_enabled !== "true") {
       return { success: false, error: "QPay одоогоор идэвхгүй байна" }
+    }
+
+    const orders = await (db.order as any).findMany({
+      where: { id: { in: orderIds } },
+      select: { customerPhone: true }
+    });
+    const invalidPhoneOrders = orders.filter((o: any) => {
+      const p = (o.customerPhone || "").replace(/\+976/g, "").replace(/\s+/g, "").replace(/-/g, "").trim();
+      return !p || p === "00000000" || /^0+$/.test(p) || p.length < 8;
+    });
+    if (invalidPhoneOrders.length > 0) {
+      return {
+        success: false,
+        error: "Утасны дугаар дутуу тул хүргэлтийн төлбөр шалгах боломжгүй."
+      };
     }
 
     const { checkQPayPayment } = await import("@/lib/qpay")

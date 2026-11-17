@@ -219,6 +219,12 @@ function UnifiedDeliverySection({ groups, settings }: { groups: any[][], setting
     return sum + orderFee;
   }, 0);
 
+  const ordersWithInvalidPhone = eligibleForDelivery.filter((o: any) => {
+    const p = (o.customerPhone || "").replace(/\+976/g, "").replace(/\s+/g, "").replace(/-/g, "").trim();
+    return !p || p === "00000000" || /^0+$/.test(p) || p.length < 8;
+  });
+  const hasInvalidPhone = ordersWithInvalidPhone.length > 0;
+
   return (
     <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl border border-indigo-100 p-5 space-y-4 shadow-sm">
       <div className="flex items-center gap-2">
@@ -246,7 +252,22 @@ function UnifiedDeliverySection({ groups, settings }: { groups: any[][], setting
               </span>
             )}
           </div>
-          <DeliveryRequestButton orderIds={eligibleForDelivery.map((o: any) => o.id)} deliveryScheduleDays={deliveryScheduleDays} />
+          {hasInvalidPhone ? (
+            <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 text-sm text-amber-900 space-y-2">
+              <div className="flex items-center gap-2 font-bold text-amber-950">
+                <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                <span>Хүргэлт захиалах боломжгүй (Утасны дугаар дутуу)</span>
+              </div>
+              <p className="text-xs text-amber-800 leading-relaxed">
+                Таны энэ захиалга дээр холбогдох утасны дугаар бүртгэгдээгүй эсвэл алдаатай байна. Хүргэлтийн ажилтан тантай холбогдох боломжгүй тул бараа алдагдахаас сэргийлж хүргэлт захиалах үйлдлийг түр хязгаарласан байна.
+              </p>
+              <p className="text-xs font-semibold text-amber-950">
+                👉 Та дэлгүүрийн админтай холбогдон утасны дугаараа баталгаажуулах эсвэл доорх салбарын хаягаар өөрийн биеэр ирж авна уу.
+              </p>
+            </div>
+          ) : (
+            <DeliveryRequestButton orderIds={eligibleForDelivery.map((o: any) => o.id)} deliveryScheduleDays={deliveryScheduleDays} />
+          )}
           
           <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
             <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
