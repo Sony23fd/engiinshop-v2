@@ -30,6 +30,7 @@ import { GroupAdminDeliveryButton } from "./GroupAdminDeliveryButton"
 import { RejectionDialog } from "@/components/admin/RejectionDialog"
 import { CustomerProfileModal } from "@/components/admin/CustomerProfileModal"
 import { PrintLabelsButton } from "@/components/admin/PrintLabelsButton"
+import { GlobalAddOrderModal } from "@/components/admin/orders/GlobalAddOrderModal"
 
 export default function SearchClient({ statuses }: { statuses: any[] }) {
   const [query, setQuery] = useState("")
@@ -180,9 +181,12 @@ export default function SearchClient({ statuses }: { statuses: any[] }) {
 
       {/* Search Header */}
       <div className="bg-white p-6 rounded-xl border shadow-sm">
-        <label className="text-sm font-medium text-muted-foreground flex items-center gap-2 mb-2">
-          <Search className="w-4 h-4" /> Хайх
-        </label>
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+            <Search className="w-4 h-4 text-indigo-600" /> Захиалга хайх
+          </label>
+          <GlobalAddOrderModal onSuccess={refreshSearchData} />
+        </div>
         <form onSubmit={handleSearch} className="flex gap-3">
           <Input 
             value={query}

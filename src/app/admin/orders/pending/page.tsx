@@ -3,6 +3,7 @@ import { GroupPendingActions } from "./GroupPendingActions"
 import { Clock, Package, Truck, User, Tag } from "lucide-react"
 import { ListSearchFilter } from "@/components/admin/ListSearchFilter"
 import { formatSelectedOptions } from "@/lib/variant-utils"
+import { GlobalAddOrderModal } from "@/components/admin/orders/GlobalAddOrderModal"
 
 export const dynamic = "force-dynamic"
 
@@ -54,7 +55,8 @@ export default async function PendingOrdersPage({
             Нийт <strong>{filteredOrders.length}</strong> захиалга — <strong>{allGroups.length}</strong> хэрэглэгч
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <GlobalAddOrderModal />
           <ListSearchFilter />
         </div>
       </div>

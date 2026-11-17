@@ -1,12 +1,13 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { Menu, LogOut, User, Shield, Truck } from "lucide-react"
+import { Menu, LogOut, User, Shield, Truck, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { OrderNotificationListener } from "@/components/admin/OrderNotificationListener"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { AdminSidebar } from "@/components/admin/AdminSidebar"
 import { WhatsNewDrawer } from "@/components/admin/WhatsNewDrawer"
+import { GlobalAddOrderModal } from "@/components/admin/orders/GlobalAddOrderModal"
 
 interface AdminUser {
   id: string
@@ -39,6 +40,21 @@ export function TopHeader({ admin }: { admin?: AdminUser | null }) {
       </div>
 
       <div className="flex items-center gap-3">
+        {admin && (
+          <GlobalAddOrderModal
+            trigger={
+              <Button
+                size="sm"
+                className="bg-[#4F46E5] hover:bg-[#4338CA] text-white font-bold gap-1.5 shadow-xs text-xs h-9 px-3"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Захиалга оруулах</span>
+                <span className="sm:hidden">Захиалга</span>
+              </Button>
+            }
+          />
+        )}
+
         <WhatsNewDrawer />
 
         {admin && (

@@ -6,7 +6,8 @@ import { getCurrentAdmin } from "@/lib/auth"
 import { normalizeOptions } from "@/lib/variant-utils"
 import { ExportButton } from "./ExportButton"
 import { ImportModal } from "./ImportModal"
-import { AddOrderSheet } from "./AddOrderSheet"
+import { GlobalAddOrderModal } from "@/components/admin/orders/GlobalAddOrderModal"
+import { AdminBatchSearchResult } from "@/app/actions/admin-manual-order-actions"
 import { BatchOrdersClient } from "./BatchOrdersClient"
 
 export default async function BatchDetailPage({ params }: { params: Promise<{ batchId: string }> }) {
@@ -36,6 +37,31 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ ba
   )
   const dispatchedQuantity = dispatchedOrders.reduce((sum: number, o: any) => sum + o.quantity, 0)
   const normOptions = normalizeOptions(batch.product?.options)
+
+  const defaultBatchFormatted: AdminBatchSearchResult = {
+    id: batch.id,
+    batchNumber: batch.batchNumber,
+    status: batch.status,
+    price: Number(batch.price ?? batch.product?.price ?? 0),
+    isFreeCargo: Boolean(batch.isFreeCargo || batch.product?.isFreeCargo),
+    isPreOrder: Boolean(batch.isPreOrder),
+    remainingQuantity: batch.remainingQuantity,
+    targetQuantity: batch.targetQuantity,
+    variantStock: (batch.variantStock && typeof batch.variantStock === 'object') ? batch.variantStock : null,
+    category: {
+      id: batch.category?.id || '',
+      name: batch.category?.name || 'Ангилалгүй'
+    },
+    product: {
+      id: batch.product?.id || '',
+      name: batch.product?.name || 'Бараа',
+      imageUrl: batch.product?.imageUrl || null,
+      price: Number(batch.product?.price ?? 0),
+      weight: Number(batch.product?.weight ?? 0),
+      isFreeCargo: Boolean(batch.product?.isFreeCargo),
+      options: batch.product?.options || null
+    }
+  }
 
   return (
     <div className="w-full bg-[#fafafa] min-h-screen p-4 md:p-8 space-y-6">
@@ -74,12 +100,7 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ ba
         <div className="flex space-x-2">
           <ExportButton batchId={batchId} />
           <ImportModal batchId={batchId} batch={batch} />
-          <AddOrderSheet 
-            batchId={batchId} 
-            batch={batch} 
-            normOptions={normOptions} 
-            statuses={statuses || []} 
-          />
+          <GlobalAddOrderModal defaultBatch={defaultBatchFormatted} />
         </div>
       </div>
 

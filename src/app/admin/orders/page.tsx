@@ -4,6 +4,7 @@ import { FolderOpen, Archive } from "lucide-react"
 
 export const dynamic = "force-dynamic"
 import { DateRangeFilter } from "@/components/admin/DateRangeFilter"
+import { GlobalAddOrderModal } from "@/components/admin/orders/GlobalAddOrderModal"
 
 export default async function AdminOrdersCategoriesPage({ searchParams }: { searchParams: Promise<{ days?: string, page?: string }> }) {
   const p = await searchParams;
@@ -21,7 +22,8 @@ export default async function AdminOrdersCategoriesPage({ searchParams }: { sear
       <div className="bg-white p-6 rounded-lg shadow-sm w-full border">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
           <h1 className="text-2xl font-bold text-slate-900">Идэвхтэй Ангиллууд</h1>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            <GlobalAddOrderModal />
             <DateRangeFilter days={days} />
             <Link href="/admin/orders/archived"
               className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 border rounded-lg px-3 py-1.5 hover:bg-slate-50 transition-colors">
