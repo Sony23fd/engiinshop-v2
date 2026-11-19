@@ -104,9 +104,10 @@ export default function DeliveryRequestButton({ orderIds, deliveryScheduleDays =
           </p>
         </div>
 
-        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-sm space-y-3">
+        {/* Amount Summary */}
+        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-sm">
           {Number(manualData.cargoFee) > 0 ? (
-            <div className="space-y-2 pb-2 border-b border-slate-200">
+            <div className="space-y-2">
               <div className="flex justify-between items-center text-xs text-slate-600">
                 <span>Каргоны төлбөр:</span>
                 <span className="font-bold text-slate-800">{Number(manualData.cargoFee).toLocaleString()} ₮</span>
@@ -121,13 +122,41 @@ export default function DeliveryRequestButton({ orderIds, deliveryScheduleDays =
               </div>
             </div>
           ) : (
-            <div className="flex justify-between items-center pb-2 border-b border-slate-200">
+            <div className="flex justify-between items-center">
               <span className="text-slate-600 font-medium">Төлөх дүн:</span>
               <span className="font-black text-xl text-indigo-600">{Number(manualData.fee).toLocaleString()} ₮</span>
             </div>
           )}
+        </div>
 
-          <div className="flex justify-between items-center pt-1">
+        {/* Step 1: Transaction Note First */}
+        <div className="bg-red-50 border-2 border-red-300 p-4 rounded-xl">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-red-700 font-extrabold uppercase tracking-wider">1. Гүйлгээний утга (Эхлээд хуулна уу!)</span>
+            <span className="bg-red-600 text-white text-[9px] font-bold px-2 py-0.5 rounded uppercase">Маш чухал</span>
+          </div>
+          <div className="bg-white border border-red-200 rounded-lg p-3 flex justify-between items-center shadow-2xs">
+            <span className="font-bold text-sm text-red-950 font-mono leading-tight select-all">
+              {manualData.bank_note || "Утасны дугаараа бичнэ үү"}
+            </span>
+            <button
+              type="button"
+              onClick={() => copyToClipboard(manualData.bank_note || "Утасны дугаараа бичнэ үү")}
+              className="flex items-center gap-1.5 bg-red-100 hover:bg-red-200 text-red-700 px-2.5 py-1.5 rounded text-xs uppercase font-bold transition-colors shrink-0 ml-2"
+            >
+              {copiedData === (manualData.bank_note || "Утасны дугаараа бичнэ үү") ? <CheckCircle2 className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+              {copiedData === (manualData.bank_note || "Утасны дугаараа бичнэ үү") ? "Хуулсан" : "Хуулах"}
+            </button>
+          </div>
+          <p className="text-[11px] text-red-700 mt-2 font-medium">
+            ⚠️ Банкны апп дээрээ шилжүүлэг хийхдээ гүйлгээний утга дээр ЗӨВХӨН энэ утгыг тавина уу.
+          </p>
+        </div>
+
+        {/* Step 2: Account Details Second */}
+        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-sm space-y-3">
+          <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">2. Дансны мэдээлэл (Шилжүүлэг хийх)</p>
+          <div className="flex justify-between items-center pt-1 border-t border-slate-200">
             <span className="text-slate-500 font-medium">Хүлээн авах банк:</span>
             <span className="font-bold text-slate-800">{manualData.bank_name}</span>
           </div>
@@ -138,9 +167,9 @@ export default function DeliveryRequestButton({ orderIds, deliveryScheduleDays =
               <button
                 type="button"
                 onClick={() => copyToClipboard(manualData.bank_account)}
-                className="flex items-center gap-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-[10px] uppercase font-bold transition-colors"
+                className="flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2.5 py-1.5 rounded text-xs uppercase font-bold transition-colors border border-indigo-100"
               >
-                {copiedData === manualData.bank_account ? <CheckCircle2 className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
+                {copiedData === manualData.bank_account ? <CheckCircle2 className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
                 {copiedData === manualData.bank_account ? "Хуулсан" : "Хуулах"}
               </button>
             </div>
@@ -149,24 +178,6 @@ export default function DeliveryRequestButton({ orderIds, deliveryScheduleDays =
             <span className="text-slate-500 font-medium">Данс эзэмшигч:</span>
             <span className="font-bold text-slate-800">{manualData.bank_holder}</span>
           </div>
-        </div>
-        
-        <div className="bg-red-50 border-2 border-red-200 p-4 rounded-xl">
-          <p className="text-xs text-red-600 font-bold uppercase tracking-wider mb-2">Гүйлгээний утга (Маш чухал)</p>
-          <div className="bg-white border border-red-100 rounded-lg p-3 flex justify-between items-center">
-            <span className="font-bold text-sm text-red-900 leading-tight">
-              {manualData.bank_note || "Утасны дугаараа бичнэ үү"}
-            </span>
-            <button
-              type="button"
-              onClick={() => copyToClipboard(manualData.bank_note || "Утасны дугаараа бичнэ үү")}
-              className="flex items-center gap-1 bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1.5 rounded text-[10px] uppercase font-bold transition-colors shrink-0 ml-2"
-            >
-              {copiedData === (manualData.bank_note || "Утасны дугаараа бичнэ үү") ? <CheckCircle2 className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-              {copiedData === (manualData.bank_note || "Утасны дугаараа бичнэ үү") ? "Хуулсан" : "Хуулах"}
-            </button>
-          </div>
-          <p className="text-[11px] text-red-700 mt-2 font-medium">Шилжүүлэг хийхдээ гүйлгээний утгыг зөв бичсэнээр таны хүргэлт & карго төлбөр баталгаажна.</p>
         </div>
 
         {error && (

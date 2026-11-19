@@ -88,22 +88,32 @@ export default async function OrderPendingPage({ params }: { params: Promise<{ o
           </div>
 
           {/* Bank details */}
-          <div className="space-y-2">
-            <PaymentRow label="Банк" value={settings.bank_name || "—"} />
-            <PaymentRow label="Дансны дугаар" value={settings.bank_account || "—"} copyable />
-            <PaymentRow label="Хүлээн авагч" value={settings.bank_holder || "—"} />
-            <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3">
-              <p className="text-xs text-indigo-600 font-medium mb-1">⚠️ Гүйлгээний утга (заавал бичнэ)</p>
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-mono font-bold text-indigo-800 text-sm tracking-wider">{transactionRef}</span>
+          <div className="space-y-3">
+            {/* Step 1: Transaction Note First */}
+            <div className="bg-red-50 border-2 border-red-200 rounded-xl p-3.5">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs text-red-700 font-bold uppercase tracking-wider">1. Гүйлгээний утга (Эхлээд хуулна уу)</p>
+                <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">Маш чухал</span>
+              </div>
+              <p className="text-[11px] text-red-600 mb-2">Банкны апп дээрээ гүйлгээний утга дээр ЗӨВХӨН энэ кодыг бичнэ:</p>
+              <div className="flex items-center justify-between gap-2 bg-white border border-red-200 rounded-lg px-3 py-2">
+                <span className="font-mono font-bold text-red-950 text-base tracking-wider select-all">{transactionRef}</span>
                 <CopyButton text={transactionRef} />
               </div>
+            </div>
+
+            {/* Step 2: Bank details */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
+              <p className="text-xs text-slate-700 font-bold uppercase tracking-wider">2. Дансны мэдээлэл (Шилжүүлэг хийх)</p>
+              <PaymentRow label="Банк" value={settings.bank_name || "—"} />
+              <PaymentRow label="Дансны дугаар" value={settings.bank_account || "—"} copyable />
+              <PaymentRow label="Хүлээн авагч" value={settings.bank_holder || "—"} />
             </div>
           </div>
 
           <div className="bg-slate-50 rounded-xl p-3 text-xs text-slate-500 space-y-1">
-            <p>1. Дээрх дансанд <strong>₮{totalAmount.toLocaleString()}</strong> шилжүүлнэ</p>
-            <p>2. Гүйлгээний утгад <strong>{transactionRef}</strong> гэж заавал бичнэ</p>
+            <p>1. Эхлээд гүйлгээний утга <strong>{transactionRef}</strong> кодыг хуулж авна</p>
+            <p>2. Дээрх данс руу <strong>₮{totalAmount.toLocaleString()}</strong> шилжүүлнэ</p>
             <p>3. Админ гүйлгээг шалгаад захиалгыг баталгаажуулна</p>
           </div>
         </div>

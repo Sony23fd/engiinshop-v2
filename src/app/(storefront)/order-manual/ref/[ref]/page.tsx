@@ -45,44 +45,62 @@ export default async function ManualCheckoutPage({ params }: { params: Promise<{
 
         {/* Step-by-step instructions */}
         <div className="space-y-6">
+          {/* Step 1: Transaction Note First */}
           <div className="flex gap-4">
-            <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 font-bold flex items-center justify-center shrink-0 border border-slate-200 mt-1">1</div>
+            <div className="w-8 h-8 rounded-full bg-red-100 text-red-600 font-bold flex items-center justify-center shrink-0 border border-red-200 mt-1">1</div>
             <div className="flex-1 space-y-3">
-              <h3 className="font-bold text-slate-800 text-lg">Дансны мэдээлэл</h3>
-              <p className="text-sm text-slate-500">Доорх данс руу шилжүүлэг хийнэ үү.</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <div>
-                  <p className="text-xs text-slate-400 mb-1">Хүлээн авагч банк</p>
-                  <p className="font-medium text-slate-800">{settings.bank_name || "Хаан банк"}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400 mb-1">Дансны нэр</p>
-                  <p className="font-medium text-slate-800">{settings.bank_holder || "Байгууллага"}</p>
-                </div>
-                <div className="sm:col-span-2 pt-2">
-                  <ManualPaymentClient label="Дансны дугаар" value={settings.bank_account || "Данс оруулаагүй байна"} />
-                </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-bold text-slate-800 text-lg">Гүйлгээний утга (Маш чухал!)</h3>
+                <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">Эхлээд хуулна уу</span>
               </div>
-            </div>
-          </div>
-
-          <div className="flex gap-4">
-            <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 font-bold flex items-center justify-center shrink-0 border border-slate-200 mt-1">2</div>
-            <div className="flex-1 space-y-3">
-              <h3 className="font-bold text-slate-800 text-lg">Гүйлгээний утга (Маш чухал!)</h3>
-              <p className="text-sm text-slate-500">Гүйлгээний утга дээр <strong>ЗӨВХӨН</strong> доорх кодыг хуулж тавина уу.</p>
-              <div className="bg-red-50 border-2 border-red-200 p-5 rounded-xl shadow-sm relative overflow-hidden">
-                <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg uppercase tracking-wider">Маш чухал</div>
+              <p className="text-sm text-slate-600 font-medium">
+                Банкны апп руугаа орохоос өмнө <strong>ЗӨВХӨН</strong> доорх кодыг эхлээд хуулж авна уу:
+              </p>
+              <div className="bg-red-50 border-2 border-red-300 p-5 rounded-xl shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg uppercase tracking-wider">1-р алхам</div>
                 <div className="mb-3 mt-2">
-                  <ManualPaymentClient value={ref} large />
+                  <ManualPaymentClient 
+                    value={ref} 
+                    large 
+                    copyToastTitle="Гүйлгээний утга хуулагдлаа! 📋" 
+                    copyToastDescription="Одоо доорх 2-р алхмын дансны дугаарыг хуулж шилжүүлэг хийнэ үү." 
+                  />
                 </div>
-                <p className="text-xs text-red-700 leading-relaxed font-medium">
+                <p className="text-xs text-red-700 leading-relaxed font-semibold">
                   ⚠️ Хэрэв та өөр зүйл бичвэл таны захиалга системд танигдахгүй бөгөөд баталгаажихгүй болохыг хатуу анхаарна уу!
                 </p>
               </div>
             </div>
           </div>
 
+          {/* Step 2: Account Details Second */}
+          <div className="flex gap-4">
+            <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 font-bold flex items-center justify-center shrink-0 border border-indigo-200 mt-1">2</div>
+            <div className="flex-1 space-y-3">
+              <h3 className="font-bold text-slate-800 text-lg">Дансны мэдээлэл</h3>
+              <p className="text-sm text-slate-500">Гүйлгээний утгаа хуулсан бол доорх данс руу шилжүүлэг хийнэ үү.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <div>
+                  <p className="text-xs text-slate-400 mb-1">Хүлээн авагч банк</p>
+                  <p className="font-bold text-slate-800">{settings.bank_name || "Хаан банк"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400 mb-1">Дансны нэр</p>
+                  <p className="font-bold text-slate-800">{settings.bank_holder || "Байгууллага"}</p>
+                </div>
+                <div className="sm:col-span-2 pt-2">
+                  <ManualPaymentClient 
+                    label="Дансны дугаар" 
+                    value={settings.bank_account || "Данс оруулаагүй байна"} 
+                    copyToastTitle="Дансны дугаар хуулагдлаа! 🏦"
+                    copyToastDescription={`${settings.bank_name || "Хаан банк"} - ${settings.bank_account || ""}`}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Step 3: Confirmation */}
           <div className="flex gap-4">
             <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 font-bold flex items-center justify-center shrink-0 border border-slate-200 mt-1">3</div>
             <div className="flex-1 space-y-3 pt-1">
