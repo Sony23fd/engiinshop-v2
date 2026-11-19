@@ -230,10 +230,18 @@ export async function getDeliveryOrders(date?: string, tab: string = "ready") {
       { status: { isFinal: false } },
       {
         OR: [
-          { wantsDelivery: true },
+          {
+            wantsDelivery: true,
+            status: {
+              OR: [
+                { isDeliverable: true },
+                { name: { in: ["Улаанбаатарт ирсэн", "Хүргэлтийн ажилтанд өгсөн", "Хүргэлтэд гарсан"] } }
+              ]
+            }
+          },
           {
             status: {
-              name: { in: ["Улаанбаатарт ирсэн", "Хүргэлтийн ажилтанд өгсөн", "Хүргэлтэд гарсан"] }
+              name: { in: ["Хүргэлтийн ажилтанд өгсөн", "Хүргэлтэд гарсан"] }
             }
           }
         ]
