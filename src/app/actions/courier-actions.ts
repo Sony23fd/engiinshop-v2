@@ -54,8 +54,6 @@ export async function getCourierDeliveries(providedPin?: string) {
     const orders = await (db.order as any).findMany({
       where: {
         paymentStatus: "CONFIRMED",
-        wantsDelivery: true,
-        deliveryAddress: { not: "" },
         status: {
           name: {
             in: [

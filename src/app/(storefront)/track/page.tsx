@@ -195,7 +195,11 @@ export default async function TrackOrderPage({
 function UnifiedDeliverySection({ groups, settings }: { groups: any[][], settings: any }) {
   const deliveryScheduleDays = settings.delivery_schedule_days || "3,6"
   const allOrders = groups.flat()
-  const alreadyDelivered = allOrders.filter((o: any) => o.wantsDelivery)
+  const alreadyDelivered = allOrders.filter((o: any) => 
+    o.wantsDelivery || 
+    o.status?.name?.toLowerCase().includes("ажилтанд өгсөн") || 
+    o.status?.name?.toLowerCase().includes("хүргэлтэд гарсан")
+  )
   const deliveryAddress = alreadyDelivered.find((o: any) => o.deliveryAddress)?.deliveryAddress
   const isStatusDeliverable = (status: any) => {
     if (!status) return false;
@@ -205,8 +209,19 @@ function UnifiedDeliverySection({ groups, settings }: { groups: any[][], setting
     return ["ирсэн", "arrived", "монголд", "улаанбаатарт", "ub"].some(k => name.includes(k));
   }
 
-  const eligibleForDelivery = allOrders.filter((o: any) => isStatusDeliverable(o.status) && !o.wantsDelivery)
-  const notYetDeliverable = allOrders.filter((o: any) => !isStatusDeliverable(o.status) && !o.wantsDelivery && !o.status?.isFinal)
+  const eligibleForDelivery = allOrders.filter((o: any) => 
+    isStatusDeliverable(o.status) && 
+    !o.wantsDelivery && 
+    !o.status?.name?.toLowerCase().includes("ажилтанд өгсөн") && 
+    !o.status?.name?.toLowerCase().includes("хүргэлтэд гарсан")
+  )
+  const notYetDeliverable = allOrders.filter((o: any) => 
+    !isStatusDeliverable(o.status) && 
+    !o.wantsDelivery && 
+    !o.status?.isFinal &&
+    !o.status?.name?.toLowerCase().includes("ажилтанд өгсөн") && 
+    !o.status?.name?.toLowerCase().includes("хүргэлтэд гарсан")
+  )
 
   if (alreadyDelivered.length === 0 && eligibleForDelivery.length === 0 && notYetDeliverable.length === 0) return null
   const hasMixedDeliverable = eligibleForDelivery.length > 0 && notYetDeliverable.length > 0;
@@ -234,9 +249,28 @@ function UnifiedDeliverySection({ groups, settings }: { groups: any[][], setting
       {alreadyDelivered.length > 0 && (
         <div className="flex items-start gap-3 text-sm text-green-700 bg-green-50/80 rounded-xl px-4 py-3 border border-green-200 shadow-sm">
           <CheckCircle2 className="w-5 h-5 mt-0 flex-shrink-0 text-green-500" />
-          <div>
-            <p className="font-semibold text-green-800">Хүргэлт захиалагдсан ({alreadyDelivered.length} бараа)</p>
-            {deliveryAddress && <p className="text-xs font-medium text-green-600/90 mt-0.5">{deliveryAddress}</p>}
+          <div className="flex-1">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <p className="font-semibold text-green-800">Хүргэлт захиалагдсан ({alreadyDelivered.length} бараа)</p>
+              {alreadyDelivered.some((o: any) => !o.deliveryFeePaid) ? (
+                <span className="text-[11px] font-bold text-amber-700 bg-amber-100/80 px-2 py-0.5 rounded-full border border-amber-200">
+                  ⏳ Төлбөр шалгагдаж буй
+                </span>
+              ) : (
+                <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full border border-emerald-200">
+                  ✅ Төлбөр баталгаажсан
+                </span>
+              )}
+            </div>
+            {deliveryAddress ? (
+              <p className={`text-xs font-medium mt-1 ${deliveryAddress === "Хаяг тодруулах шаардлагатай" ? "text-amber-700 font-bold" : "text-green-600/90"}`}>
+                📍 {deliveryAddress}
+              </p>
+            ) : (
+              <p className="text-xs font-bold text-amber-700 mt-1">
+                📍 Хаяг тодруулах шаардлагатай (Админтай холбогдоно уу)
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -312,7 +346,11 @@ function OrderGroup({ orders, completed = false, deliveryScheduleDays = "3,6", s
   const allDelivered = allFinal && !anyRejected
   const allDeliveryRequested = orders.every((o: any) => o.wantsDelivery)
   const someDeliveryRequested = orders.some((o: any) => o.wantsDelivery)
-  const wantsDelivery = allDeliveryRequested || someDeliveryRequested || !!first.wantsDelivery
+  const hasDeliveryStatus = orders.some((o: any) => {
+    const s = o.status?.name?.toLowerCase() || ""
+    return s.includes("хүргэлт") || s.includes("ажилтанд") || s.includes("жолооч")
+  })
+  const wantsDelivery = allDeliveryRequested || someDeliveryRequested || !!first.wantsDelivery || hasDeliveryStatus
   const deliveryDate = orders.find((o: any) => o.deliveryDate)?.deliveryDate || first.deliveryDate
 
   // Determine styles (Neutralize if completed)

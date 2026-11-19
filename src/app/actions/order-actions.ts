@@ -225,18 +225,20 @@ export async function getDeliveredOrders(days: number = 30, page: number = 1, li
 
 export async function getDeliveryOrders(date?: string, tab: string = "ready") {
   try {
-    const whereClause: any = {
-      paymentStatus: "CONFIRMED", // Must be confirmed by Main Admin first
-      wantsDelivery: true,
-      deliveryAddress: { not: "" },
-      status: {
-        isFinal: false,
+    const whereConditions: any[] = [
+      { paymentStatus: "CONFIRMED" },
+      { status: { isFinal: false } },
+      {
         OR: [
-          { isDeliverable: true },
-          { name: { in: ["Улаанбаатарт ирсэн", "Хүргэлтийн ажилтанд өгсөн", "Хүргэлтэд гарсан"] } }
+          { wantsDelivery: true },
+          {
+            status: {
+              name: { in: ["Улаанбаатарт ирсэн", "Хүргэлтийн ажилтанд өгсөн", "Хүргэлтэд гарсан"] }
+            }
+          }
         ]
       }
-    }
+    ]
 
     if (date) {
       // date is in YYYY-MM-DD
@@ -246,25 +248,29 @@ export async function getDeliveryOrders(date?: string, tab: string = "ready") {
       const endOfDay = new Date(date)
       endOfDay.setHours(23, 59, 59, 999)
 
-      whereClause.OR = [
-        {
-          deliveryRequestedAt: {
-            gte: startOfDay,
-            lte: endOfDay
+      whereConditions.push({
+        OR: [
+          {
+            deliveryRequestedAt: {
+              gte: startOfDay,
+              lte: endOfDay
+            }
+          },
+          {
+            deliveryRequestedAt: null,
+            updatedAt: {
+              gte: startOfDay,
+              lte: endOfDay
+            }
           }
-        },
-        {
-          deliveryRequestedAt: null,
-          updatedAt: {
-            gte: startOfDay,
-            lte: endOfDay
-          }
-        }
-      ]
+        ]
+      })
     }
 
     const allOrders = await (db.order as any).findMany({
-      where: whereClause,
+      where: {
+        AND: whereConditions
+      },
       include: {
         batch: { include: { product: true, category: true } },
         status: true
@@ -272,30 +278,43 @@ export async function getDeliveryOrders(date?: string, tab: string = "ready") {
       orderBy: { updatedAt: "desc" }
     })
 
-    const readyOrders = allOrders.filter((o: any) =>
-      !o.status?.name?.toLowerCase().includes("ажилтанд өгсөн") &&
-      !o.status?.name?.toLowerCase().includes("хүргэлтэд гарсан")
-    )
-    const inTransitOrders = allOrders.filter((o: any) =>
-      o.status?.name?.toLowerCase().includes("ажилтанд өгсөн") ||
-      o.status?.name?.toLowerCase().includes("хүргэлтэд гарсан")
-    )
+    const isMissingAddress = (o: any) => {
+      const addr = (o.deliveryAddress || "").trim()
+      return !addr || addr === "Хаяг тодруулах шаардлагатай" || addr === "Өөрөө ирж авна" || addr === "Өөрөө авна"
+    }
 
-    let filteredOrders = allOrders
-    if (tab === "ready") {
-      filteredOrders = readyOrders
-    } else if (tab === "in_transit") {
+    const isCourierTransit = (o: any) => {
+      const s = o.status?.name?.toLowerCase() || ""
+      return s.includes("ажилтанд өгсөн") || s.includes("хүргэлтэд гарсан")
+    }
+
+    // Missing address orders across all deliverable states
+    const missingOrders = allOrders.filter(isMissingAddress)
+
+    // Ready to prepare for delivery (not yet handed to courier)
+    const readyOrders = allOrders.filter((o: any) => !isCourierTransit(o))
+
+    // In transit with couriers
+    const inTransitOrders = allOrders.filter(isCourierTransit)
+
+    let filteredOrders = readyOrders
+    if (tab === "in_transit") {
       filteredOrders = inTransitOrders
+    } else if (tab === "missing_address") {
+      filteredOrders = missingOrders
+    } else {
+      filteredOrders = readyOrders
     }
 
     return {
       success: true,
       orders: JSON.parse(JSON.stringify(filteredOrders)),
       readyCount: readyOrders.length,
-      inTransitCount: inTransitOrders.length
+      inTransitCount: inTransitOrders.length,
+      missingCount: missingOrders.length
     }
   } catch (error: any) {
-    return { success: false, error: error.message, orders: [], readyCount: 0, inTransitCount: 0 }
+    return { success: false, error: error.message, orders: [], readyCount: 0, inTransitCount: 0, missingCount: 0 }
   }
 }
 
@@ -338,7 +357,7 @@ export async function handoverOrdersToCourier(orderIds: string[], autoConfirmFee
     })
     if (!courierStatus) return { success: false, error: "'Хүргэлтийн ажилтанд өгсөн' статус олдсонгүй" }
 
-    const updateData: any = { statusId: courierStatus.id }
+    const updateData: any = { statusId: courierStatus.id, wantsDelivery: true }
     if (autoConfirmFee) {
       updateData.deliveryFeePaid = true
     }
@@ -1112,6 +1131,19 @@ export async function updateOrderStatus(orderId: string, statusId: string, reaso
         updateData.wantsDelivery = false
       }
 
+      // 4. If transitioning to delivery status, ensure wantsDelivery=true and address placeholder if empty
+      const isDeliveryStatus = ["Хүргэлтийн ажилтанд өгсөн", "Хүргэлтэд гарсан"].includes(newStatus.name)
+      if (isDeliveryStatus) {
+        updateData.wantsDelivery = true
+        const currentAddr = (order.deliveryAddress || "").trim()
+        if (!currentAddr || currentAddr === "Өөрөө ирж авна" || currentAddr === "Өөрөө авна") {
+          updateData.deliveryAddress = "Хаяг тодруулах шаардлагатай"
+        }
+        if (!order.deliveryRequestedAt) {
+          updateData.deliveryRequestedAt = new Date()
+        }
+      }
+
       return await (tx.order as any).update({
         where: { id: orderId },
         data: updateData
@@ -1488,6 +1520,21 @@ export async function updateBatchOrderStatusesByIds(
           })
         }
 
+        // Logic for transitioning TO Delivery status
+        const isDeliveryStatus = ["Хүргэлтийн ажилтанд өгсөн", "Хүргэлтэд гарсан"].includes(targetStatus.name)
+        if (isDeliveryStatus) {
+          updateData.wantsDelivery = true
+          const currentAddr = (order.deliveryAddress || "").trim()
+          if (!currentAddr || currentAddr === "Өөрөө ирж авна" || currentAddr === "Өөрөө авна") {
+            updateData.deliveryAddress = "Хаяг тодруулах шаардлагатай"
+          }
+          if (!order.deliveryRequestedAt) {
+            updateData.deliveryRequestedAt = new Date()
+          }
+        } else if (targetStatus.isFinal && targetStatus.name === "Өөрөө ирж авсан" && order.wantsDelivery) {
+          updateData.wantsDelivery = false
+        }
+
         await (tx.order as any).update({
           where: { id: order.id },
           data: updateData
@@ -1666,6 +1713,31 @@ export async function requestDelivery(orderIds: string[], deliveryAddress: strin
       revalidatePath("/track")
       return { success: true, directlyConfirmed: true }
     }
+
+    // Save-On-Submit: Immediately save delivery address & intent to DB
+    await (db.order as any).updateMany({
+      where: { id: { in: eligibleIds } },
+      data: {
+        wantsDelivery: true,
+        deliveryFeePaid: false,
+        deliveryAddress: deliveryAddress.trim(),
+        deliveryDate: deliveryDate ? new Date(deliveryDate) : undefined,
+        deliveryRequestedAt: new Date()
+      }
+    })
+
+    // Emit notification for admin so they see the delivery request immediately
+    const { emitDeliveryRequest } = await import("@/lib/orderEvents")
+    emitDeliveryRequest({
+      customerName: eligibleOrders[0]?.customerName || "Хэрэглэгч",
+      customerPhone: eligibleOrders[0]?.customerPhone || "",
+      address: deliveryAddress.trim(),
+      orderCount: eligibleIds.length,
+      createdAt: new Date().toISOString()
+    })
+
+    revalidatePath("/track")
+    revalidatePath("/admin/orders/delivery")
 
     // Force Cargo Manual Bank Transfer for Cargo & Delivery Fee
     const bankNote = settings.cargo_payment_instruction || `${eligibleOrders[0]?.customerPhone || ""} хүргэлт карго`
@@ -2274,5 +2346,45 @@ export async function getRecentOrderNotifications() {
     return { success: true, data: sortedNotifications }
   } catch (error) {
     return { success: false, data: [] }
+  }
+}
+
+export async function updateDeliveryAddressForOrders(orderIds: string[], newAddress: string) {
+  try {
+    const adminMode = await getCurrentAdmin()
+    if (!adminMode) return { success: false, error: "Хандах эрхгүй" }
+
+    if (!orderIds || orderIds.length === 0) return { success: false, error: "Захиалга сонгогдоогүй" }
+    const trimmedAddress = (newAddress || "").trim()
+    if (!trimmedAddress) return { success: false, error: "Хаяг хоосон байна" }
+
+    await (db.order as any).updateMany({
+      where: { id: { in: orderIds } },
+      data: {
+        deliveryAddress: trimmedAddress,
+        wantsDelivery: true
+      }
+    })
+
+    await logAdminActivity({
+      action: "ХҮРГЭЛТИЙН_ХАЯГ_ӨӨРЧИЛСӨН",
+      type: "ORDER",
+      target: `${orderIds.length} захиалга`,
+      targetUrl: "/admin/orders/delivery",
+      detail: `${orderIds.length} захиалгын хүргэлтийн хаягийг '${trimmedAddress}' болгож шинэчлэв.`,
+      userId: adminMode.id,
+      userName: adminMode.name || "Админ",
+      userRole: adminMode.role,
+    })
+
+    revalidatePath("/admin/orders/delivery")
+    revalidatePath("/admin/orders/search")
+    revalidatePath("/courier")
+    revalidatePath("/track")
+
+    return { success: true }
+  } catch (err: any) {
+    console.error("updateDeliveryAddressForOrders error:", err)
+    return { success: false, error: err.message }
   }
 }

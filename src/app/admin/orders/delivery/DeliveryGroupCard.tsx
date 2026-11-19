@@ -1,15 +1,48 @@
 "use client"
 
 import { useState } from "react"
-import { User, Truck, Box, Tag, CheckCircle2, AlertCircle } from "lucide-react"
+import { User, Truck, Box, Tag, CheckCircle2, AlertCircle, Edit2 } from "lucide-react"
 import { GroupDeliveryActions } from "./GroupDeliveryActions"
 import { formatSelectedOptions } from "@/lib/variant-utils"
+import { updateDeliveryAddressForOrders } from "@/app/actions/order-actions"
+import { useToast } from "@/components/ui/use-toast"
+import { useRouter } from "next/navigation"
 
 export function DeliveryGroupCard({ groupOrders }: { groupOrders: any[] }) {
   const [selectedIds, setSelectedIds] = useState<string[]>(groupOrders.map(o => o.id))
+  const { toast } = useToast()
+  const router = useRouter()
 
   const first = groupOrders[0]
   const deliveryAddress = groupOrders.find((o: any) => o.deliveryAddress)?.deliveryAddress
+  const isMissingAddr = !deliveryAddress || 
+    deliveryAddress.trim() === "" || 
+    deliveryAddress === "Хаяг тодруулах шаардлагатай" || 
+    deliveryAddress === "Өөрөө ирж авна" || 
+    deliveryAddress === "Өөрөө авна"
+
+  const [isEditingAddress, setIsEditingAddress] = useState(false)
+  const [inputAddress, setInputAddress] = useState(isMissingAddr ? "" : (deliveryAddress || ""))
+  const [isSavingAddress, setIsSavingAddress] = useState(false)
+
+  const handleSaveAddress = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!inputAddress.trim()) {
+      toast({ variant: "destructive", title: "Алдаа", description: "Хүргэлтийн хаяг хоосон байж болохгүй" })
+      return
+    }
+    setIsSavingAddress(true)
+    const allGroupOrderIds = groupOrders.map(o => o.id)
+    const res = await updateDeliveryAddressForOrders(allGroupOrderIds, inputAddress.trim())
+    setIsSavingAddress(false)
+    if (res.success) {
+      toast({ title: "Амжилттай", description: "Хүргэлтийн хаяг шинэчлэгдлээ." })
+      setIsEditingAddress(false)
+      router.refresh()
+    } else {
+      toast({ variant: "destructive", title: "Алдаа", description: res.error || "Хаяг шинэчлэхэд алдаа гарлаа" })
+    }
+  }
 
   const isOutForDelivery = groupOrders.some((o: any) => 
     o.status?.name?.toLowerCase().includes("ажилтанд өгсөн") || 
@@ -40,11 +73,11 @@ export function DeliveryGroupCard({ groupOrders }: { groupOrders: any[] }) {
   }
 
   return (
-    <div className={`bg-white rounded-xl border shadow-sm overflow-hidden border-l-4 ${isOutForDelivery ? "border-l-indigo-500" : "border-l-amber-400"}`}>
+    <div className={`bg-white rounded-xl border shadow-sm overflow-hidden border-l-4 ${isMissingAddr ? "border-l-red-500" : (isOutForDelivery ? "border-l-indigo-500" : "border-l-amber-400")}`}>
       {/* Customer Header */}
       <div className="bg-slate-50 border-b px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div className="flex items-center gap-3">
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isOutForDelivery ? "bg-indigo-100 text-indigo-600" : "bg-amber-100 text-amber-600"}`}>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isMissingAddr ? "bg-red-100 text-red-600" : (isOutForDelivery ? "bg-indigo-100 text-indigo-600" : "bg-amber-100 text-amber-600")}`}>
             <User className="w-4 h-4" />
           </div>
           <div>
@@ -62,6 +95,11 @@ export function DeliveryGroupCard({ groupOrders }: { groupOrders: any[] }) {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {isMissingAddr && (
+            <span className="bg-red-100 text-red-800 text-xs px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1.5 shadow-xs border border-red-200">
+              <AlertCircle className="w-3.5 h-3.5 text-red-600" /> Хаяг дутуу!
+            </span>
+          )}
           {isOutForDelivery ? (
             <span className="bg-indigo-100 text-indigo-800 text-xs px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1.5 shadow-xs">
               <Truck className="w-3.5 h-3.5" /> Жолоочтой яваа (Хүргэлтэд гарсан)
@@ -144,7 +182,51 @@ export function DeliveryGroupCard({ groupOrders }: { groupOrders: any[] }) {
                   </div>
                   <div className="col-span-1 sm:col-span-3">
                     <span className="text-slate-400 text-xs block">Хүргүүлэх хаяг</span>
-                    <span className="font-semibold text-indigo-700 bg-indigo-50 px-1 rounded">{deliveryAddress || "Хаяг оруулаагүй байна!"}</span>
+                    {isEditingAddress ? (
+                      <form onSubmit={handleSaveAddress} className="flex items-center gap-2 mt-1" onClick={e => e.stopPropagation()}>
+                        <input
+                          type="text"
+                          value={inputAddress}
+                          onChange={e => setInputAddress(e.target.value)}
+                          placeholder="Дүүрэг, хороо, байр, орц, тоот..."
+                          className="text-xs px-2.5 py-1.5 border border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 flex-1 bg-white text-slate-800 shadow-xs"
+                          autoFocus
+                        />
+                        <button
+                          type="submit"
+                          disabled={isSavingAddress}
+                          className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-2.5 py-1.5 rounded-lg disabled:opacity-50 shrink-0 shadow-xs"
+                        >
+                          {isSavingAddress ? "Хадгалж байна..." : "Хадгалах"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setIsEditingAddress(false); setInputAddress(isMissingAddr ? "" : (deliveryAddress || "")); }}
+                          className="text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 px-2.5 py-1.5 rounded-lg shrink-0"
+                        >
+                          Болих
+                        </button>
+                      </form>
+                    ) : (
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        {isMissingAddr ? (
+                          <span className="text-xs font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-md inline-flex items-center gap-1">
+                            ⚠️ Хаяг тодруулах шаардлагатай!
+                          </span>
+                        ) : (
+                          <span className="font-semibold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded text-xs border border-indigo-100">
+                            {deliveryAddress}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setIsEditingAddress(true); }}
+                          className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1 underline ml-1 cursor-pointer bg-white px-1.5 py-0.5 rounded border border-indigo-200 shadow-2xs"
+                        >
+                          <Edit2 className="w-3 h-3" /> {isMissingAddr ? "Хаяг оруулах" : "Засах"}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -162,7 +244,7 @@ export function DeliveryGroupCard({ groupOrders }: { groupOrders: any[] }) {
             <>Сонгосон <strong className="text-amber-700 font-bold">{selectedIds.length}</strong> захиалгыг жолоочид баглаж өгсөн бол хүргэлтэд гаргана уу.</>
           )}
         </p>
-        <GroupDeliveryActions orderIds={selectedIds} isOutForDelivery={isOutForDelivery} isFeePaid={isFeePaid} />
+        <GroupDeliveryActions orderIds={selectedIds} isOutForDelivery={isOutForDelivery} isFeePaid={isFeePaid} isMissingAddress={isMissingAddr} />
       </div>
     </div>
   )

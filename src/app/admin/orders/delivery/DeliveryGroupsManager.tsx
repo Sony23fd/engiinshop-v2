@@ -20,7 +20,7 @@ import { useRouter } from "next/navigation"
 
 interface DeliveryGroupsManagerProps {
   groups: any[][]
-  currentTab: "ready" | "in_transit"
+  currentTab: "ready" | "in_transit" | "missing_address"
   courierPin: string
 }
 

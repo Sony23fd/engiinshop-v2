@@ -1,6 +1,6 @@
 import { getDeliveryOrders } from "@/app/actions/order-actions"
 import { getShopSettings } from "@/app/actions/settings-actions"
-import { Truck, Box } from "lucide-react"
+import { Truck, Box, AlertCircle } from "lucide-react"
 import { DeliveryGroupsManager } from "./DeliveryGroupsManager"
 import { DeliveryFilter } from "./DeliveryFilter"
 import { ListSearchFilter } from "@/components/admin/ListSearchFilter"
@@ -18,14 +18,16 @@ export default async function DeliveryQueuePage({
   const dateFilter = resolvedParams.date
   const q = resolvedParams.q?.toLowerCase() || ""
   const page = resolvedParams.page ? parseInt(resolvedParams.page, 10) : 1
-  const currentTab = resolvedParams.tab === "in_transit" ? "in_transit" : "ready"
+  const currentTab = resolvedParams.tab === "in_transit" 
+    ? "in_transit" 
+    : (resolvedParams.tab === "missing_address" ? "missing_address" : "ready")
   const itemsPerPage = 50
 
   const [deliveryData, settings] = await Promise.all([
     getDeliveryOrders(dateFilter, currentTab),
     getShopSettings()
   ])
-  const { orders, readyCount = 0, inTransitCount = 0 } = deliveryData
+  const { orders, readyCount = 0, inTransitCount = 0, missingCount = 0 } = deliveryData
   
   let filteredOrders = orders || []
   if (q) {
@@ -67,8 +69,10 @@ export default async function DeliveryQueuePage({
           <p className="text-slate-500 text-sm mt-1">
             {currentTab === "ready" ? (
               <>{dateFilter ? <strong>{dateFilter}</strong> : "Нийт"} хүргэлтэд бэлтгэх <strong>{filteredOrders.length}</strong> ширхэг бараа — <strong>{allGroups.length}</strong> багц</>
-            ) : (
+            ) : currentTab === "in_transit" ? (
               <>{dateFilter ? <strong>{dateFilter}</strong> : "Нийт"} жолоочтой замдаа яваа <strong>{filteredOrders.length}</strong> ширхэг бараа — <strong>{allGroups.length}</strong> багц</>
+            ) : (
+              <>{dateFilter ? <strong>{dateFilter}</strong> : "Нийт"} хаяг дутуу / тодруулах шаардлагатай <strong>{filteredOrders.length}</strong> ширхэг бараа — <strong>{allGroups.length}</strong> багц</>
             )}
           </p>
         </div>
@@ -78,8 +82,24 @@ export default async function DeliveryQueuePage({
         </div>
       </div>
 
+      {/* Alert banner if missing address orders exist */}
+      {missingCount > 0 && currentTab !== "missing_address" && (
+        <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
+            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+            <span>⚠️ Хүргэлтийн хаяг дутуу эсвэл тодорхойгүй {missingCount} захиалга байна! Эдгээр захиалгыг жолоочид өгөхөөс өмнө хаягийг нь тодруулна уу.</span>
+          </div>
+          <Link
+            href={`?tab=missing_address${dateFilter ? `&date=${dateFilter}` : ""}${q ? `&q=${q}` : ""}`}
+            className="text-xs bg-amber-600 hover:bg-amber-700 text-white font-bold px-3 py-1.5 rounded-lg shrink-0 text-center transition-colors shadow-xs"
+          >
+            Хаяг тодруулах ({missingCount}) →
+          </Link>
+        </div>
+      )}
+
       {/* Tabs */}
-      <div className="flex border-b border-slate-200 gap-4">
+      <div className="flex border-b border-slate-200 gap-4 flex-wrap">
         <Link
           href={`?tab=ready${dateFilter ? `&date=${dateFilter}` : ""}${q ? `&q=${q}` : ""}`}
           className={cn(
@@ -116,6 +136,24 @@ export default async function DeliveryQueuePage({
             {inTransitCount}
           </span>
         </Link>
+        <Link
+          href={`?tab=missing_address${dateFilter ? `&date=${dateFilter}` : ""}${q ? `&q=${q}` : ""}`}
+          className={cn(
+            "pb-3 text-sm font-bold flex items-center gap-2 border-b-2 transition-all",
+            currentTab === "missing_address" 
+              ? "border-red-500 text-red-600" 
+              : "border-transparent text-slate-500 hover:text-slate-800"
+          )}
+        >
+          <AlertCircle className="w-4 h-4" />
+          <span>Хаяг дутуу / Тодруулах</span>
+          <span className={cn(
+            "px-2 py-0.5 rounded-full text-xs font-bold",
+            missingCount > 0 ? "bg-red-100 text-red-800" : "bg-slate-100 text-slate-600"
+          )}>
+            {missingCount}
+          </span>
+        </Link>
       </div>
 
       {groups.length === 0 ? (
@@ -125,10 +163,15 @@ export default async function DeliveryQueuePage({
               <Box className="w-10 h-10 text-slate-300 mx-auto mb-3" />
               <p className="text-slate-500 font-medium">Одоогоор хүргэлтэд бэлтгэх (хүлээгдэж буй) захиалга байхгүй.</p>
             </>
-          ) : (
+          ) : currentTab === "in_transit" ? (
             <>
               <Truck className="w-10 h-10 text-slate-300 mx-auto mb-3" />
               <p className="text-slate-500 font-medium">Одоогоор жолоочид хүлээлгэн өгсөн, замдаа яваа захиалга байхгүй.</p>
+            </>
+          ) : (
+            <>
+              <AlertCircle className="w-10 h-10 text-emerald-400 mx-auto mb-3" />
+              <p className="text-emerald-700 font-medium">Баяр хүргэе! Хаяг дутуу захиалга байхгүй байна.</p>
             </>
           )}
         </div>

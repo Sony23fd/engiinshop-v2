@@ -15,11 +15,13 @@ import { useRouter } from "next/navigation"
 export function GroupDeliveryActions({ 
   orderIds,
   isOutForDelivery = false,
-  isFeePaid = false
+  isFeePaid = false,
+  isMissingAddress = false
 }: { 
   orderIds: string[];
   isOutForDelivery?: boolean;
   isFeePaid?: boolean;
+  isMissingAddress?: boolean;
 }) {
   const [loading, setLoading] = useState<"handover" | "deliver" | "pickup" | "revert" | "fee" | null>(null)
   const [done, setDone] = useState<"handover" | "delivered" | "pickedup" | "reverted" | null>(null)
@@ -29,6 +31,11 @@ export function GroupDeliveryActions({
   // 1. Hand over to courier (Step 1)
   async function handleHandoverToCourier() {
     if (orderIds.length === 0) return
+
+    if (isMissingAddress) {
+      alert("⚠️ АНХААРУУЛГА:\nЭнэ захиалгын хүргэлтийн хаяг тодорхойгүй байна!\n\nЖолоочид хүлээлгэн өгөхөөс өмнө хаягийг нь оруулна уу.")
+      return
+    }
 
     let autoConfirmFee = false
     if (!isFeePaid) {

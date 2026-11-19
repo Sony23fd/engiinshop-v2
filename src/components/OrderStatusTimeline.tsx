@@ -32,8 +32,15 @@ export function OrderStatusTimeline({
     lowerStatus.includes("rejected") || 
     lowerStatus.includes("refund");
 
+  // If status indicates delivery, force delivery timeline regardless of wantsDelivery prop
+  const effectiveWantsDelivery = wantsDelivery || 
+    lowerStatus.includes("хүргэлт") || 
+    lowerStatus.includes("ажилтанд") || 
+    lowerStatus.includes("жолооч") ||
+    lowerStatus.includes("delivery");
+
   // Dynamic steps depending on delivery preference
-  const steps = wantsDelivery ? [
+  const steps = effectiveWantsDelivery ? [
     { 
       name: "Захиалга үүссэн", 
       icon: Clock, 
