@@ -631,15 +631,24 @@ export async function getOrdersByAccount(searchQuery: string) {
     // Normalize phone number (strip +976, spaces, dashes)
     const normalizedPhone = cleanQuery.replace(/\+976/g, "").replace(/\s+/g, "").replace(/-/g, "").trim();
 
-    // Check if query is a numeric order number (e.g. #16601 or 16601)
+    // Check if query is a numeric order number safely within PostgreSQL INT4 (max 2147483647)
     const cleanOrderStr = cleanQuery.replace(/^#/, "");
     const numericOrderNumber = parseInt(cleanOrderStr, 10);
-    const isOrderNumber = !isNaN(numericOrderNumber) && numericOrderNumber > 0 && String(numericOrderNumber) === cleanOrderStr;
+    const isSafeInt4 = !isNaN(numericOrderNumber) && numericOrderNumber > 0 && numericOrderNumber <= 2147483647;
+    // An orderNumber should only match if explicitly prefixed with '#' OR if it's within realistic order ID limits (< 1,000,000)
+    const isOrderNumber = isSafeInt4 && (cleanQuery.startsWith("#") || (numericOrderNumber < 1000000 && cleanOrderStr.length <= 6));
 
     const orConditions: any[] = [
       { accountNumber: cleanQuery },
-      { transactionRef: cleanQuery }
+      { accountNumber: { contains: cleanQuery, mode: "insensitive" } },
+      { transactionRef: cleanQuery },
+      { transactionRef: { contains: cleanQuery, mode: "insensitive" } }
     ];
+
+    // If query contains digits (like account or phone with spaces or symbols), also match digits
+    if (digitsOnly.length >= 6 && digitsOnly !== cleanQuery) {
+      orConditions.push({ accountNumber: { contains: digitsOnly, mode: "insensitive" } });
+    }
 
     if (cleanQuery !== "00000000" && !/^0+$/.test(cleanQuery)) {
       orConditions.push({ customerPhone: cleanQuery });
@@ -1862,13 +1871,13 @@ export async function getOrdersArchive(page: number = 1, limit: number = 20, sea
     };
 
     if (search) {
-      const isNum = !isNaN(Number(search));
       const numQ = Number(search);
+      const isSafeInt = !isNaN(numQ) && Number.isInteger(numQ) && numQ > 0 && numQ <= 2147483647;
       where.OR = [
         { customerPhone: { contains: search, mode: 'insensitive' } },
         { customerName: { contains: search, mode: 'insensitive' } },
         { accountNumber: { contains: search, mode: 'insensitive' } },
-        ...(isNum ? [
+        ...(isSafeInt ? [
           { orderNumber: numQ },
           { batch: { batchNumber: numQ } }
         ] : [])
@@ -1940,13 +1949,13 @@ export async function getArchivedConfirmedOrders(page: number = 1, limit: number
     };
 
     if (search) {
-      const isNum = !isNaN(Number(search));
       const numQ = Number(search);
+      const isSafeInt = !isNaN(numQ) && Number.isInteger(numQ) && numQ > 0 && numQ <= 2147483647;
       where.OR = [
         { customerPhone: { contains: search, mode: 'insensitive' } },
         { customerName: { contains: search, mode: 'insensitive' } },
         { accountNumber: { contains: search, mode: 'insensitive' } },
-        ...(isNum ? [
+        ...(isSafeInt ? [
           { orderNumber: numQ },
           { batch: { batchNumber: numQ } }
         ] : [])

@@ -412,12 +412,14 @@ export async function getEligibleOrdersForShipment(params?: {
 
     if (params?.search?.trim()) {
       const q = params.search.trim().toLowerCase()
-      const isNum = !isNaN(Number(q))
+      const numQ = Number(q)
+      const isSafeInt = !isNaN(numQ) && Number.isInteger(numQ) && numQ > 0 && numQ <= 2147483647
       where.OR = [
         { customerName: { contains: q, mode: "insensitive" } },
         { customerPhone: { contains: q } },
+        { accountNumber: { contains: q, mode: "insensitive" } },
         { batch: { product: { name: { contains: q, mode: "insensitive" } } } },
-        ...(isNum ? [{ orderNumber: Number(q) }] : []),
+        ...(isSafeInt ? [{ orderNumber: numQ }] : []),
       ]
     }
 
