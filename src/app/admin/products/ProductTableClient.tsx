@@ -6,8 +6,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { reconcileAllBatchStocks } from "@/app/actions/product-actions"
 import { EditProductSheet } from "./EditProductSheet"
 import { BatchSaleToggle } from "./BatchSaleToggle"
-import { ImageUploader } from "@/components/admin/ImageUploader"
-import { VideoUploader } from "@/components/admin/VideoUploader"
+import { ProductMediaModal } from "@/components/admin/ProductMediaModal"
 import { MergeProductsDialog } from "@/components/admin/MergeProductsDialog"
 import { Package, Layers, X, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -140,7 +139,7 @@ export function ProductTableClient({
               <th className="px-3 py-3">Бараа №</th>
               <th className="px-4 py-3">Нэр</th>
               <th className="px-4 py-3 text-center">Үйлдэл</th>
-              <th className="px-4 py-3 text-center">Зураг</th>
+              <th className="px-4 py-3 text-center">Мультимедиа</th>
               <th className="px-4 py-3">Зорилтот тоо</th>
               <th className="px-4 py-3">Үлдэгдэл</th>
               <th className="px-4 py-3">Үнэ</th>
@@ -188,17 +187,15 @@ export function ProductTableClient({
                     <td className="px-4 py-4 text-center">
                       <EditProductSheet batch={batch} categories={categories} />
                     </td>
-                    <td className="px-4 py-4">
-                      <div className="flex gap-2 justify-center">
-                        <ImageUploader
+                    <td className="px-4 py-4 text-center">
+                      <div className="flex justify-center">
+                        <ProductMediaModal
                           productId={batch.product?.id}
+                          productName={batch.product?.name ?? ""}
                           currentImageUrl={batch.product?.imageUrl}
-                          batchName={batch.product?.name ?? ""}
-                        />
-                        <VideoUploader
-                          productId={batch.product?.id}
+                          currentImages={batch.product?.images || []}
                           currentVideoUrl={batch.product?.videoUrl}
-                          batchName={batch.product?.name ?? ""}
+                          options={batch.product?.options}
                         />
                       </div>
                     </td>

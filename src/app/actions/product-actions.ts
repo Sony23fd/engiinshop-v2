@@ -420,6 +420,9 @@ export async function createProduct(data: {
   options?: any[]
   variantStock?: Record<string, number>
   isFreeCargo?: boolean
+  imageUrl?: string
+  images?: string[]
+  videoUrl?: string
 }) {
   try {
     const hasVariants = data.variantStock && typeof data.variantStock === 'object' && Object.keys(data.variantStock).length > 0
@@ -467,6 +470,9 @@ export async function createProduct(data: {
             ...(data.weight !== undefined && { weight: data.weight }),
             ...(data.sourceLink !== undefined && { sourceLink: data.sourceLink }),
             ...(data.options !== undefined && { options: data.options }),
+            ...(data.imageUrl && { imageUrl: data.imageUrl }),
+            ...(data.images && { images: data.images }),
+            ...(data.videoUrl && { videoUrl: data.videoUrl }),
           }
         }
       },
@@ -494,6 +500,9 @@ export async function updateProduct(data: {
   options?: any[]
   variantStock?: Record<string, number> | null
   isFreeCargo?: boolean
+  imageUrl?: string
+  images?: string[]
+  videoUrl?: string
 }) {
   try {
     // 1. Update the Product entity
@@ -506,7 +515,10 @@ export async function updateProduct(data: {
         weight: data.weight,
         sourceLink: data.sourceLink,
         options: data.options || [],
-        ...(data.isFreeCargo !== undefined && { isFreeCargo: data.isFreeCargo })
+        ...(data.isFreeCargo !== undefined && { isFreeCargo: data.isFreeCargo }),
+        ...(data.imageUrl !== undefined && { imageUrl: data.imageUrl }),
+        ...(data.images !== undefined && { images: data.images }),
+        ...(data.videoUrl !== undefined && { videoUrl: data.videoUrl }),
       }
     })
 
@@ -769,4 +781,114 @@ export async function reconcileAllBatchStocks() {
     return { success: false, error: error.message }
   }
 }
+
+export async function addProductImage(productId: string, imageUrl: string, setAsCover: boolean = false) {
+  try {
+    const admin = await getCurrentAdmin()
+    if (!admin) return { success: false, error: "Зөвшөөрөлгүй хандалт" }
+
+    const product = await db.product.findUnique({ where: { id: productId } })
+    if (!product) return { success: false, error: "Бараа олдсонгүй" }
+
+    const currentImages = product.images || []
+    const updatedImages = currentImages.includes(imageUrl) ? currentImages : [...currentImages, imageUrl]
+
+    const updateData: any = { images: updatedImages }
+    if (setAsCover || !product.imageUrl) {
+      updateData.imageUrl = imageUrl
+    }
+
+    await db.product.update({
+      where: { id: productId },
+      data: updateData
+    })
+
+    revalidatePath("/admin/products")
+    revalidatePath(`/product`)
+    return { success: true, images: updatedImages, imageUrl: updateData.imageUrl || product.imageUrl }
+  } catch (error: any) {
+    console.error("Failed to add product image:", error)
+    return { success: false, error: error.message }
+  }
+}
+
+export async function removeProductImage(productId: string, imageUrl: string) {
+  try {
+    const admin = await getCurrentAdmin()
+    if (!admin) return { success: false, error: "Зөвшөөрөлгүй хандалт" }
+
+    const product = await db.product.findUnique({ where: { id: productId } })
+    if (!product) return { success: false, error: "Бараа олдсонгүй" }
+
+    const updatedImages = (product.images || []).filter(img => img !== imageUrl)
+    let nextCover = product.imageUrl
+
+    if (product.imageUrl === imageUrl) {
+      nextCover = updatedImages.length > 0 ? updatedImages[0] : null
+    }
+
+    await db.product.update({
+      where: { id: productId },
+      data: {
+        images: updatedImages,
+        imageUrl: nextCover
+      }
+    })
+
+    revalidatePath("/admin/products")
+    revalidatePath(`/product`)
+    return { success: true, images: updatedImages, imageUrl: nextCover }
+  } catch (error: any) {
+    console.error("Failed to remove product image:", error)
+    return { success: false, error: error.message }
+  }
+}
+
+export async function setProductCoverImage(productId: string, imageUrl: string) {
+  try {
+    const admin = await getCurrentAdmin()
+    if (!admin) return { success: false, error: "Зөвшөөрөлгүй хандалт" }
+
+    const product = await db.product.findUnique({ where: { id: productId } })
+    if (!product) return { success: false, error: "Бараа олдсонгүй" }
+
+    const currentImages = product.images || []
+    const updatedImages = currentImages.includes(imageUrl) ? currentImages : [imageUrl, ...currentImages]
+
+    await db.product.update({
+      where: { id: productId },
+      data: {
+        imageUrl,
+        images: updatedImages
+      }
+    })
+
+    revalidatePath("/admin/products")
+    revalidatePath(`/product`)
+    return { success: true, imageUrl }
+  } catch (error: any) {
+    console.error("Failed to set cover image:", error)
+    return { success: false, error: error.message }
+  }
+}
+
+export async function removeProductVideo(productId: string) {
+  try {
+    const admin = await getCurrentAdmin()
+    if (!admin) return { success: false, error: "Зөвшөөрөлгүй хандалт" }
+
+    await db.product.update({
+      where: { id: productId },
+      data: { videoUrl: null }
+    })
+
+    revalidatePath("/admin/products")
+    revalidatePath(`/product`)
+    return { success: true }
+  } catch (error: any) {
+    console.error("Failed to remove video:", error)
+    return { success: false, error: error.message }
+  }
+}
+
 

@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
     const file = formData.get("file") as File
     const productId = formData.get("productId") as string | null
     const isVariant = formData.get("isVariant") === "true"
+    const isGallery = formData.get("isGallery") === "true"
 
     if (!file) {
       return NextResponse.json({ error: "File is required" }, { status: 400 })
@@ -65,12 +66,36 @@ export async function POST(request: NextRequest) {
 
     const fileUrl = `/uploads/products/${filename}`
 
-    // Update product.imageUrl or videoUrl in DB ONLY IF productId is present AND isVariant is false
+    // Update product.imageUrl, images, or videoUrl in DB ONLY IF productId is present AND isVariant is false
     if (productId && !isVariant) {
-      await db.product.update({
-        where: { id: productId },
-        data: isVideo ? { videoUrl: fileUrl } : { imageUrl: fileUrl }
-      })
+      if (isVideo) {
+        await db.product.update({
+          where: { id: productId },
+          data: { videoUrl: fileUrl }
+        })
+      } else if (isGallery) {
+        const prod = await db.product.findUnique({ where: { id: productId } })
+        const curr = prod?.images || []
+        const nextImages = curr.includes(fileUrl) ? curr : [...curr, fileUrl]
+        await db.product.update({
+          where: { id: productId },
+          data: {
+            images: nextImages,
+            ...(!prod?.imageUrl && { imageUrl: fileUrl })
+          }
+        })
+      } else {
+        const prod = await db.product.findUnique({ where: { id: productId } })
+        const curr = prod?.images || []
+        const nextImages = curr.includes(fileUrl) ? curr : [fileUrl, ...curr]
+        await db.product.update({
+          where: { id: productId },
+          data: {
+            imageUrl: fileUrl,
+            images: nextImages
+          }
+        })
+      }
     }
 
     return NextResponse.json({ success: true, url: fileUrl, imageUrl: fileUrl, videoUrl: isVideo ? fileUrl : undefined, type: isVideo ? "video" : "image" })

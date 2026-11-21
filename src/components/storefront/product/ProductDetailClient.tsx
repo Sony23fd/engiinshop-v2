@@ -98,6 +98,7 @@ export function ProductDetailClient({
         {/* Gallery with variant image switching and thumbnail row */}
         <ProductGallery
           defaultImageUrl={batch.product?.imageUrl}
+          images={batch.product?.images || []}
           activeImageUrl={activeVariantImageUrl}
           productName={batch.product?.name || "Бараа"}
           videoUrl={batch.product?.videoUrl}

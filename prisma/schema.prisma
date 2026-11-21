@@ -35,6 +35,7 @@ model Product {
   name          String
   description   String?
   imageUrl      String?
+  images        String[] @default([])
   videoUrl      String?
   price         Decimal
   sourceLink    String?
