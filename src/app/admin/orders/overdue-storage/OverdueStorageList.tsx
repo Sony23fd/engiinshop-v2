@@ -6,6 +6,7 @@ import { Phone, Clock, FileEdit, Copy, CheckCircle2, Truck, ExternalLink, Loader
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
+import { formatSelectedOptions } from "@/lib/variant-utils"
 
 export function OverdueStorageList({ orders }: { orders: any[] }) {
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -195,6 +196,13 @@ export function OverdueStorageList({ orders }: { orders: any[] }) {
                       <div className="font-semibold text-slate-900">
                         {order.batch?.product?.name || "Тодорхойгүй"}
                       </div>
+                      {order.selectedOptions && Object.keys(order.selectedOptions).length > 0 && (
+                        <div className="mt-1">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">
+                            🏷️ {formatSelectedOptions(order.selectedOptions)}
+                          </span>
+                        </div>
+                      )}
                       <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-2">
                         <span>#{order.orderNumber}</span>
                         <span>·</span>

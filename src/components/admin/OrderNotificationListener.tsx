@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react"
 import { Bell, CheckCircle2, Truck, User } from "lucide-react"
 import Link from "next/link"
 import { getRecentOrderNotifications } from "@/app/actions/order-actions"
+import { formatSelectedOptions } from "@/lib/variant-utils"
 
 interface OrderItem {
   orderId: string
@@ -11,6 +12,7 @@ interface OrderItem {
   quantity: number
   totalAmount: number
   batchId: string
+  selectedOptions?: any
 }
 
 interface OrderNotification {
@@ -159,11 +161,14 @@ export function OrderNotificationListener() {
                           {n.customerName}
                           {n.customerPhone && <span className="text-slate-400 font-normal text-xs ml-1">{n.customerPhone}</span>}
                         </p>
-                        {(n.items || []).map((item, j) => (
-                          <p key={j} className="text-xs text-slate-500 mt-0.5 truncate pl-4">
-                            · {item.productName} × {item.quantity}
-                          </p>
-                        ))}
+                        {(n.items || []).map((item, j) => {
+                          const opt = formatSelectedOptions(item.selectedOptions)
+                          return (
+                            <p key={j} className="text-xs text-slate-500 mt-0.5 truncate pl-4">
+                              · {item.productName} {opt && <span className="font-semibold text-indigo-600">({opt})</span>} × {item.quantity}
+                            </p>
+                          )
+                        })}
                         <div className="flex items-center justify-between mt-1">
                           <p className="text-xs font-bold text-indigo-600">₮{Number(n.totalAmount).toLocaleString()}</p>
                           {n.wantsDelivery && (
@@ -226,9 +231,14 @@ export function OrderNotificationListener() {
                   <>
                     <p className="font-semibold text-slate-900 text-sm">🛒 Шинэ захиалга!</p>
                     <p className="text-sm text-slate-700 font-medium mt-0.5">{showToast.customerName}</p>
-                    {(showToast.items || []).map((item, j) => (
-                      <p key={j} className="text-xs text-slate-500 truncate">· {item.productName} × {item.quantity}</p>
-                    ))}
+                    {(showToast.items || []).map((item, j) => {
+                      const opt = formatSelectedOptions(item.selectedOptions)
+                      return (
+                        <p key={j} className="text-xs text-slate-500 truncate">
+                          · {item.productName} {opt && <span className="font-semibold text-indigo-600">({opt})</span>} × {item.quantity}
+                        </p>
+                      )
+                    })}
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-indigo-600 font-bold text-xs">₮{Number(showToast.totalAmount).toLocaleString()}</span>
                       {showToast.wantsDelivery && (

@@ -307,11 +307,6 @@ export function CreateProductSheet({ categories }: { categories: any[] }) {
                           onChange={e => updateSingleItem(idx, "value", e.target.value)}
                           className="h-8 text-xs flex-1"
                         />
-                        <VariantImageUploader
-                          imageUrl={item.imageUrl}
-                          onUploaded={url => updateSingleItem(idx, "imageUrl", url)}
-                          onRemove={() => updateSingleItem(idx, "imageUrl", undefined)}
-                        />
                         <div className="flex items-center gap-1 shrink-0">
                           <Input
                             type="number"

@@ -2,6 +2,7 @@ import { getOrderForPayment, getShopSettings } from "@/app/actions/settings-acti
 import { notFound } from "next/navigation"
 import { CheckCircle2, Clock, AlertCircle, CreditCard } from "lucide-react"
 import { CopyButton } from "./CopyButton"
+import { formatSelectedOptions } from "@/lib/variant-utils"
 
 export const dynamic = "force-dynamic"
 
@@ -67,7 +68,19 @@ export default async function OrderPendingPage({ params }: { params: Promise<{ o
           </h2>
           <div className="space-y-2 text-sm">
             <Row label="Захиалагч" value={order.customerName} />
-            <Row label="Бараа" value={order.batch?.product?.name ?? "Бараа"} />
+            <Row 
+              label="Бараа" 
+              value={
+                <div className="text-right">
+                  <div>{order.batch?.product?.name ?? "Бараа"}</div>
+                  {order.selectedOptions && Object.keys(order.selectedOptions as object).length > 0 && (
+                    <span className="inline-block mt-0.5 text-[11px] text-indigo-700 font-bold bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">
+                      🏷️ {formatSelectedOptions(order.selectedOptions)}
+                    </span>
+                  )}
+                </div>
+              } 
+            />
             <Row label="Тоо" value={`${order.quantity} ширхэг`} />
             <Row label="Хүргэлт" value={order.wantsDelivery ? "Хүргэлтээр" : "Өөрөө ирнэ"} />
           </div>
@@ -126,7 +139,7 @@ export default async function OrderPendingPage({ params }: { params: Promise<{ o
   )
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex justify-between">
       <span className="text-slate-500">{label}</span>

@@ -1,9 +1,10 @@
 import { getShopSettings } from "@/app/actions/settings-actions"
 import { db } from "@/lib/db"
 import { notFound } from "next/navigation"
-import { Clock, AlertCircle } from "lucide-react"
+import { Clock, AlertCircle, Package } from "lucide-react"
 import { ManualPaymentClient } from "./ManualPaymentClient"
 import { PaymentConfirmationClient } from "./PaymentConfirmationClient"
+import { formatSelectedOptions } from "@/lib/variant-utils"
 
 export const dynamic = "force-dynamic"
 
@@ -11,7 +12,12 @@ export default async function ManualCheckoutPage({ params }: { params: Promise<{
   const { ref } = await params
   
   const orders = await db.order.findMany({
-    where: { transactionRef: ref }
+    where: { transactionRef: ref },
+    include: {
+      batch: {
+        include: { product: true }
+      }
+    }
   })
 
   if (!orders || orders.length === 0) {
@@ -36,10 +42,35 @@ export default async function ManualCheckoutPage({ params }: { params: Promise<{
         </div>
 
         {/* Amount */}
-        <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-6 text-center">
-          <p className="text-indigo-600 text-sm font-semibold mb-1">ТӨЛБӨР ТӨЛӨХ ДҮН</p>
-          <div className="text-4xl font-black text-indigo-900 font-mono">
-            ₮{totalAmount.toLocaleString()}
+        <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-6 text-center space-y-4">
+          <div>
+            <p className="text-indigo-600 text-sm font-semibold mb-1">ТӨЛБӨР ТӨЛӨХ ДҮН</p>
+            <div className="text-4xl font-black text-indigo-900 font-mono">
+              ₮{totalAmount.toLocaleString()}
+            </div>
+          </div>
+
+          {/* Ordered items breakdown with options */}
+          <div className="bg-white/80 rounded-lg p-3 border border-indigo-100 text-left divide-y divide-slate-100">
+            {orders.map((o: any) => (
+              <div key={o.id} className="py-2 first:pt-0 last:pb-0 flex items-center justify-between gap-3 text-xs">
+                <div className="space-y-0.5 min-w-0">
+                  <p className="font-bold text-slate-800 truncate">
+                    {o.batch?.product?.name || "Бараа"}
+                  </p>
+                  {o.selectedOptions && Object.keys(o.selectedOptions).length > 0 && (
+                    <div>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">
+                        🏷️ {formatSelectedOptions(o.selectedOptions)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <span className="font-extrabold text-slate-700 shrink-0">
+                  {o.quantity} ш
+                </span>
+              </div>
+            ))}
           </div>
         </div>
 

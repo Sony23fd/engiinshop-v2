@@ -1,5 +1,6 @@
 import { EventEmitter } from "events"
 import { sendTelegramNotification } from "./telegram"
+import { formatSelectedOptions } from "./variant-utils"
 
 const globalForEmitter = global as unknown as { orderEmitter?: EventEmitter }
 if (!globalForEmitter.orderEmitter) {
@@ -29,6 +30,7 @@ export interface NewOrderEvent {
     quantity: number
     totalAmount: number
     batchId: string
+    selectedOptions?: any
   }>
   totalAmount: number
   wantsDelivery: boolean
@@ -93,7 +95,11 @@ export function emitNewOrder(event: Omit<NewOrderEvent, "items"> & {
 
     // Send Telegram alert
     const itemsList = entry.event.items
-      .map(i => `• ${i.productName} (${i.quantity}ш) - ${Number(i.totalAmount).toLocaleString()}₮`)
+      .map(i => {
+        const optText = formatSelectedOptions(i.selectedOptions)
+        const optSuffix = optText ? ` [🎨 ${optText}]` : ""
+        return `• ${i.productName}${optSuffix} (${i.quantity}ш) - ${Number(i.totalAmount).toLocaleString()}₮`
+      })
       .join("\n")
     const msg = `🛍️ <b>ШИНЭ ЗАХИАЛГА ИРЛЭЭ!</b>\n` +
       `👤 Захиалагч: <b>${entry.event.customerName}</b> (${entry.event.customerPhone || "Утасгүй"})\n` +

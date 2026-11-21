@@ -854,6 +854,7 @@ export async function createOrder(data: {
           quantity: data.quantity,
           totalAmount: data.totalAmount,
           batchId: data.batchId,
+          selectedOptions: data.selectedOptions,
         }
       })
     } catch { /* non-critical */ }
@@ -2330,7 +2331,8 @@ export async function getRecentOrderNotifications() {
         productName: o.batch?.product?.name || "Бараа",
         quantity: o.quantity,
         totalAmount: Number(o.totalAmount || 0),
-        batchId: o.batchId
+        batchId: o.batchId,
+        selectedOptions: o.selectedOptions
       })
     }
 

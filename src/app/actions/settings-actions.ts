@@ -391,3 +391,12 @@ export async function getOrdersByTransactionRef(transactionRef: string) {
     return { success: false, error: error.message }
   }
 }
+
+export async function testTelegramConnection(token?: string, chatId?: string) {
+  try {
+    const { sendTestTelegramMessage } = await import("@/lib/telegram")
+    return await sendTestTelegramMessage(token, chatId)
+  } catch (error: any) {
+    return { success: false, error: error.message || "Туршилтын мессеж илгээхэд алдаа гарлаа" }
+  }
+}

@@ -6,6 +6,7 @@ import { Search, Download, Upload, Plus, Package, ClipboardList } from "lucide-r
 import { Input } from "@/components/ui/input"
 import { getBatchById } from "@/app/actions/batch-actions"
 import { getOrderStatuses } from "@/app/actions/order-actions"
+import { formatSelectedOptions } from "@/lib/variant-utils"
 import { 
   Sheet, 
   SheetContent, 
@@ -223,6 +224,13 @@ export default async function BatchDetailPage({ params }: { params: Promise<{ id
                         <p className="text-slate-800 text-sm uppercase">{order.customerName},</p>
                         <p>{order.customerPhone},</p>
                         <p>{batch.product?.name}</p>
+                        {order.selectedOptions && Object.keys(order.selectedOptions).length > 0 && (
+                          <div>
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">
+                              🏷️ {formatSelectedOptions(order.selectedOptions)}
+                            </span>
+                          </div>
+                        )}
                         <p className="text-slate-800">Карго: {Number(order.cargoFee || 0)} ₮</p>
                       </div>
                     </td>

@@ -17,6 +17,7 @@ import {
 import DeliveryRequestButton from "./DeliveryRequestButton"
 import { OrderStatusTimeline } from "@/components/OrderStatusTimeline"
 import { RefreshButton } from "@/components/storefront/track/RefreshButton"
+import { formatSelectedOptions } from "@/lib/variant-utils"
 
 export const dynamic = "force-dynamic"
 
@@ -457,6 +458,13 @@ function OrderGroup({ orders, completed = false, deliveryScheduleDays = "3,6", s
                   <p className={`font-bold text-sm truncate ${isCancelled || completed ? "text-slate-400 font-bold" : isPending ? "text-slate-500" : "text-slate-800"}`}>
                     {order.batch?.product?.name}
                   </p>
+                  {order.selectedOptions && Object.keys(order.selectedOptions).length > 0 && (
+                    <div className="mt-0.5">
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md">
+                        🏷️ {formatSelectedOptions(order.selectedOptions)}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex flex-wrap items-center gap-2 mt-0.5">
                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wide">#{order.orderNumber} · {order.quantity} ширхэг</span>
                     {(() => {

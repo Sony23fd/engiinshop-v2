@@ -226,16 +226,43 @@ export function getVariantImageUrl(
  */
 export function formatSelectedOptions(selectedOptions: any): string {
   if (!selectedOptions) return ""
-  if (typeof selectedOptions === "string") return selectedOptions
-  if (typeof selectedOptions !== "object") return String(selectedOptions)
+  
+  let target = selectedOptions
+  if (typeof target === "string") {
+    const trimmed = target.trim()
+    if ((trimmed.startsWith("{") && trimmed.endsWith("}")) || (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
+      try {
+        target = JSON.parse(trimmed)
+      } catch {
+        return trimmed
+      }
+    } else {
+      return trimmed
+    }
+  }
 
-  const entries = Object.entries(selectedOptions)
+  if (Array.isArray(target)) {
+    return target.map(v => String(v).trim()).filter(Boolean).join(", ")
+  }
+
+  if (typeof target !== "object" || target === null) return String(target)
+
+  const entries = Object.entries(target)
     .filter(([_, v]) => v !== undefined && v !== null && String(v).trim() !== "")
   
   if (entries.length === 0) return ""
   
-  // If only 1 option and its name is generic (e.g. "Size", "Хэмжээ", "Сонголт"), show "Size: XL" or just the value
-  return entries.map(([k, v]) => `${k}: ${v}`).join(", ")
+  return entries
+    .map(([k, v]) => {
+      const cleanKey = String(k).trim()
+      const cleanVal = String(v).trim()
+      // If key and value are identical (e.g. "Хар": "Хар"), just show the value
+      if (cleanKey.toLowerCase() === cleanVal.toLowerCase()) {
+        return cleanVal
+      }
+      return `${cleanKey}: ${cleanVal}`
+    })
+    .join(", ")
 }
 
 export interface VariantSummaryItem {

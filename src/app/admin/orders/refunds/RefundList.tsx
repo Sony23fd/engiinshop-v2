@@ -4,6 +4,7 @@ import { useState } from "react"
 import { toggleOrderRefund } from "@/app/actions/order-actions"
 import { ExternalLink, CreditCard, Banknote, User, Phone, CheckCircle2, RotateCcw, Box } from "lucide-react"
 import Link from "next/link"
+import { formatSelectedOptions } from "@/lib/variant-utils"
 
 export function RefundList({ 
   data, 
@@ -86,6 +87,13 @@ export function RefundList({
                         <Box className="w-3.5 h-3.5" />
                         <span className="truncate max-w-[200px]">{order.batch?.product?.name || "Тодорхойгүй бараа"}</span>
                       </div>
+                      {order.selectedOptions && Object.keys(order.selectedOptions).length > 0 && (
+                        <div className="mt-1">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">
+                            🏷️ {formatSelectedOptions(order.selectedOptions)}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4">

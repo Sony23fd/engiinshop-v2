@@ -5,6 +5,7 @@ import { Clock, CreditCard, CheckCircle2, AlertCircle } from "lucide-react"
 import { CopyButton } from "../../[orderId]/CopyButton"
 import { QRCodeSVG } from "qrcode.react"
 import { PaymentCheckClient } from "./PaymentCheckClient"
+import { formatSelectedOptions } from "@/lib/variant-utils"
 
 export const dynamic = "force-dynamic"
 
@@ -102,8 +103,15 @@ export default async function OrderPendingByRefPage({ params }: { params: Promis
           <div className="divide-y border rounded-xl overflow-hidden">
             {orders.map((order: any) => (
               <div key={order.id} className="flex justify-between items-center px-3 py-2.5 text-sm">
-                <div>
+                <div className="space-y-0.5">
                   <p className="font-medium text-slate-800">{order.batch?.product?.name}</p>
+                  {order.selectedOptions && Object.keys(order.selectedOptions).length > 0 && (
+                    <div>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">
+                        🏷️ {formatSelectedOptions(order.selectedOptions)}
+                      </span>
+                    </div>
+                  )}
                   <p className="text-xs text-slate-400">{order.quantity} ширхэг × ₮{Math.round(Number(order.totalAmount) / order.quantity).toLocaleString()}</p>
                 </div>
                 <span className="font-semibold text-slate-700">₮{Number(order.totalAmount).toLocaleString()}</span>

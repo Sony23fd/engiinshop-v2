@@ -4,12 +4,13 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { Loader2, Upload, ImageIcon, Sparkles } from "lucide-react"
+import { Loader2, Upload, ImageIcon, Sparkles, Send, Bot } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import Image from "next/image"
 import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { testTelegramConnection } from "@/app/actions/settings-actions"
 
 import { SystemUpdateCard } from "@/components/admin/SystemUpdateCard"
 import { Role } from "@prisma/client"
@@ -47,6 +48,45 @@ export function GeneralSettingsClient({ initialSettings, userRole }: Props) {
   const [carouselImages, setCarouselImages] = useState<string[]>(
     initialCarouselStr ? JSON.parse(initialCarouselStr) : []
   )
+
+  const [telegramBotToken, setTelegramBotToken] = useState(initialSettings["telegram_bot_token"] || "")
+  const [telegramChatId, setTelegramChatId] = useState(initialSettings["telegram_chat_id"] || "")
+  const [isTestingTelegram, setIsTestingTelegram] = useState(false)
+
+  async function handleTestTelegram() {
+    if (!telegramBotToken.trim() || !telegramChatId.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Тохиргоо дутуу байна",
+        description: "Bot Token болон Chat ID-г оруулсны дараа шалгана уу."
+      })
+      return
+    }
+    setIsTestingTelegram(true)
+    try {
+      const res = await testTelegramConnection(telegramBotToken.trim(), telegramChatId.trim())
+      if (res.success) {
+        toast({
+          title: "Холболт амжилттай! 🎉",
+          description: "Telegram чат/групп руу тань туршилтын мессеж амжилттай очлоо."
+        })
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Telegram алдаа",
+          description: res.error || "Мессеж илгээж чадсангүй."
+        })
+      }
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Алдаа",
+        description: err.message
+      })
+    } finally {
+      setIsTestingTelegram(false)
+    }
+  }
 
   const [isUploading, setIsUploading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -99,6 +139,8 @@ export function GeneralSettingsClient({ initialSettings, userRole }: Props) {
         hero_bg_color: heroBgColor,
         delivery_schedule_days: deliveryScheduleDays.join(","),
         hero_carousel_images: JSON.stringify(carouselImages),
+        telegram_bot_token: telegramBotToken.trim(),
+        telegram_chat_id: telegramChatId.trim(),
       }
 
       const res = await fetch("/api/admin/settings", {
@@ -372,6 +414,86 @@ export function GeneralSettingsClient({ initialSettings, userRole }: Props) {
                 </div>
               </div>
             </div>
+          </div>
+        </CardContent>
+        <CardFooter className="bg-slate-50 border-t border-slate-100 flex justify-end">
+          <Button 
+            onClick={handleSave} 
+            disabled={isUploading || isSaving}
+            className="bg-[#4e3dc7] hover:bg-indigo-700 text-white shadow-sm font-medium px-6"
+          >
+            {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+            Хадгалах
+          </Button>
+        </CardFooter>
+      </Card>
+
+      {/* Telegram Bot Notification Settings Card */}
+      <Card className="border-slate-200 shadow-sm">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Bot className="w-5 h-5 text-indigo-600" />
+            <CardTitle>Telegram Bot Мэдэгдлийн Тохиргоо</CardTitle>
+          </div>
+          <CardDescription>
+            Шинэ захиалга, төлбөр баталгаажилт болон хүргэлтийн хүсэлт ирэх үед таны Telegram групп эсвэл чат руу (сонгосон өнгө, размерийн хамт) шуурхай мессеж очих тохиргоо.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700">
+                Telegram Bot Token
+              </label>
+              <Input
+                placeholder="Ж: 123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"
+                value={telegramBotToken}
+                onChange={e => setTelegramBotToken(e.target.value)}
+                className="bg-white font-mono text-xs"
+              />
+              <p className="text-[11px] text-slate-400">
+                Telegram дээр <strong>@BotFather</strong>-аас авсан HTTP API Token.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700">
+                Telegram Chat ID / Group ID
+              </label>
+              <Input
+                placeholder="Ж: -1001234567890 эсвэл 123456789"
+                value={telegramChatId}
+                onChange={e => setTelegramChatId(e.target.value)}
+                className="bg-white font-mono text-xs"
+              />
+              <p className="text-[11px] text-slate-400">
+                Мэдэгдэл хүлээн авах суваг, групп эсвэл админы хувийн чат ID.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-indigo-50/70 border border-indigo-100 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-0.5">
+              <p className="text-xs font-bold text-indigo-900">Холболтыг шалгах</p>
+              <p className="text-[11px] text-indigo-700">
+                Дээр оруулсан Bot болон Chat ID руу туршилтын мессеж илгээж шалгана.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleTestTelegram}
+              disabled={isTestingTelegram || !telegramBotToken.trim() || !telegramChatId.trim()}
+              className="border-indigo-300 text-indigo-700 hover:bg-indigo-100 bg-white font-bold text-xs h-9 shrink-0 shadow-2xs"
+            >
+              {isTestingTelegram ? (
+                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+              ) : (
+                <Send className="w-3.5 h-3.5 mr-1.5" />
+              )}
+              Туршилтын мессеж илгээх
+            </Button>
           </div>
         </CardContent>
         <CardFooter className="bg-slate-50 border-t border-slate-100 flex justify-end">

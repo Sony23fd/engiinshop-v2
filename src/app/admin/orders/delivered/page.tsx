@@ -3,6 +3,7 @@ import { GroupDeliveredActions } from "./GroupDeliveredActions"
 import { DateRangeFilter } from "@/components/admin/DateRangeFilter"
 import { ListSearchFilter } from "@/components/admin/ListSearchFilter"
 import { PackageCheck, Package, Truck, User } from "lucide-react"
+import { formatSelectedOptions } from "@/lib/variant-utils"
 
 export const dynamic = "force-dynamic"
 
@@ -95,9 +96,14 @@ export default async function DeliveredOrdersPage({ searchParams }: { searchPara
                     <div key={order.id} className="px-5 py-4 hover:bg-slate-50/50 transition-colors">
                       <div className="flex items-start gap-3 flex-wrap">
                         <div className="flex-1 min-w-0 space-y-1.5">
-                          <div className="flex items-center gap-3 flex-wrap">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-semibold text-slate-800">{order.batch?.product?.name}</span>
                             <span className="text-slate-400 text-sm">#{order.orderNumber}</span>
+                            {order.selectedOptions && Object.keys(order.selectedOptions).length > 0 && (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">
+                                🏷️ {formatSelectedOptions(order.selectedOptions)}
+                              </span>
+                            )}
                           </div>
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-1 text-sm">
                             <div>
