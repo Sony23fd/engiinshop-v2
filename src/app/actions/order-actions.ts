@@ -1679,7 +1679,7 @@ export async function requestDelivery(orderIds: string[], deliveryAddress: strin
 
     const { getShopSettings } = await import("./settings-actions")
     const settings = await getShopSettings()
-    const deliveryFee = Number(settings.delivery_fee || "6000")
+    const deliveryFee = Number(settings.delivery_fee || "8000")
 
     // Calculate total cargo fee for eligible orders
     let totalCargoFee = 0
@@ -1722,33 +1722,13 @@ export async function requestDelivery(orderIds: string[], deliveryAddress: strin
       return { success: true, directlyConfirmed: true }
     }
 
-    // Save-On-Submit: Immediately save delivery address & intent to DB
-    await (db.order as any).updateMany({
-      where: { id: { in: eligibleIds } },
-      data: {
-        wantsDelivery: true,
-        deliveryFeePaid: false,
-        deliveryAddress: deliveryAddress.trim(),
-        deliveryDate: deliveryDate ? new Date(deliveryDate) : undefined,
-        deliveryRequestedAt: new Date()
-      }
-    })
+    // Notice: We DO NOT mutate wantsDelivery in DB yet.
+    // The delivery request will only be recorded once the customer confirms their bank transfer via confirmManualDeliveryRequest.
+    const rawPhone = eligibleOrders[0]?.customerPhone || ""
+    const cleanPhone = rawPhone.replace(/\+976/g, "").replace(/\s+/g, "").replace(/-/g, "").trim()
+    const bankNote = `${cleanPhone} хүргэлт`
+    const instruction = settings.cargo_payment_instruction || "Гүйлгээний утга дээр утасныхаа дугаарыг заавал бичнэ үү."
 
-    // Emit notification for admin so they see the delivery request immediately
-    const { emitDeliveryRequest } = await import("@/lib/orderEvents")
-    emitDeliveryRequest({
-      customerName: eligibleOrders[0]?.customerName || "Хэрэглэгч",
-      customerPhone: eligibleOrders[0]?.customerPhone || "",
-      address: deliveryAddress.trim(),
-      orderCount: eligibleIds.length,
-      createdAt: new Date().toISOString()
-    })
-
-    revalidatePath("/track")
-    revalidatePath("/admin/orders/delivery")
-
-    // Force Cargo Manual Bank Transfer for Cargo & Delivery Fee
-    const bankNote = settings.cargo_payment_instruction || `${eligibleOrders[0]?.customerPhone || ""} хүргэлт карго`
     return {
       success: true,
       isManual: true,
@@ -1756,10 +1736,11 @@ export async function requestDelivery(orderIds: string[], deliveryAddress: strin
         fee: totalPayableFee,
         cargoFee: totalCargoFee,
         deliveryFee: deliveryFee,
-        bank_name: settings.cargo_bank_name || settings.bank_name || "Хаан Банк",
-        bank_account: settings.cargo_bank_account || settings.bank_account || "",
-        bank_holder: settings.cargo_bank_holder || settings.bank_holder || "",
-        bank_note: bankNote
+        bank_name: settings.cargo_bank_name || "Төрийн Банк",
+        bank_account: settings.cargo_bank_account || "MN660034171700066647",
+        bank_holder: settings.cargo_bank_holder || "Мөнхбат Буяннэмэх",
+        bank_note: bankNote,
+        instruction: instruction
       }
     }
   } catch (err: any) {
@@ -1768,12 +1749,12 @@ export async function requestDelivery(orderIds: string[], deliveryAddress: strin
   }
 }
 
-export async function confirmManualDeliveryRequest(orderIds: string[], address: string, deliveryDate?: string) {
+export async function confirmManualDeliveryRequest(orderIds: string[], address: string, deliveryDate?: string, senderAccount?: string) {
   try {
     // Fetch orders first to get customer info for notification and verification
     const orders = await (db.order as any).findMany({
       where: { id: { in: orderIds } },
-      select: { id: true, customerName: true, customerPhone: true }
+      select: { id: true, customerName: true, customerPhone: true, accountNumber: true }
     })
     if (!orders || orders.length === 0) return { success: false, error: "Захиалга олдсонгүй" }
 
@@ -1790,15 +1771,20 @@ export async function confirmManualDeliveryRequest(orderIds: string[], address: 
       };
     }
 
+    const updateData: any = {
+      wantsDelivery: true,
+      deliveryFeePaid: false, // Pending manual verification by admin
+      deliveryAddress: address.trim(),
+      deliveryDate: deliveryDate ? new Date(deliveryDate) : undefined,
+      deliveryRequestedAt: new Date()
+    }
+    if (senderAccount && senderAccount.trim()) {
+      updateData.accountNumber = senderAccount.trim()
+    }
+
     await (db.order as any).updateMany({
       where: { id: { in: orderIds } },
-      data: {
-        wantsDelivery: true,
-        deliveryFeePaid: false, // Pending manual verification by admin
-        deliveryAddress: address.trim(),
-        deliveryDate: deliveryDate ? new Date(deliveryDate) : undefined,
-        deliveryRequestedAt: new Date()
-      }
+      data: updateData
     })
 
     // Emit notification for admin
@@ -1812,6 +1798,7 @@ export async function confirmManualDeliveryRequest(orderIds: string[], address: 
     })
 
     revalidatePath("/track")
+    revalidatePath("/admin/orders/delivery")
     revalidatePath("/admin/orders")
     return { success: true }
   } catch (err: any) {

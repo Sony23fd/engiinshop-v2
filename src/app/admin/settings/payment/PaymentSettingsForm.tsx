@@ -6,10 +6,9 @@ import { CheckCircle2, Loader2 } from "lucide-react"
 
 const FIELDS = [
   { key: "bank_name", label: "Банкны нэр", placeholder: "Хаан Банк" },
-  { key: "bank_account", label: "Дансны дугаар", placeholder: "5071443386" },
-  { key: "bank_holder", label: "Данс эзэмшигч", placeholder: "Отгоо" },
+  { key: "bank_account", label: "Дансны дугаар", placeholder: "730005005046231632" },
+  { key: "bank_holder", label: "Данс эзэмшигч", placeholder: "Ундрал Мөнхдалай" },
   { key: "bank_note", label: "Нэмэлт тайлбар", placeholder: "Anar Korea Shop" },
-  { key: "delivery_fee", label: "Хүргэлтийн хураамж /QPay/ (₮)", placeholder: "6000" },
 ]
 
 export function PaymentSettingsForm({ settings }: { settings: Record<string, string> }) {
@@ -87,8 +86,9 @@ export function PaymentSettingsForm({ settings }: { settings: Record<string, str
         ))}
       </div>
 
-      <div className="border-t pt-4 text-xs text-slate-400">
-        Эдгээр мэдээлэл нь хэрэглэгчид захиалгын дараа харуулагдана.
+      <div className="border-t pt-4 text-xs text-slate-500 space-y-1">
+        <p>Эдгээр мэдээлэл нь хэрэглэгчид захиалгын үндсэн барааны төлбөр төлөхөд харуулагдана.</p>
+        <p className="text-indigo-600 font-medium">💡 Карго тээвэр болон хот доторх хүргэлтийн суурь төлбөр, дансны тохиргоог <a href="/admin/cargo-settings" className="underline font-bold hover:text-indigo-800">Карго Тохиргоо</a> цэсээс удирдахыг анхаарна уу.</p>
       </div>
     </div>
   )

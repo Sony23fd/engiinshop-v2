@@ -18,13 +18,17 @@ export default function DeliveryRequestButton({ orderIds, deliveryScheduleDays =
 
   const [qrData, setQrData] = useState<{ text: string, urls: any[], invoiceId: string } | null>(null)
   const [manualData, setManualData] = useState<any>(null)
+  const [senderAccount, setSenderAccount] = useState("")
   const [checkingPayment, setCheckingPayment] = useState(false)
   const [copiedData, setCopiedData] = useState("")
 
-  async function copyToClipboard(text: string) {
+  async function copyToClipboard(text: string, customMsg?: string) {
     await navigator.clipboard.writeText(text)
     setCopiedData(text)
-    toast({ title: "Амжилттай хуулагдлаа!", description: text })
+    toast({ 
+      title: "Хуулагдлаа!", 
+      description: customMsg || text 
+    })
     setTimeout(() => setCopiedData(""), 2000)
   }
 
@@ -69,7 +73,13 @@ export default function DeliveryRequestButton({ orderIds, deliveryScheduleDays =
 
   async function handleManualConfirm() {
     setLoading(true)
-    const res = await confirmManualDeliveryRequest(orderIds, address, selectedDeliveryDate || undefined)
+    setError(null)
+    const res = await confirmManualDeliveryRequest(
+      orderIds, 
+      address, 
+      selectedDeliveryDate || undefined,
+      senderAccount || undefined
+    )
     setLoading(false)
     if (res.success) {
       setDone(true)
@@ -137,18 +147,23 @@ export default function DeliveryRequestButton({ orderIds, deliveryScheduleDays =
           </div>
           <div className="bg-white border border-red-200 rounded-lg p-3 flex justify-between items-center shadow-2xs">
             <span className="font-bold text-sm text-red-950 font-mono leading-tight select-all">
-              {manualData.bank_note || "Утасны дугаараа бичнэ үү"}
+              {manualData.bank_note}
             </span>
             <button
               type="button"
-              onClick={() => copyToClipboard(manualData.bank_note || "Утасны дугаараа бичнэ үү")}
+              onClick={() => copyToClipboard(manualData.bank_note, "Гүйлгээний утга хуулагдлаа! Одоо 2-р алхмын данс руу шилжүүлнэ үү.")}
               className="flex items-center gap-1.5 bg-red-100 hover:bg-red-200 text-red-700 px-2.5 py-1.5 rounded text-xs uppercase font-bold transition-colors shrink-0 ml-2"
             >
-              {copiedData === (manualData.bank_note || "Утасны дугаараа бичнэ үү") ? <CheckCircle2 className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
-              {copiedData === (manualData.bank_note || "Утасны дугаараа бичнэ үү") ? "Хуулсан" : "Хуулах"}
+              {copiedData === manualData.bank_note ? <CheckCircle2 className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+              {copiedData === manualData.bank_note ? "Хуулсан" : "Хуулах"}
             </button>
           </div>
-          <p className="text-[11px] text-red-700 mt-2 font-medium">
+          {manualData.instruction && (
+            <p className="text-[11px] text-red-800 mt-2 font-medium bg-red-100/60 p-2 rounded">
+              ℹ️ {manualData.instruction}
+            </p>
+          )}
+          <p className="text-[11px] text-red-700 mt-1.5 font-medium">
             ⚠️ Банкны апп дээрээ шилжүүлэг хийхдээ гүйлгээний утга дээр ЗӨВХӨН энэ утгыг тавина уу.
           </p>
         </div>
@@ -166,7 +181,7 @@ export default function DeliveryRequestButton({ orderIds, deliveryScheduleDays =
               <span className="font-bold text-slate-900 text-base font-mono">{manualData.bank_account}</span>
               <button
                 type="button"
-                onClick={() => copyToClipboard(manualData.bank_account)}
+                onClick={() => copyToClipboard(manualData.bank_account, "Дансны дугаар хуулагдлаа. Банкны апп дээрээ гүйлгээний утгаа заавал наана уу!")}
                 className="flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2.5 py-1.5 rounded text-xs uppercase font-bold transition-colors border border-indigo-100"
               >
                 {copiedData === manualData.bank_account ? <CheckCircle2 className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
@@ -178,6 +193,22 @@ export default function DeliveryRequestButton({ orderIds, deliveryScheduleDays =
             <span className="text-slate-500 font-medium">Данс эзэмшигч:</span>
             <span className="font-bold text-slate-800">{manualData.bank_holder}</span>
           </div>
+        </div>
+
+        {/* Step 3: Confirmation and Optional Sender Account */}
+        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs space-y-2">
+          <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">3. Баталгаажуулах</p>
+          <label className="font-medium text-slate-600 block">
+            Шилжүүлсэн дансны дугаар (Сүүлийн 4 орон эсвэл данс / Заавал биш):
+          </label>
+          <input
+            type="text"
+            value={senderAccount}
+            onChange={e => setSenderAccount(e.target.value)}
+            placeholder="Жишээ: 5011... эсвэл Хаан банк"
+            className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-400 font-mono"
+          />
+          <p className="text-[10px] text-slate-400">Төлбөр шалгах явцыг түргэсгэхэд тусална.</p>
         </div>
 
         {error && (

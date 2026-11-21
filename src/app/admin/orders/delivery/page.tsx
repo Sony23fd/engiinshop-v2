@@ -181,6 +181,7 @@ export default async function DeliveryQueuePage({
             groups={groups} 
             currentTab={currentTab} 
             courierPin={settings.courier_pin_code || "2026"} 
+            deliveryFee={Number(settings.delivery_fee || 8000)}
           />
 
           {totalPages > 1 && (

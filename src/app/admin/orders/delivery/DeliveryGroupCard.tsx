@@ -8,7 +8,13 @@ import { updateDeliveryAddressForOrders } from "@/app/actions/order-actions"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
 
-export function DeliveryGroupCard({ groupOrders }: { groupOrders: any[] }) {
+export function DeliveryGroupCard({ 
+  groupOrders,
+  deliveryFee = 8000
+}: { 
+  groupOrders: any[];
+  deliveryFee?: number;
+}) {
   const [selectedIds, setSelectedIds] = useState<string[]>(groupOrders.map(o => o.id))
   const { toast } = useToast()
   const router = useRouter()
@@ -130,9 +136,9 @@ export function DeliveryGroupCard({ groupOrders }: { groupOrders: any[] }) {
         <div className="text-slate-500 text-xs flex items-center gap-3">
           <span>📦 Карго: <strong className="text-slate-800 font-semibold">{totalCargoFee > 0 ? `${totalCargoFee.toLocaleString()} ₮` : "Үнэгүй"}</strong></span>
           <span>·</span>
-          <span>🚚 Хүргэлт: <strong className="text-slate-800 font-semibold">6,000 ₮</strong></span>
+          <span>🚚 Хүргэлт: <strong className="text-slate-800 font-semibold">{deliveryFee.toLocaleString()} ₮</strong></span>
           <span>·</span>
-          <span>Нийт: <strong className="text-slate-900 font-bold">{(totalCargoFee + 6000).toLocaleString()} ₮</strong></span>
+          <span>Нийт: <strong className="text-slate-900 font-bold">{(totalCargoFee + deliveryFee).toLocaleString()} ₮</strong></span>
         </div>
       </div>
 

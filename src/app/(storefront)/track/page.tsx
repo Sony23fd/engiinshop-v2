@@ -234,6 +234,8 @@ function UnifiedDeliverySection({ groups, settings }: { groups: any[][], setting
     return sum + orderFee;
   }, 0);
 
+  const deliveryFee = Number(settings.delivery_fee || 8000);
+
   const ordersWithInvalidPhone = eligibleForDelivery.filter((o: any) => {
     const p = (o.customerPhone || "").replace(/\+976/g, "").replace(/\s+/g, "").replace(/-/g, "").trim();
     return !p || p === "00000000" || /^0+$/.test(p) || p.length < 8;
@@ -280,11 +282,17 @@ function UnifiedDeliverySection({ groups, settings }: { groups: any[][], setting
             <p className="text-sm text-slate-700 font-medium">
               🚚 <strong>{eligibleForDelivery.length}</strong> бараа хүргэлтэд бэлэн байна.
             </p>
-            {totalEligibleCargoFee > 0 && (
-              <span className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-lg self-start sm:self-auto">
-                Каргоны төлбөр: {totalEligibleCargoFee.toLocaleString()} ₮
+            <div className="flex flex-wrap items-center gap-1.5 self-start sm:self-auto text-xs">
+              <span className="font-semibold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md">
+                Карго: <strong className="text-slate-800">{totalEligibleCargoFee > 0 ? `${totalEligibleCargoFee.toLocaleString()} ₮` : "Үнэгүй"}</strong>
               </span>
-            )}
+              <span className="font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md">
+                Хүргэлт: <strong className="text-indigo-900">{deliveryFee.toLocaleString()} ₮</strong>
+              </span>
+              <span className="font-extrabold text-white bg-indigo-600 px-2 py-0.5 rounded-md shadow-2xs">
+                Нийт: {(totalEligibleCargoFee + deliveryFee).toLocaleString()} ₮
+              </span>
+            </div>
           </div>
           {hasInvalidPhone ? (
             <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 text-sm text-amber-900 space-y-2">

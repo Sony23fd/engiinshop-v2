@@ -22,12 +22,14 @@ interface DeliveryGroupsManagerProps {
   groups: any[][]
   currentTab: "ready" | "in_transit" | "missing_address"
   courierPin: string
+  deliveryFee?: number
 }
 
 export function DeliveryGroupsManager({
   groups,
   currentTab,
-  courierPin
+  courierPin,
+  deliveryFee = 8000
 }: DeliveryGroupsManagerProps) {
   const [selectedGroupKeys, setSelectedGroupKeys] = useState<string[]>([])
   const [loadingAction, setLoadingAction] = useState<"bulk_deliver" | "bulk_handover" | null>(null)
@@ -242,7 +244,7 @@ export function DeliveryGroupsManager({
               </div>
 
               <div className={`transition-all rounded-xl ${isSelected ? "ring-2 ring-indigo-500 shadow-md" : ""}`}>
-                <DeliveryGroupCard groupOrders={groupOrders} />
+                <DeliveryGroupCard groupOrders={groupOrders} deliveryFee={deliveryFee} />
               </div>
             </div>
           )

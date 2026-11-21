@@ -6,11 +6,11 @@ import { CheckCircle2, Loader2, AlertTriangle, Bell, Truck, CreditCard, Sparkles
 import { useToast } from "@/components/ui/use-toast"
 
 const BANK_FIELDS = [
-  { key: "cargo_bank_name", label: "Карго Хүлээн авагч Банк", placeholder: "Хаан Банк", desc: "Карго төлбөр орох банк" },
-  { key: "cargo_bank_account", label: "Карго Дансны дугаар", placeholder: "5011...", desc: "Тусдаа каргоны дансны дугаар" },
-  { key: "cargo_bank_holder", label: "Карго Данс эзэмшигч", placeholder: "Анар Карго", desc: "Данс эзэмшигчийн нэр" },
+  { key: "cargo_bank_name", label: "Карго Хүлээн авагч Банк", placeholder: "Төрийн Банк", desc: "Карго төлбөр орох банк" },
+  { key: "cargo_bank_account", label: "Карго Дансны дугаар", placeholder: "MN660034171700066647", desc: "Тусдаа каргоны дансны дугаар" },
+  { key: "cargo_bank_holder", label: "Карго Данс эзэмшигч", placeholder: "Мөнхбат Буяннэмэх", desc: "Данс эзэмшигчийн нэр" },
   { key: "cargo_payment_instruction", label: "Гүйлгээний утгын заавар", placeholder: "Гүйлгээний утга дээр утасныхаа дугаарыг заавал бичнэ үү.", desc: "Шилжүүлэг хийх үед хэрэглэгчид өгөх заавар" },
-  { key: "delivery_fee", label: "Хүргэлтийн суурь төлбөр (₮)", placeholder: "6000", desc: "Хот доторх хүргэлтийн үндсэн дүн" },
+  { key: "delivery_fee", label: "Хүргэлтийн суурь төлбөр (₮)", placeholder: "8000", desc: "Хот доторх хүргэлтийн үндсэн дүн" },
 ]
 
 export function CargoSettingsForm({ settings }: { settings: Record<string, string> }) {
@@ -84,7 +84,7 @@ export function CargoSettingsForm({ settings }: { settings: Record<string, strin
             <div className="flex justify-between items-center pb-2 border-b border-slate-200">
               <span className="text-slate-500 font-medium text-xs">Төлөх дүн:</span>
               <span className="font-bold text-base text-indigo-600">
-                {Number(values.delivery_fee || 6000).toLocaleString()} ₮
+                {Number(values.delivery_fee || 8000).toLocaleString()} ₮
               </span>
             </div>
             <div className="flex justify-between items-center text-xs">
